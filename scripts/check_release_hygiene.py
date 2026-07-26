@@ -88,26 +88,15 @@ FORBIDDEN_EXACT = (
 # Regex for the `.env.<anything>.local` family.
 FORBIDDEN_EXACT_RE = re.compile(r"^\.env\.[^/]+\.local$")
 
-# Paths that DID exist in public history once and are consciously accepted as
-# not worth a history rewrite (a force-push would break every clone and fork).
-# Every entry must be a harmless POLICY leak — no live secret ever lived here.
-# The tree gate still rejects these for the working tree; only the history-path
-# scan grandfathers them.
-#   docs/INSTALL_SAAS.md — Turkish end-user install guide, published on
-#   voxislive.com. Committed in PR #4 (c06257c), removed + gitignored in PR #5
-#   (4df6899). Zero secrets / IPs / credentials; left in history by decision.
-HISTORY_PATH_ALLOWLIST = frozenset({
-    "docs/INSTALL_SAAS.md",
-})
-# Directory prefixes that existed in public history and are consciously
-# accepted (a force-push rewrite would break every clone/fork over this).
-#   store-listings/ — published Microsoft Store listing text, added in
-#   6313528 and untracked in 2921746. Marketing copy only: no keys, hosts,
-#   or credentials. TEMPORARY: drop this once history is rewritten to
-#   remove it entirely.
-HISTORY_PATH_ALLOWLIST_PREFIXES = (
-    "store-listings/",
-)
+# Paths consciously grandfathered in public history (a force-push rewrite to
+# remove them would break every clone and fork). Every entry must be a
+# harmless POLICY leak — no live secret ever lived here. The tree gate still
+# rejects these for the working tree; only the history-path scan grandfathers
+# them. Empty as of the 2026-07-26 history squash (public history is now a
+# single commit) — add entries here only for a *future* leak judged not worth
+# another rewrite, not retroactively for anything before that squash.
+HISTORY_PATH_ALLOWLIST: frozenset[str] = frozenset()
+HISTORY_PATH_ALLOWLIST_PREFIXES: tuple[str, ...] = ()
 
 # --- Secret content signatures ----------------------------------------------
 # Each entry: (human label, compiled pattern). Patterns are deliberately tight
