@@ -1593,8 +1593,9 @@ class Bridge:
 
         class _Handler(http.server.BaseHTTPRequestHandler):
             def _cors(self):
-                origin = self.headers.get("Origin", "") or "*"
-                self.send_header("Access-Control-Allow-Origin", origin)
+                origin = self.headers.get("Origin", "")
+                if origin == "https://voxislive.com":
+                    self.send_header("Access-Control-Allow-Origin", origin)
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
