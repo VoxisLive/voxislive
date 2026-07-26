@@ -1,0 +1,83 @@
+# --- Voxis Production Git Ignore ---
+
+.local/
+
+.vault/
+
+# --- Runtime secrets & tokens ---
+.env
+.env.local
+.env.*.local
+config.json
+config.json._pending_default_restore
+jwt.dat
+*.dat
+install.secret
+legacy_machine.secret
+transcript_index.json
+*.secret
+voxis.log
+
+# --- Optional closed-source package (open-core hook, see README) ---
+premium/
+tests/test_premium_adress.py
+
+# --- Server-side auth service (self-host deployers maintain a private fork) ---
+backend/
+
+# --- Non-public docs subpaths (docs/ itself is public) ---
+docs/server/
+docs/marketing/
+docs/INSTALL_SAAS.md
+
+# --- Per-user runtime data ---
+profiles/
+
+# --- Python artefacts ---
+__pycache__/
+*.pyc
+.venv*/
+venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.flatpak-builder/
+
+# --- Flutter / Dart artefacts ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# --- Packaged release output ---
+production_release/
+installer/redist/
+
+# --- Session output ---
+transcripts/
+obs_subtitle.txt
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+
+# --- AI session memory (stays local) ---
+.claude/
+.agents/
+skills-lock.json
+
+# --- Linux port working tree (leading slash: app/sysaudio/linux/ is TRACKED) ---
+/linux/
+
+# --- SQLite WAL fragments ---
+*.db-shm
+*.db-wal
+
+# --- Benchmark fixtures + run outputs ---
+scripts/bench/fixtures/**/*.wav
+scripts/bench/results*.jsonl
+
+# --- Model weights (regenerable, auto-downloaded) ---
+models/speaker_campplus.onnx
+tts_models/
