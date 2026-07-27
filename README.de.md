@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.11--3.13-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)
-[![GitHub stars](https://img.shields.io/github/stars/DavutAkca/voxislive?style=social)](https://github.com/DavutAkca/voxislive/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)](https://github.com/VoxisLive/voxislive/stargazers)
 
 > Echtzeit-Sprachübersetzung für Windows — übersetze jedes Video, Spiel oder Meeting und höre es live in deiner eigenen Sprache.
 >
@@ -19,7 +19,7 @@
 **📖 Anleitung:** [Entwickler / BYOK-Setup](docs/INSTALL_BYOK.md) — die Endnutzer-App wird über den **Microsoft Store** ausgeliefert; Setup-Doku unter [voxislive.com](https://voxislive.com).
 
 > [!WARNING]
-> **Laden Sie nur von [voxislive.com](https://voxislive.com), dem Microsoft-Store-Eintrag oder diesem Repository (`github.com/DavutAkca/voxislive`) herunter.** Kopien dieses Repositorys wurden auf anderen GitHub-Konten gefunden, einige leiten zu Installern auf fremden Seiten weiter — diese sind **nicht offiziell** und können schädlich sein. Dieses Projekt verteilt niemals einen Installer über eine Drittanbieter-Seite oder ein anderes GitHub-Konto. Wenn Sie eine verdächtige Kopie finden, melden Sie sie bitte: [support@voxislive.com](mailto:support@voxislive.com).
+> **Laden Sie nur von [voxislive.com](https://voxislive.com), dem Microsoft-Store-Eintrag oder diesem Repository (`github.com/VoxisLive/voxislive`) herunter.** Kopien dieses Repositorys wurden auf anderen GitHub-Konten gefunden, einige leiten zu Installern auf fremden Seiten weiter — diese sind **nicht offiziell** und können schädlich sein. Dieses Projekt verteilt niemals einen Installer über eine Drittanbieter-Seite oder ein anderes GitHub-Konto. Wenn Sie eine verdächtige Kopie finden, melden Sie sie bitte: [support@voxislive.com](mailto:support@voxislive.com).
 
 ---
 
@@ -60,7 +60,7 @@ Windows audio ──► Capture ──► Silero VAD gate ──► Gemini Live 
 ## Schnellstart (Entwickler-Build)
 
 ```powershell
-git clone https://github.com/DavutAkca/voxislive.git
+git clone https://github.com/VoxisLive/voxislive.git
 cd voxislive
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -215,7 +215,7 @@ Beiträge sind willkommen — indem du einen Pull Request öffnest, erklärst du
 
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/DavutAkca/voxislive/issues)
+- **Issues:** [GitHub Issues](https://github.com/VoxisLive/voxislive/issues)
 - **Kommerzielle Anfragen:** <https://voxislive.com/licensing>
 
 *Voxis Live — Echtzeit-Sprachübersetzung, simultan.*

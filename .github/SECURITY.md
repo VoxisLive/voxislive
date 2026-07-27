@@ -5,7 +5,7 @@
 Please **do not** open a public issue for security problems.
 
 Report privately through GitHub's
-[**Report a vulnerability**](https://github.com/DavutAkca/voxislive/security/advisories/new)
+[**Report a vulnerability**](https://github.com/VoxisLive/voxislive/security/advisories/new)
 form (the repository's **Security → Advisories** tab). We aim to acknowledge a
 valid report within a few days and will coordinate a fix and disclosure with you.
 

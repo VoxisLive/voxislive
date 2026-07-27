@@ -11,7 +11,7 @@ and may be incorporated with attribution in the project history.
 ## Development setup (BYOK / developer build)
 
 ```powershell
-git clone https://github.com/DavutAkca/voxislive.git
+git clone https://github.com/VoxisLive/voxislive.git
 cd voxislive
 python -m venv .venv            # Python 3.11-3.13, 64-bit (3.14 not supported yet)
 .\.venv\Scripts\Activate.ps1

@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.11--3.13-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)
-[![GitHub stars](https://img.shields.io/github/stars/DavutAkca/voxislive?style=social)](https://github.com/DavutAkca/voxislive/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)](https://github.com/VoxisLive/voxislive/stargazers)
 
 > Windows için gerçek zamanlı sesli çeviri — herhangi bir videoyu, oyunu veya toplantıyı çevirin ve kendi dilinizde, anlık olarak duyun.
 >
@@ -19,7 +19,7 @@
 **📖 Kılavuz:** [Geliştirici / BYOK kurulumu](docs/INSTALL_BYOK.md) — son kullanıcı uygulaması **Microsoft Store** üzerinden dağıtılır; kurulum dökümanı [voxislive.com](https://voxislive.com)'da.
 
 > [!WARNING]
-> **Sadece [voxislive.com](https://voxislive.com), Microsoft Store listesi veya bu repo (`github.com/DavutAkca/voxislive`) üzerinden indirin.** Bu reponun başka GitHub hesaplarında kopyaları tespit edildi; bazıları başka sitelerdeki yükleyicilere yönlendiriyor — bunlar **resmi değildir** ve zararlı olabilir. Bu proje hiçbir zaman üçüncü taraf bir siteden veya farklı bir GitHub hesabından yükleyici dağıtmaz. Şüpheli bir kopya görürseniz bildirin: [support@voxislive.com](mailto:support@voxislive.com).
+> **Sadece [voxislive.com](https://voxislive.com), Microsoft Store listesi veya bu repo (`github.com/VoxisLive/voxislive`) üzerinden indirin.** Bu reponun başka GitHub hesaplarında kopyaları tespit edildi; bazıları başka sitelerdeki yükleyicilere yönlendiriyor — bunlar **resmi değildir** ve zararlı olabilir. Bu proje hiçbir zaman üçüncü taraf bir siteden veya farklı bir GitHub hesabından yükleyici dağıtmaz. Şüpheli bir kopya görürseniz bildirin: [support@voxislive.com](mailto:support@voxislive.com).
 
 ---
 
@@ -60,7 +60,7 @@ Windows audio ──► Capture ──► Silero VAD gate ──► Gemini Live 
 ## Hızlı başlangıç (geliştirici derlemesi)
 
 ```powershell
-git clone https://github.com/DavutAkca/voxislive.git
+git clone https://github.com/VoxisLive/voxislive.git
 cd voxislive
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -215,7 +215,7 @@ Katkılar memnuniyetle karşılanır — bir pull request açarak, katkınızın
 
 ## Destek
 
-- **Sorunlar:** [GitHub Issues](https://github.com/DavutAkca/voxislive/issues)
+- **Sorunlar:** [GitHub Issues](https://github.com/VoxisLive/voxislive/issues)
 - **Ticari talepler:** <https://voxislive.com/licensing>
 
 *Voxis Live — gerçek zamanlı, simültane sesli çeviri.*

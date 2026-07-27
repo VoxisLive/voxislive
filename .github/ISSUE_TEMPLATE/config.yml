@@ -4,5 +4,5 @@ contact_links:
     url: https://voxislive.com/licensing
     about: Commercial use, white-label, or the official SaaS build.
   - name: Report a security vulnerability
-    url: https://github.com/DavutAkca/voxislive/security/advisories/new
+    url: https://github.com/VoxisLive/voxislive/security/advisories/new
     about: Please report security issues privately, not as a public issue.
