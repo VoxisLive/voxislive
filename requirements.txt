@@ -8,10 +8,13 @@
 # stays on 3.13 until stable cp314 wheels exist.
 google-genai==2.14.0
 sounddevice==0.5.5
-numpy==2.5.1
+# numpy 2.5.x and scipy 1.18.x dropped Python 3.11 (Requires-Python >=3.12),
+# breaking the CI test matrix's 3.11 leg — hold both back until 3.11 support
+# is dropped from quality.yml's matrix or these get a 3.11-compatible patch.
+numpy==2.4.6
 onnxruntime==1.28.0
 soxr==1.1.0
-scipy==1.18.0
+scipy==1.17.1
 python-dotenv==1.2.2
 # Migration of legacy Fernet-wrapped BYOK slots (migrate-on-read decoder in
 # byok_store). DPAPI is the at-rest wrapper now; this only decrypts old slots.
