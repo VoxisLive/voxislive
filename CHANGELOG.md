@@ -64,7 +64,7 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 - A language-swap control to exchange the two translation targets in one step.
 
 *Thanks to [Vladimir Vorobyov (@uladzemer)](https://github.com/uladzemer) for
-this contribution — [audio diagnostics fix](https://github.com/DavutAkca/voxislive/commit/9ee5e50c637dd8435402248777f8b959ea0c81cb).*
+this contribution — [audio diagnostics fix](https://github.com/VoxisLive/voxislive/commit/9ee5e50c637dd8435402248777f8b959ea0c81cb).*
 
 ### Fixed
 - A crash partway through starting a Video/Game or Meeting session could leak
@@ -92,4 +92,4 @@ this contribution — [audio diagnostics fix](https://github.com/DavutAkca/voxis
   push and pull request against `main` (Python 3.11 and 3.13, Windows).
 
 *Thanks to [Vladimir Vorobyov (@uladzemer)](https://github.com/uladzemer) for
-this contribution too — [runtime/storage hardening](https://github.com/DavutAkca/voxislive/commit/8cdc51eee8e68726d4c21410fa17332a1ccbf892).*
+this contribution too — [runtime/storage hardening](https://github.com/VoxisLive/voxislive/commit/8cdc51eee8e68726d4c21410fa17332a1ccbf892).*

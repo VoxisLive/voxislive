@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.11--3.13-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)
-[![GitHub stars](https://img.shields.io/github/stars/DavutAkca/voxislive?style=social)](https://github.com/DavutAkca/voxislive/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)](https://github.com/VoxisLive/voxislive/stargazers)
 
 > Real-time voice translation for Windows — translate any video, game, or meeting and hear it in your own language, live.
 >
@@ -19,7 +19,7 @@
 **📖 Guide:** [Developer / BYOK setup](docs/INSTALL_BYOK.md) — the end-user app ships via the **Microsoft Store**; setup docs live at [voxislive.com](https://voxislive.com).
 
 > [!WARNING]
-> **Only trust downloads from [voxislive.com](https://voxislive.com), the Microsoft Store listing, or this repository at `github.com/DavutAkca/voxislive`.** Copies of this repository have been found on other GitHub accounts, some redirecting to installers hosted elsewhere — those are **not official** and may be malicious. This project never distributes an installer from a third-party site or a different GitHub account. If you find a suspicious clone, please report it: [support@voxislive.com](mailto:support@voxislive.com).
+> **Only trust downloads from [voxislive.com](https://voxislive.com), the Microsoft Store listing, or this repository at `github.com/VoxisLive/voxislive`.** Copies of this repository have been found on other GitHub accounts, some redirecting to installers hosted elsewhere — those are **not official** and may be malicious. This project never distributes an installer from a third-party site or a different GitHub account. If you find a suspicious clone, please report it: [support@voxislive.com](mailto:support@voxislive.com).
 
 ---
 
@@ -60,7 +60,7 @@ Windows audio ──► Capture ──► Silero VAD gate ──► Gemini Live 
 ## Quick start (developer build)
 
 ```powershell
-git clone https://github.com/DavutAkca/voxislive.git
+git clone https://github.com/VoxisLive/voxislive.git
 cd voxislive
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -221,7 +221,7 @@ For architecture deep-dives, latency benchmark comparisons, and system audio cap
 * **Technical Wiki & Latency Matrix:** [r/LiveTranslation Wiki](https://www.reddit.com/r/LiveTranslation/wiki/index)
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/DavutAkca/voxislive/issues)
+- **Issues:** [GitHub Issues](https://github.com/VoxisLive/voxislive/issues)
 - **Commercial inquiries:** <https://voxislive.com/licensing>
 
 *Voxis Live — real-time, simultaneous voice translation.*

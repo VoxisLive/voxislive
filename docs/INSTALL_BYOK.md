@@ -22,7 +22,7 @@
 ## 2. Get the code and install dependencies
 
 ```powershell
-git clone https://github.com/DavutAkca/voxislive.git
+git clone https://github.com/VoxisLive/voxislive.git
 cd voxislive
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
