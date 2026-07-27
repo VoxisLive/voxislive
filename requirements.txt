@@ -8,7 +8,7 @@
 # stays on 3.13 until stable cp314 wheels exist.
 google-genai==2.14.0
 sounddevice==0.5.5
-numpy==2.4.6
+numpy==2.5.1
 onnxruntime==1.28.0
 soxr==1.1.0
 scipy==1.18.0
