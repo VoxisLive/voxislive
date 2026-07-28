@@ -65,6 +65,12 @@ _REFRESH_MARGIN_S: float = 3 * 24 * 3600.0   # start refreshing 3 days early
 _REFRESH_THROTTLE_S: float = 3600.0          # at most one attempt per hour
 _last_refresh_attempt: float = 0.0
 
+# get_quota re-verifies when the server's token cache has expired (see there).
+# Only a FAILED re-verify is throttled; a successful one warms the cache for a
+# full TTL and so cannot repeat per heartbeat.
+_QUOTA_REAUTH_THROTTLE_S: float = 30.0
+_last_quota_reauth_fail: float = 0.0
+
 _log = logging.getLogger("voxis.client")
 _lock: threading.Lock = threading.Lock()
 _jwt: Optional[str] = None
@@ -469,13 +475,15 @@ def verify_session() -> tuple[Optional[dict], Optional[str]]:
         return None, _net_error()
 
 
-def get_quota() -> Optional[dict]:
-    """Fetches the cached quota (verify_session must have been called this session)."""
-    if not IS_OFFICIAL_RELEASE:
-        return {"unlimited": True, "remaining": 999999.0, "allowed_minutes": 999999.0, "used_minutes": 0.0}
-    token = _valid_jwt()
-    if not token:
-        return None
+def _get_quota_once() -> tuple[str, Optional[dict]]:
+    """One GET /auth/quota attempt. Returns ("ok", quota) | ("reauth", None) |
+    ("fail", None).
+
+    Mirrors _post_usage: a 401 here is the server's 5-minute token cache having
+    expired, not a sign-out — /auth/quota only reads that cache (tc.Get, and a
+    read does not extend the TTL). It is never a definitive auth verdict either;
+    /auth/session-key is the authoritative check and clears the JWT when needed.
+    """
     try:
         resp = _http.get(
             f"{_BASE_URL}/auth/quota",
@@ -483,13 +491,65 @@ def get_quota() -> Optional[dict]:
             timeout=_TIMEOUT,
         )
         if resp.status_code == 200:
-            return resp.json()
-        # 401 on quota is not treated as a definitive sign-out: the session-key
-        # endpoint is the authoritative auth check and will clear the JWT if needed.
-        return None
+            return "ok", resp.json()
+        if resp.status_code == 401:
+            return "reauth", None
+        return "fail", None
     except requests.RequestException as exc:
         _log_detail("get_quota", exc)
+        return "fail", None
+
+
+def get_quota() -> Optional[dict]:
+    """Fetches the current quota snapshot, repopulating the server's token cache
+    when it has expired.
+
+    Only /auth/verify writes that cache (tc.Set); /auth/quota just reads it and
+    401s on a miss, so every 5 minutes this call fails once by construction.
+    Returning None there left the CALLER holding its last value: webui polls this
+    each heartbeat to draw the minutes-left counter, and index.html's
+    refreshQuotaAfterSession keeps the previous QUOTA when a poll yields nothing.
+    The counter therefore froze at a stale number and stayed frozen — a user
+    watching a 150-minute film read "60 min left" while the balance actually
+    reached zero and the server cut the session mid-film with no warning the
+    counter had ever given (field report, 2026-07-28).
+
+    So do what report_usage already does with its own 401: re-verify once.
+    /auth/verify answers with the same snapshot shape, so its body IS the
+    refreshed quota. When it declines to return one — 402, a paid tier that is
+    genuinely exhausted — resolveEntry has still re-cached the entry on the way
+    to that 402, so a single retry of the GET now succeeds and yields the
+    exhausted snapshot, which is exactly the number the counter must show.
+    """
+    global _last_quota_reauth_fail
+    if not IS_OFFICIAL_RELEASE:
+        return {"unlimited": True, "remaining": 999999.0, "allowed_minutes": 999999.0, "used_minutes": 0.0}
+    token = _valid_jwt()
+    if not token:
         return None
+    status, quota = _get_quota_once()
+    if status != "reauth":
+        return quota
+    # Throttle only the FAILING path. A successful re-verify warms the cache for
+    # another TTL, so it cannot recur per-beat; a failing one (PB down → 502 from
+    # resolveEntry) otherwise turns a 6-second poll into three requests every
+    # 6 seconds against a server that is already sick.
+    now = time.time()
+    if now - _last_quota_reauth_fail < _QUOTA_REAUTH_THROTTLE_S:
+        return None
+    info, _ = verify_session()
+    if info is not None:
+        return info
+    _last_quota_reauth_fail = now
+    # verify_session cleared the JWT on a genuine 401; anything else (402, a PB
+    # hiccup) may still have left a fresh cache entry behind, so it is worth one
+    # more read.
+    if not _valid_jwt():
+        return None
+    status, quota = _get_quota_once()
+    if status == "ok":
+        _last_quota_reauth_fail = 0.0
+    return quota
 
 
 def _device_headers() -> dict:

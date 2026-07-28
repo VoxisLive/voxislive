@@ -213,3 +213,80 @@ def test_session_key_device_blocked_without_hint_still_raises(monkeypatch):
         vc.get_session_key()
     assert exc_info.value.first_account is None
     assert exc_info.value.remaining_minutes is None
+
+
+# --- get_quota: the 401 that froze the minutes-left counter ---------------
+#
+# /auth/quota only READS the server's 5-minute token cache, so it 401s once per
+# TTL by construction. get_quota used to map that to None, and the UI keeps its
+# previous value when a poll yields nothing — so the counter froze at a stale
+# number for the rest of a long session (field report, 2026-07-28).
+
+
+def _quota_env(monkeypatch, gets, verify_result=None):
+    """Official build, valid JWT, scripted GET responses, stubbed verify."""
+    monkeypatch.setattr(vc, "IS_OFFICIAL_RELEASE", True)
+    monkeypatch.setattr(vc, "_valid_jwt", lambda: _make_jwt(exp=time.time() + 3600))
+    monkeypatch.setattr(vc, "_last_quota_reauth_fail", 0.0)
+    calls = {"gets": 0, "verifies": 0}
+
+    class _FakeHttp:
+        def get(self, url, headers=None, params=None, timeout=None):
+            calls["gets"] += 1
+            return gets[min(calls["gets"] - 1, len(gets) - 1)]
+
+    def _verify():
+        calls["verifies"] += 1
+        return verify_result if verify_result is not None else (None, "err")
+
+    monkeypatch.setattr(vc, "_http", _FakeHttp())
+    monkeypatch.setattr(vc, "verify_session", _verify)
+    return calls
+
+
+def test_get_quota_200_does_not_reverify(monkeypatch):
+    fresh = {"remaining": 60.0, "allowed_minutes": 380.0, "used_minutes": 320.0}
+    calls = _quota_env(monkeypatch, [_FakeResp(200, fresh)])
+    assert vc.get_quota() == fresh
+    assert calls["gets"] == 1 and calls["verifies"] == 0
+
+
+def test_get_quota_401_reverifies_and_returns_fresh_snapshot(monkeypatch):
+    # The regression: cache expired mid-session. /auth/verify repopulates it and
+    # answers with the same snapshot shape, so its body IS the fresh quota — the
+    # counter must move, not hold its last number.
+    fresh = {"remaining": 0.0, "allowed_minutes": 380.0, "used_minutes": 380.1}
+    calls = _quota_env(monkeypatch, [_FakeResp(401)], verify_result=(fresh, None))
+    assert vc.get_quota() == fresh
+    assert calls["verifies"] == 1
+
+
+def test_get_quota_401_then_402_verify_retries_the_read(monkeypatch):
+    # A paid tier that is genuinely exhausted: /auth/verify 402s (verify_session
+    # returns None) but resolveEntry already re-cached the entry on the way
+    # there, so one retry of the GET yields the exhausted snapshot the counter
+    # has to display.
+    exhausted = {"remaining": 0.0, "allowed_minutes": 380.0, "used_minutes": 380.1}
+    calls = _quota_env(monkeypatch, [_FakeResp(401), _FakeResp(200, exhausted)],
+                       verify_result=(None, "quota exceeded"))
+    assert vc.get_quota() == exhausted
+    assert calls["gets"] == 2 and calls["verifies"] == 1
+
+
+def test_get_quota_failed_reverify_is_throttled(monkeypatch):
+    # PB down: verify fails and the retry 401s too. The next poll (6 s later)
+    # must NOT re-verify again — three requests every six seconds against an
+    # already-sick server is how a stale counter becomes an outage amplifier.
+    calls = _quota_env(monkeypatch, [_FakeResp(401)], verify_result=(None, "502"))
+    assert vc.get_quota() is None
+    assert calls["verifies"] == 1
+    assert vc.get_quota() is None
+    assert calls["verifies"] == 1, "failed re-verify must be throttled"
+
+
+def test_get_quota_non_401_error_never_reverifies(monkeypatch):
+    # 500/403/transport failure is not a cache miss — returning None there is
+    # correct and must not cost an extra round-trip.
+    calls = _quota_env(monkeypatch, [_FakeResp(500)])
+    assert vc.get_quota() is None
+    assert calls["gets"] == 1 and calls["verifies"] == 0
