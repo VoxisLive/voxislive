@@ -34,12 +34,15 @@ its own via class attrs. They are NOT tuning knobs to revisit here.
 """
 import asyncio
 import contextlib
+import logging
 import random
 import threading
 import time
 import traceback
 
 from .i18n import t
+
+_log = logging.getLogger("voxis")
 
 
 class _Rotate(Exception):
@@ -337,10 +340,12 @@ class BaseTranslator(threading.Thread):
         and from the covert immediate-close. If on_fatal returns truthy it has
         taken over and the failure stays silent; otherwise the status surfaces as
         it always did."""
+        _log.error("%s: abandoning the reconnect loop: %r", self.name, exc)
         if self.on_fatal is not None and not self._fatal_fired:
             self._fatal_fired = True
             try:
                 if self.on_fatal(exc):
+                    _log.info("%s: a substitute engine took over", self.name)
                     return
             except Exception:  # a broken handler must not mask the real failure
                 traceback.print_exc()
@@ -394,10 +399,15 @@ class BaseTranslator(threading.Thread):
                                 and time.monotonic() - started >= self.MIN_SESSION_SECONDS):
                     transient_failures = 0
                     if not self._stopping.is_set():
+                        _log.info("%s: session renewing (planned rotation)", self.name)
                         self.on_status(t("st_renewing", name=self.name))
                 elif not self._stopping.is_set():
                     self._reset_reconnect_state()
                     transient_failures += 1
+                    _log.warning("%s: server closed the session immediately "
+                                 "(failure %d/%d, backoff %.1fs)", self.name,
+                                 transient_failures, self.MAX_TRANSIENT_FAILURES,
+                                 self._backoff)
                     if transient_failures >= self.MAX_TRANSIENT_FAILURES:
                         self._give_up(t("st_server_closed"))
                         break
@@ -419,6 +429,7 @@ class BaseTranslator(threading.Thread):
                 # Terminal (auth/permission/quota/4xx): retrying with the same key
                 # cannot succeed — give up and let a substitute engine step in.
                 if self._is_terminal(e):
+                    _log.error("%s: terminal error, not retrying: %r", self.name, e)
                     self._give_up(e)
                     break
                 # A session that ran past the minimum lifetime proves the path
@@ -428,7 +439,11 @@ class BaseTranslator(threading.Thread):
                     transient_failures = 0
                 transient_failures += 1
                 self._reset_reconnect_state()
+                _log.warning("%s: transient error (failure %d/%d, retry in %.1fs): %r",
+                             self.name, transient_failures,
+                             self.MAX_TRANSIENT_FAILURES, self._backoff, e)
                 if transient_failures >= self.MAX_TRANSIENT_FAILURES:
+                    _log.error("%s: transient retries exhausted — giving up", self.name)
                     self._give_up(e)
                     break
                 self.on_status(t("st_conn_err", name=self.name, s=int(self._backoff), e=e))
@@ -453,6 +468,8 @@ class BaseTranslator(threading.Thread):
             # the websocket engines (Gemini's _open_session is a no-op).
             await self._open_session(conn)
             self._reinject_carryover()
+            _log.info("%s: session connected (target=%s, model=%s)",
+                      self.name, self.target_lang, getattr(self, "model", "?"))
             self.on_status(t("st_connected", name=self.name, lang=self.target_lang))
             if self.READY_ON_CONNECT:
                 self._ready.set()
@@ -545,6 +562,9 @@ class BaseTranslator(threading.Thread):
             # (a hung TCP connection may never raise in the receiver).
             if self._sent_since_recv >= self.STALL_ROTATE_SECONDS:
                 self._sent_since_recv = 0.0
+                _log.warning("%s: stall watchdog — %.0fs of audio sent with no "
+                             "server event, forcing a fresh session", self.name,
+                             self.STALL_ROTATE_SECONDS)
                 self.on_status(t("st_stall_reconnect", name=self.name,
                                  s=int(self.STALL_ROTATE_SECONDS)))
                 raise _Rotate(heal=True)
@@ -565,6 +585,10 @@ class BaseTranslator(threading.Thread):
                 if (stalled >= self.NO_OUTPUT_ROTATE_SECONDS
                         and self._watchdog_rotations < self.WATCHDOG_ROTATE_MAX):
                     self._watchdog_rotations += 1
+                    _log.warning("%s: no-output watchdog — input %.0fs ago but no "
+                                 "translation for %.0fs, self-heal rotation %d/%d",
+                                 self.name, now - self._last_input_ts, stalled,
+                                 self._watchdog_rotations, self.WATCHDOG_ROTATE_MAX)
                     self.on_status(t("st_noout_reconnect", name=self.name,
                                      s=int(self.NO_OUTPUT_ROTATE_SECONDS)))
                     raise _Rotate(heal=True)
