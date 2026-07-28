@@ -51,6 +51,7 @@ def _bare_bridge_with_backlog(backlog_s):
     # Per-direction accumulators (webui._LegState); a bare Bridge skips __init__.
     b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
+    b._src_track = []
     b._session_start = 0.0
     b._lines = []
     b._turns = []

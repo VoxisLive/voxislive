@@ -33,6 +33,14 @@ Exports render it as a language-neutral "S1:"/"S2:" prefix — only when the
 session actually saw more than one speaker, so single-voice transcripts stay
 clean.
 
+`source_track` (optional, additive, top level) is the input-transcription stream
+with the time each stretch ARRIVED, kept independently of how it was paired onto
+turns. A turn's own `src` is a best-effort pairing built from a fixed lag
+estimate; where that estimate is wrong the pairing is wrong, and with only the
+paired result on disk the error could not even be measured after the fact. This
+track is the raw material a corrected pairing can be derived and validated
+against. Omitted when empty.
+
 `leg` (optional, additive) is the meeting direction a turn belongs to —
 "incoming" (the other party, translated for the user) or "outgoing" (the user,
 translated for the other party). Written only in meeting mode, so a Video/Game
@@ -75,7 +83,8 @@ def session_filename(started: float) -> str:
 
 
 def build_record(started, turns, *, app_version="", mode="",
-                 ui_language="", target_in="", target_out="", events=()) -> dict:
+                 ui_language="", target_in="", target_out="", events=(),
+                 source_track=()) -> dict:
     """Assemble a schema-v1 record from the in-memory turn list. `turns` is a
     list of {"t", "dir", "src", "text"} dicts (src may be empty).
 
@@ -109,6 +118,18 @@ def build_record(started, turns, *, app_version="", mode="",
              for e in (events or []) if str(e.get("msg", "")).strip()]
     if clean:
         record["events"] = clean
+    # Whitelisted the same way turns are, so the Bridge's internal bookkeeping
+    # (its merge watermark) cannot leak into the file.
+    track = [
+        {
+            "t": float(e.get("t", 0.0)),
+            "text": str(e.get("text", "")).strip(),
+            **({"leg": e["leg"]} if e.get("leg") else {}),
+        }
+        for e in (source_track or []) if str(e.get("text", "")).strip()
+    ]
+    if track:
+        record["source_track"] = track
     return record
 
 

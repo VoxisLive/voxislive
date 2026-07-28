@@ -351,6 +351,15 @@ class Bridge:
         # cannot answer "did it drop at 16:31?" — the status line scrolled past in
         # the UI and reached no file at all (session audit 2026-07-28).
         self._session_events: list[dict] = []
+        # The source (input-transcription) stream with ARRIVAL timestamps, kept
+        # independently of how it gets paired onto turns. The per-turn `src`
+        # field is a best-effort pairing built from a fixed lag estimate, and on
+        # an engine whose source stream trails the translation that estimate is
+        # wrong (see the SRC_LAG_S row in CLAUDE.md). Until now the record kept
+        # only the RESULT of that pairing, so a bad pairing could not even be
+        # measured after the fact, let alone re-derived. This track is the raw
+        # material: what arrived, and when.
+        self._src_track: list[dict] = []
         self._session_start = 0.0
         # Per-session output folder, decided at start so the transcript JSON, its
         # caption exports, and the optional dual-track WAVs all land together in
@@ -595,6 +604,7 @@ class Bridge:
             st.src_buf += text
             st.src_marks.append((now, len(st.src_buf)))
             st.last_src_t = now
+            self._track_source(now, text, leg)
             # Live "heard now" feed: the accumulating source utterance streams to
             # the UI's ghost line as it is spoken (the definitive, paired source
             # still lands with the 'src' event when its translation finalizes —
@@ -708,6 +718,33 @@ class Bridge:
         # to appear (see index.html onTrans) — skip the stager read otherwise.
         backlog = self.controller.current_playback_backlog() if newline else 0.0
         self._put_event(("trans", text, newline, hint, backlog, leg))
+
+    SRC_TRACK_MERGE_S = 1.0        # coalesce increments closer than this
+    SRC_TRACK_MAX = 4000           # bound the record; a long session stays sane
+
+    def _track_source(self, now: float, text: str, leg: str) -> None:
+        """Record a source increment with the time it ARRIVED. Caller holds
+        _text_lock.
+
+        Deltas land a few words at a time, so consecutive ones are merged into
+        the entry they continue — the useful resolution is "when did this
+        stretch of source arrive", not one row per token."""
+        text = text or ""
+        if not text.strip() or not self._session_start:
+            return
+        t = max(0.0, now - self._session_start)
+        last = self._src_track[-1] if self._src_track else None
+        if (last is not None and last.get("leg") == (leg if leg != "incoming" else None)
+                and now - last["_at"] <= self.SRC_TRACK_MERGE_S):
+            last["text"] += text
+            last["_at"] = now
+            return
+        if len(self._src_track) >= self.SRC_TRACK_MAX:
+            return
+        entry = {"t": t, "text": text, "_at": now}
+        if leg != "incoming":
+            entry["leg"] = leg
+        self._src_track.append(entry)
 
     def _last_turn_text(self, leg: str) -> str:
         """Text of the most recent turn recorded for `leg`. Caller holds
@@ -2511,6 +2548,7 @@ class Bridge:
             with self._text_lock:
                 self._turns = []
                 self._session_events = []
+                self._src_track = []
                 self._session_start = 0.0
                 self._session_dir = None
                 self._session_dirname = None
@@ -2604,6 +2642,7 @@ class Bridge:
             target_in=self.cfg.get("target_language_incoming", ""),
             target_out=self.cfg.get("target_language_outgoing", ""),
             events=list(self._session_events),
+            source_track=list(self._src_track),
         )
 
     def save_txt(self, silent=False):

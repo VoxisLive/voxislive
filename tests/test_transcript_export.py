@@ -144,3 +144,24 @@ def test_failed_save_preserves_the_previous_good_record(tmp_path, monkeypatch):
             str(tmp_path), {"version": 1, "turns": []}, subdir="voxis_atomic")
     assert ts.load_record(path) == good
     assert not list((tmp_path / "voxis_atomic").glob("*.tmp"))
+
+
+def test_source_track_is_omitted_when_empty():
+    turns = [{"t": 0.0, "dir": "out", "src": "hi", "text": "selam"}]
+    assert "source_track" not in ts.build_record(0.0, turns)
+    assert "source_track" not in ts.build_record(0.0, turns, source_track=[])
+
+
+def test_source_track_records_arrival_times_and_drops_internals():
+    """The per-turn `src` is a PAIRING; this track is what actually arrived and
+    when, so a wrong pairing can be measured and re-derived afterwards."""
+    turns = [{"t": 0.0, "dir": "out", "src": "", "text": "selam"}]
+    rec = ts.build_record(0.0, turns, source_track=[
+        {"t": 1.5, "text": "Hello there.", "_at": 999.0},
+        {"t": 4.0, "text": "  ", "_at": 999.0},          # blank: not an arrival
+        {"t": 6.0, "text": "How are you?", "leg": "outgoing", "_at": 999.0},
+    ])
+    assert rec["source_track"] == [
+        {"t": 1.5, "text": "Hello there."},
+        {"t": 6.0, "text": "How are you?", "leg": "outgoing"},
+    ]
