@@ -98,6 +98,9 @@ class QwenTranslator(BaseTranslator):
         # Cumulative-stream -> increment conversion state (out + in captions).
         self._out_acc = ""
         self._in_acc = ""
+        # Accumulators whose next increment opens a new sentence and must lead
+        # with a separator — see _delta and the *.done handler.
+        self._boundary_pending: set[str] = set()
         self._last_done_id = None
         # Duplicate-audio instrumentation (Ivo's "doubled audio" report). We do
         # NOT dedupe blind: the doubling may live in the user's capture/loopback
@@ -174,6 +177,11 @@ class QwenTranslator(BaseTranslator):
         # response id carried over from the previous session.
         self._out_acc = ""
         self._in_acc = ""
+        # A rotation clears the accumulators but NOT the caption line downstream,
+        # so the new session's first increment continues an open sentence and
+        # needs the same separator a *.done boundary gets. Harmless on the very
+        # first session: a leading space is stripped when the turn finalizes.
+        self._boundary_pending = {"_out_acc", "_in_acc"}
         self._last_done_id = None
         self._prev_audio = b""
 
@@ -188,16 +196,27 @@ class QwenTranslator(BaseTranslator):
     def _delta(self, acc_attr: str, txt: str) -> str:
         """Qwen's caption streams repeat CUMULATIVE text; the product transcript
         expects increments (Gemini semantics). Emit only what extends the
-        accumulator; genuinely new text after a reset is emitted whole."""
+        accumulator; genuinely new text after a reset is emitted whole.
+
+        Increments are concatenated raw downstream (webui `_cur_line += text`),
+        so a sentence boundary that clears the accumulator must carry its own
+        separator: without it the next response's first increment extends an
+        EMPTY accumulator and returns bare text, gluing two sentences together
+        ("bekleyelim.Bu arada,"). `_boundary_pending` marks those resets."""
         acc = getattr(self, acc_attr)
+        boundary = acc_attr in self._boundary_pending
         if txt.startswith(acc):
             inc = txt[len(acc):]
             setattr(self, acc_attr, txt)
+            if inc and boundary:
+                self._boundary_pending.discard(acc_attr)
+                return inc if inc[:1].isspace() else " " + inc
             return inc
         if acc.startswith(txt):
-            return ""
+            return ""            # no growth — the boundary stays pending
         setattr(self, acc_attr, txt)
-        return (" " if acc else "") + txt
+        self._boundary_pending.discard(acc_attr)
+        return (" " if acc or boundary else "") + txt
 
     def _detect_dup_audio(self, pcm: bytes) -> str | None:
         """Flag a translated-audio delta that duplicates the one before it.
@@ -272,6 +291,7 @@ class QwenTranslator(BaseTranslator):
                     if inc.strip():
                         self.on_text("out", inc)
                 self._out_acc = ""
+                self._boundary_pending.add("_out_acc")
                 self._mark_text_output()
             elif et.endswith(".failed") and "input_audio_transcription" in et:
                 # DashScope's ASR rejected this utterance server-side — no
