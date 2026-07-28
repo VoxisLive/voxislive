@@ -142,6 +142,56 @@ _DUP_NORM = str.maketrans("", "", ".,;:!?…\"'()-—–")
 _DUP_LEAD = ("yani", "ve", "ama", "so", "and", "but", "well", "okay", "tamam")
 
 
+INLINE_REPEAT_MIN_WORDS = 5     # below this a repeat is plausible speech
+
+
+def _strip_inline_repeat(text: str, threshold: float = 0.9) -> str:
+    """Drop an engine re-speak that repeats INSIDE one caption line.
+
+    The cross-turn guard (_near_duplicate) only compares whole turns, so it
+    never saw this shape:
+
+        A. <connective>, A. <tail>
+
+    where A is a full clause the engine emitted twice — measured at 4-8 % of all
+    caption words in two podcast sessions, identical in both runs of the same
+    video (2026-07-29). The AUDIO says A once; only the caption carries it
+    twice, which also inflated how much text looked "never spoken".
+
+    Conservative by construction, because this DELETES text: the repeat must be
+    at least INLINE_REPEAT_MIN_WORDS long, must not overlap its own first copy,
+    and must match at `threshold`. A short echo ("Evet. Evet.") is left alone —
+    that is plausible speech. Whatever follows the second copy is kept.
+    """
+    w = text.split()
+    n = len(w)
+    if n < 2 * INLINE_REPEAT_MIN_WORDS:
+        return text
+    key = [x.translate(_DUP_NORM).casefold() for x in w]
+    # Candidate restarts: positions that repeat the line's opening words. Cheap
+    # filter first — the full ratio check runs on a handful of positions, not on
+    # every (length, offset) pair, so this stays off the caption path's budget.
+    probe = key[:3]
+    starts = [i for i in range(INLINE_REPEAT_MIN_WORDS, n - INLINE_REPEAT_MIN_WORDS + 1)
+              if key[i:i + 3] == probe]
+    if not starts:
+        return text
+    import difflib
+    for i in starts:
+        ln = min(i, n - i)                      # longest non-overlapping copy
+        while ln >= INLINE_REPEAT_MIN_WORDS:
+            # The last words must match EXACTLY, or a fuzzy match is free to run
+            # one word past the real repeat and eat the first word of the tail —
+            # `threshold` tolerates a single mismatch in ten, and that mismatch
+            # would be a word the speaker actually said.
+            if (key[ln - 1] == key[i + ln - 1]
+                    and difflib.SequenceMatcher(None, key[:ln], key[i:i + ln],
+                                                autojunk=False).ratio() >= threshold):
+                return " ".join(w[:ln] + w[i + ln:])
+            ln -= 1
+    return text
+
+
 def _near_duplicate(prev: str, cur: str, threshold: float = 0.9) -> bool:
     """True when `cur` is an engine re-speak of `prev` rather than fresh speech.
 
@@ -645,7 +695,9 @@ class Bridge:
             or (overlong and st.cur_line.rstrip().endswith(SENTENCE_END))
             or len(st.cur_line) >= HARD_LINE_CHARS)
         if newline:
-            finished = st.cur_line.strip()
+            # Repair before anything reads the line: the cross-turn re-speak
+            # guard, the record and the exports must all see the same text.
+            finished = _strip_inline_repeat(st.cur_line.strip())
             st.cur_line = ""
             # The turn that just ended pairs with — and consumes — only the
             # source heard up to roughly SRC_LAG_S ago, not whatever has
@@ -2620,7 +2672,7 @@ class Bridge:
             self._turns.sort(key=lambda x: x.get("t", 0.0))
 
     def _flush_leg_locked(self, leg, st):
-            tail = st.cur_line.strip()
+            tail = _strip_inline_repeat(st.cur_line.strip())
             if not tail:
                 # No pending translation. If the whole session produced NO
                 # translation at all (Qwen can drop its text stream mid-session

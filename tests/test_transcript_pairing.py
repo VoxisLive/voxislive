@@ -322,3 +322,57 @@ def test_audio_track_survives_a_controller_without_the_counter():
     b._session_start = 100.0
     _feed(b, "out", "bir", 101.0)
     assert b._audio_track == []
+
+
+# --- engine re-speak INSIDE one caption line ---------------------------------
+
+def test_inline_respeak_is_removed_keeping_the_tail():
+    """Field shape (identical in two runs of the same video, 2026-07-29): the
+    engine emits a full clause twice inside ONE line, with a connective between.
+    The audio says it once — only the caption carries it twice. Whatever follows
+    the second copy is real speech and must survive."""
+    line = ("Ve daha fazlasi icin Leo English Podcast'e abone olmayi unutmayin. "
+            "Tamam, Ve daha fazlasi icin Leo English Podcast'e abone olmayi "
+            "unutmayin. pratik Ingilizce dersleri.")
+    out = webui._strip_inline_repeat(line)
+    assert out.count("abone olmayi unutmayin") == 1
+    assert out.endswith("pratik Ingilizce dersleri."), "tail must not be eaten"
+
+
+def test_inline_respeak_never_drops_a_word_of_the_tail():
+    """A fuzzy match may run one word past the real repeat; that word would be
+    something the speaker actually said."""
+    line = "bir iki uc dort bes alti X bir iki uc dort bes alti YENI kelime"
+    out = webui._strip_inline_repeat(line)
+    assert out.split()[-2:] == ["YENI", "kelime"]
+
+
+def test_short_repetition_is_left_alone():
+    """"Evet. Evet." is dialogue, not an artifact."""
+    for line in ("Evet. Evet.", "Tamam, tamam.", "Konusmaya devam et. Konusmaya devam et."):
+        assert webui._strip_inline_repeat(line) == line
+
+
+def test_ordinary_line_is_untouched():
+    line = "Bugun hava cok guzel ve yarin da guzel olacak diye dusunuyorum."
+    assert webui._strip_inline_repeat(line) == line
+
+
+def test_repaired_text_is_always_a_subsequence():
+    """The repair may only DELETE — never reorder or invent."""
+    line = ("aaa bbb ccc ddd eee fff ggg hhh "
+            "aaa bbb ccc ddd eee fff ggg hhh son kelime")
+    out = webui._strip_inline_repeat(line).split()
+    it = iter(line.split())
+    assert all(tok in it for tok in out)
+
+
+def test_finalized_turn_is_repaired():
+    b = _bare_bridge()
+    b._session_start = 100.0
+    dup = ("bugun daha sakin hissetmenize yardimci olmak istiyoruz daha net "
+           "yani bugun daha sakin hissetmenize yardimci olmak istiyoruz daha net")
+    _feed(b, "out", dup, 101.0)
+    b._flush_turns()
+    text = b._turns[0]["text"]
+    assert text.count("sakin hissetmenize") == 1
