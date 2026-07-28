@@ -18,24 +18,17 @@ def _bare_bridge():
     """A Bridge with only the transcript buffers wired up — no ModeController,
     no window — so the pure text-pairing logic can be driven directly."""
     b = object.__new__(Bridge)
+    # Per-direction accumulators (webui._LegState); a bare Bridge skips __init__.
+    b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
-    b._src_buf = ""
-    b._src_done = []
-    b._src_marks = []
-    b._last_src_t = 0.0
-    b._cur_line = ""
-    b._last_t = 0.0
     b._session_start = 0.0
-    b._turn_start = 0.0
     b._lines = []
     b._turns = []
     b._overlay_text = ""
     b._overlay_until = 0.0
     # Speaker-labeling state (see Bridge.__init__).
     b._cur_spk = None
-    b._src_spk = None
     b._spk_seen = set()
-    b._pending_spk_break = False
     b._put_event = lambda *a, **k: None      # swallow UI events
     b._obs_write = lambda *a, **k: None       # swallow OBS file writes
     # No live session/stager off this bare Bridge — backlog is always 0.
@@ -176,3 +169,95 @@ def test_opt_in_problem_report_keeps_source_only_recovery_text():
     b = _bare_bridge()
     b._turns = [{"src": "Recovered source", "text": ""}]
     assert b._collect_transcript() == "Recovered source"
+
+
+# --- turn-length safety valves ----------------------------------------------
+
+def test_continuous_stream_splits_at_a_sentence_end():
+    """LINE_GAP alone assumes the engine pauses between utterances. A
+    simultaneous engine that streams continuously never gives it that pause, so
+    one turn swallowed 20+ seconds of speech and rendered a 548-character
+    caption line (session audit 2026-07-28). Past MAX_LINE_CHARS the stream must
+    split — at a sentence end, not mid-clause."""
+    b = _bare_bridge()
+    b._session_start = 0.0
+    # Distinct sentences: identical ones would trip the re-speak guard instead
+    # and mask what this test is about.
+    sentences = [f"Bu {i} numarali cumle yeterince uzunlukta yazilmistir. "
+                 for i in range(8)]
+    tick = 0.0
+    # Feed continuously: every increment lands well inside LINE_GAP.
+    for s in sentences:
+        tick += 0.2
+        _feed(b, "out", s, tick)
+    b._flush_turns()
+    texts = [t["text"] for t in b._turns]
+    assert len(texts) > 1, "a continuous stream must still produce several turns"
+    assert all(len(x) <= webui.HARD_LINE_CHARS for x in texts)
+    # Every split landed on a sentence boundary — no clause was cut in half.
+    assert all(x.rstrip().endswith(webui.SENTENCE_END) for x in texts)
+    # Nothing was lost or duplicated in the split.
+    assert " ".join(texts).split() == "".join(sentences).split()
+
+
+def test_normal_length_turns_are_not_split():
+    """The valves must only catch pathological turns; an ordinary utterance
+    (~88 chars in the measured session) keeps its existing boundaries."""
+    b = _bare_bridge()
+    b._session_start = 0.0
+    _feed(b, "out", "Kisa bir cumle.", 0.1)
+    _feed(b, "out", " Devami da kisa.", 0.3)
+    b._flush_turns()
+    assert [t["text"] for t in b._turns] == ["Kisa bir cumle. Devami da kisa."]
+
+
+def test_run_on_without_punctuation_still_hits_a_hard_ceiling():
+    b = _bare_bridge()
+    b._session_start = 0.0
+    tick = 0.0
+    for i in range(12):
+        tick += 0.2
+        _feed(b, "out", f"kelime{i} " * 10, tick)
+    b._flush_turns()
+    assert all(len(t["text"]) <= webui.HARD_LINE_CHARS + 80 for t in b._turns)
+    assert len(b._turns) > 1
+
+
+# --- engine re-speak guard --------------------------------------------------
+
+def test_reworded_respeak_is_dropped():
+    """The re-speak after an internal reconnect is REGENERATED, so it comes back
+    lightly reworded. Exact equality let it through as a second turn that was
+    never spoken aloud (field session t=653 vs t=662)."""
+    line = "rezidans temel olarak 10 haftalik yogun yuz yuze bir programdir"
+    b = _bare_bridge()
+    b._session_start = 0.0
+    _feed(b, "out", line, 0.1)
+    _feed(b, "out", "Yani, " + line, 0.2 + webui.LINE_GAP)
+    b._flush_turns()
+    assert [t["text"] for t in b._turns] == [line]
+
+
+def test_genuine_repetition_of_a_short_line_is_kept():
+    """Short repeats are plausible dialogue and must survive the streaming
+    guard. (The stop-time tail guard drops an exact trailing repeat outright —
+    long-standing behaviour — so the repeat is checked mid-stream, not as the
+    session's last line.)"""
+    b = _bare_bridge()
+    b._session_start = 0.0
+    _feed(b, "out", "Evet.", 0.1)
+    _feed(b, "out", "Evet.", 0.2 + webui.LINE_GAP)
+    _feed(b, "out", "Devam edelim.", 0.3 + 2 * webui.LINE_GAP)
+    b._flush_turns()
+    assert [t["text"] for t in b._turns] == ["Evet.", "Evet.", "Devam edelim."]
+
+
+def test_different_long_sentences_are_both_kept():
+    a = "Rezidans on hafta surer ve tamamen yuz yuze yapilir burada."
+    c = "Yatirim komitesi onuncu haftada sanal olarak toplanacaktir."
+    b = _bare_bridge()
+    b._session_start = 0.0
+    _feed(b, "out", a, 0.1)
+    _feed(b, "out", c, 0.2 + webui.LINE_GAP)
+    b._flush_turns()
+    assert [t["text"] for t in b._turns] == [a, c]

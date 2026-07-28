@@ -10,6 +10,7 @@ wasted work — see _on_text_locked).
 import threading
 
 from app.pipeline import IncomingPipeline, ModeController
+import app.webui as webui
 from app.webui import Bridge, LINE_GAP
 
 
@@ -47,22 +48,16 @@ def test_current_playback_backlog_zero_when_idle():
 
 def _bare_bridge_with_backlog(backlog_s):
     b = object.__new__(Bridge)
+    # Per-direction accumulators (webui._LegState); a bare Bridge skips __init__.
+    b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
-    b._src_buf = ""
-    b._src_done = []
-    b._last_src_t = 0.0
-    b._cur_line = ""
-    b._last_t = 0.0
     b._session_start = 0.0
-    b._turn_start = 0.0
     b._lines = []
     b._turns = []
     b._overlay_text = ""
     b._overlay_until = 0.0
     b._cur_spk = None
-    b._src_spk = None
     b._spk_seen = set()
-    b._pending_spk_break = False
     b._src_append_target = None
     b.events = []
     b._put_event = b.events.append
