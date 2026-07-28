@@ -91,6 +91,16 @@ SPK_GAP = 0.7
 # exists to prevent.
 SRC_LAG_S = 3.0
 FADE_MS = 6.0
+# Turn-length safety valves for engines that never pause long enough to trip
+# LINE_GAP. Past MAX_LINE_CHARS (or MAX_LINE_SECONDS in one turn) the stream is
+# split at the NEXT sentence end, so the break lands on a real boundary rather
+# than mid-clause; HARD_LINE_CHARS splits regardless, for a run-on that never
+# punctuates. Chosen so a normal utterance (~88 chars in a measured session) is
+# never split and only the pathological ones are.
+MAX_LINE_CHARS = 180
+MAX_LINE_SECONDS = 12.0
+HARD_LINE_CHARS = 400
+SENTENCE_END = (".", "!", "?", "…", "。", "！", "？")
 # Prefetched session-key freshness window (seconds). Short on purpose so a
 # stale entry falls back to the normal synchronous fetch. Only RAW keys are
 # ever cached — a single-use ephemeral token (2-min new-session window,
@@ -121,6 +131,69 @@ def _cap_subtitle(text: str, limit: int = SUBTITLE_MAX) -> str:
     cut = text[-limit:]
     sp = cut.find(" ")
     return cut[sp + 1:] if 0 <= sp < 40 else cut
+
+
+_DUP_NORM = str.maketrans("", "", ".,;:!?…\"'()-—–")
+_DUP_LEAD = ("yani", "ve", "ama", "so", "and", "but", "well", "okay", "tamam")
+
+
+def _near_duplicate(prev: str, cur: str, threshold: float = 0.9) -> bool:
+    """True when `cur` is an engine re-speak of `prev` rather than fresh speech.
+
+    The re-speak after an internal reconnect is REGENERATED, so it returns
+    lightly reworded — different punctuation, or a leading connective bolted on.
+    Exact equality misses those, and the echo lands in the transcript as a
+    second turn that was never spoken aloud."""
+    def norm(s):
+        w = s.translate(_DUP_NORM).casefold().split()
+        while w and w[0] in _DUP_LEAD:
+            del w[0]
+        return w
+
+    a, b = norm(prev), norm(cur)
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    # Length alone rules most pairs out before the O(n^2) ratio is worth running.
+    if min(len(a), len(b)) / max(len(a), len(b)) < threshold:
+        return False
+    import difflib
+    return difflib.SequenceMatcher(None, a, b).ratio() >= threshold
+
+
+class _LegState:
+    """Per-direction transcript accumulators.
+
+    A meeting runs TWO translators — incoming (other party -> user) and outgoing
+    (user -> other party) — and both used to stream into one set of buffers, so
+    the two translations interleaved inside a single caption line and landed in
+    the record indistinguishable from each other. The lock around _on_text kept
+    that from corrupting the buffers, but it could not keep the two
+    CONVERSATIONS apart. Each leg now accumulates on its own; the turn list they
+    both append to stays shared, because the record is one chronological
+    timeline (turns carry `leg` to say which side spoke).
+
+    Video/Game mode only ever uses the incoming leg."""
+
+    __slots__ = ("cur_line", "last_t", "turn_start", "src_buf", "src_done",
+                 "src_marks", "last_src_t", "src_spk", "pending_spk_break")
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.cur_line = ""
+        self.last_t = 0.0
+        self.turn_start = 0.0
+        # See Bridge.__init__ for why the completed-source queue is a FIFO and
+        # what the marks are for.
+        self.src_buf = ""
+        self.src_done: list[tuple[int | None, str, float]] = []
+        self.src_marks: list[tuple[float, int]] = []
+        self.last_src_t = 0.0
+        self.src_spk: int | None = None
+        self.pending_spk_break = False
 
 
 def _autofill_meeting_devices(cfg):
@@ -227,8 +300,10 @@ class Bridge:
             on_speaker=self._on_speaker,
         )
 
-        self._lines, self._cur_line = [], ""
-        self._last_t = 0.0
+        self._lines = []
+        # Per-direction accumulators (see _LegState). Video/Game uses only the
+        # incoming leg; a meeting drives both from two translator threads.
+        self._legs = {"incoming": _LegState(), "outgoing": _LegState()}
         # Source-transcription stream, paired to translation turns by TIMESTAMP,
         # not by matching pause patterns between the two independent streams.
         # _src_buf accumulates the in-flight source utterance's deltas; a
@@ -241,15 +316,12 @@ class Bridge:
         # per-turn _cur_src clear wiped source belonging to a later turn,
         # blanking the JSON `src` field localization/dubbing relies on — Ivo,
         # 1.0.27). Each entry is (speaker, text, last_heard_ts) — see _pop_source.
-        self._src_buf = ""
-        self._src_done: list[tuple[int | None, str, float]] = []
-        self._last_src_t = 0.0
-        # Arrival checkpoints for the in-flight _src_buf: (timestamp, cumulative
-        # length in _src_buf at that point). Lets _pop_source(cutoff) return only
-        # the PREFIX of _src_buf that had arrived by cutoff — the rest (source
-        # heard after the finishing turn's own translation started) is left
-        # queued rather than handed to the wrong turn. See _pop_source.
-        self._src_marks: list[tuple[float, int]] = []
+        # These live on the leg (see _LegState) so a meeting's two directions
+        # cannot pair one side's source with the other side's translation.
+        # Arrival checkpoints (src_marks) are (timestamp, cumulative length in
+        # src_buf): they let _pop_source(cutoff) return only the PREFIX that had
+        # arrived by cutoff and leave the rest queued for a later turn.
+        #
         # Speaker labeling (local tracker, incoming direction). _cur_spk is the
         # label the tracker believes is talking NOW; _src_spk is the label the
         # in-flight source buffer STARTED under (the buffer finalizes on the
@@ -258,9 +330,7 @@ class Bridge:
         # deliberately language-neutral, like professional subtitle tags, so
         # exports read the same regardless of UI language.
         self._cur_spk: int | None = None
-        self._src_spk: int | None = None
         self._spk_seen: set[int] = set()
-        self._pending_spk_break = False
         self._session_file = None
         # Path of the transcript auto-saved by the most recent stop(). Unlike
         # _session_file it SURVIVES the stop-time buffer clear, so a user who
@@ -271,8 +341,12 @@ class Bridge:
         # Each entry: {"t": offset_s, "dir": "out", "src": str, "text": str}.
         # Parallel to self._lines (kept for the plain-text path); reset per session.
         self._turns = []
+        # Engine lifecycle (connect / renew / reconnect / watchdog) as timestamped
+        # entries, persisted alongside the turns. Without these a saved transcript
+        # cannot answer "did it drop at 16:31?" — the status line scrolled past in
+        # the UI and reached no file at all (session audit 2026-07-28).
+        self._session_events: list[dict] = []
         self._session_start = 0.0
-        self._turn_start = 0.0
         # Per-session output folder, decided at start so the transcript JSON, its
         # caption exports, and the optional dual-track WAVs all land together in
         # one self-contained directory (Ivo, 1.0.28). _session_dirname is the bare
@@ -439,13 +513,15 @@ class Bridge:
         self._enqueue(self._push_q, msg)
         self._enqueue(self._events, msg)
 
-    def _on_text(self, direction, text):
+    def _on_text(self, direction, text, leg="incoming"):
         # Meeting mode runs two translator receiver threads into this one method;
         # serialize so their read-modify-write on the shared transcript / overlay /
         # OBS state cannot interleave (which previously mispaired source vs
         # translation in exports and let both threads truncate the OBS file).
+        # `leg` says WHICH conversation side this text belongs to — the lock keeps
+        # the buffers consistent, only the leg keeps the two sides apart.
         with self._text_lock:
-            self._on_text_locked(direction, text)
+            self._on_text_locked(direction, text, leg)
 
     def _on_speaker(self, label: int):
         """Speaker-change event from the local tracker (its worker thread).
@@ -463,12 +539,16 @@ class Bridge:
             self._spk_seen.add(label)
             if prev is None:
                 return  # first assignment — nothing to split yet
-            buf = self._src_buf.strip()
+            # The tracker only listens to the INCOMING capture, so it may only
+            # ever split that leg's stream. The outgoing leg is the user's own
+            # single voice and is never labeled.
+            st = self._legs["incoming"]
+            buf = st.src_buf.strip()
             if buf:
-                self._src_done.append((self._src_spk, buf, self._last_src_t))
-                self._src_buf = ""
-                self._src_marks = []
-            self._pending_spk_break = True
+                st.src_done.append((st.src_spk, buf, st.last_src_t))
+                st.src_buf = ""
+                st.src_marks = []
+            st.pending_spk_break = True
 
     def _peek_spk(self) -> int | None:
         """Best-effort label for the translation line streaming NOW: the oldest
@@ -477,18 +557,20 @@ class Bridge:
         _text_lock."""
         if len(self._spk_seen) < 2:
             return None
-        if self._src_done:
-            return self._src_done[0][0]
-        return self._src_spk if self._src_buf else self._cur_spk
+        st = self._legs["incoming"]
+        if st.src_done:
+            return st.src_done[0][0]
+        return st.src_spk if st.src_buf else self._cur_spk
 
-    def _on_text_locked(self, direction, text):
+    def _on_text_locked(self, direction, text, leg="incoming"):
         now = time.time()
+        st = self._legs.get(leg) or self._legs["incoming"]
         if direction == "in":
             # Input transcription (what the speaker said). Accumulate per utterance
             # so a completed source can be paired with the translation turn it
             # produced. No UI event here — the source caption is attached when the
             # matching translation turn finalizes.
-            if self._src_buf and (now - self._last_src_t) > LINE_GAP:
+            if st.src_buf and (now - st.last_src_t) > LINE_GAP:
                 # A speech pause completed this source utterance — queue it for the
                 # translation turn it produced. Source leads the translation by the
                 # model's ear-voice lag, so it is queued before that turn finalizes.
@@ -498,36 +580,53 @@ class Bridge:
                 # utterance was last actually heard (_last_src_t), not "now" (the
                 # moment the gap was merely detected) — that's what _pop_source
                 # compares against a turn's own start time.
-                self._src_done.append((self._src_spk, self._src_buf.strip(), self._last_src_t))
-                self._src_buf = ""
-                self._src_marks = []
-            if not self._src_buf:
-                self._src_spk = self._cur_spk
-            self._src_buf += text
-            self._src_marks.append((now, len(self._src_buf)))
-            self._last_src_t = now
+                st.src_done.append((st.src_spk, st.src_buf.strip(), st.last_src_t))
+                st.src_buf = ""
+                st.src_marks = []
+            if not st.src_buf:
+                # Only the incoming capture is diarized; the outgoing leg is the
+                # user's own single voice.
+                st.src_spk = self._cur_spk if leg == "incoming" else None
+            st.src_buf += text
+            st.src_marks.append((now, len(st.src_buf)))
+            st.last_src_t = now
             # Live "heard now" feed: the accumulating source utterance streams to
             # the UI's ghost line as it is spoken (the definitive, paired source
             # still lands with the 'src' event when its translation finalizes —
             # source LEADS translation by the ear-voice lag, so the live text
             # must not be attached to the currently rendering turn).
-            self._put_event(("hear_live", self._src_buf.strip()))
+            # The ghost line shows what is being HEARD; the user's own speech is
+            # not "heard" in that sense, so only the incoming leg feeds it.
+            if leg == "incoming":
+                self._put_event(("hear_live", st.src_buf.strip()))
             return
         # direction == "out": the translated text stream.
         if not self._session_start:
-            # First translated token of the session anchors the timeline; turn
-            # offsets are measured from here (approximate caption sync).
+            # Fallback anchor only. _start sets this to the session's wall-clock
+            # start so cue offsets match the recording; this covers text arriving
+            # with no session behind it (tests drive _on_text directly).
             self._session_start = now
-        gap = now - self._last_t
+        gap = now - st.last_t
         # An armed speaker break fires at the next micro-pause: the model gives
         # no word timestamps, so the change cannot split the stream exactly —
         # the short output pause between the two voices' translations is the
         # best available seam.
-        newline = bool(self._cur_line) and (
-            gap > LINE_GAP or (self._pending_spk_break and gap > SPK_GAP))
+        # Safety valves. LINE_GAP alone assumes the engine pauses between
+        # utterances; a simultaneous engine streaming continuously never gives it
+        # that pause, so a single turn can swallow 20+ seconds of speech (a field
+        # session produced 548 characters in one caption line). Prefer a sentence
+        # boundary; fall back to a hard ceiling so a run-on cannot grow forever.
+        held = now - st.turn_start if st.turn_start else 0.0
+        overlong = (len(st.cur_line) >= MAX_LINE_CHARS
+                    or held >= MAX_LINE_SECONDS)
+        newline = bool(st.cur_line) and (
+            gap > LINE_GAP
+            or (st.pending_spk_break and gap > SPK_GAP)
+            or (overlong and st.cur_line.rstrip().endswith(SENTENCE_END))
+            or len(st.cur_line) >= HARD_LINE_CHARS)
         if newline:
-            finished = self._cur_line.strip()
-            self._cur_line = ""
+            finished = st.cur_line.strip()
+            st.cur_line = ""
             # The turn that just ended pairs with — and consumes — only the
             # source heard up to roughly SRC_LAG_S ago, not whatever has
             # piled up in the buffer by now. Translation trails source by the
@@ -537,7 +636,7 @@ class Bridge:
             # right now" over-claims into whichever turn happens to finish
             # first. See SRC_LAG_S for why this lag-adjusted "now" is used
             # instead of this turn's own start time.
-            spk, src = self._pop_source(now - SRC_LAG_S)
+            spk, src = self._pop_source(now - SRC_LAG_S, st)
             own_src = src or None
             if own_src:
                 # The label rides along only in a genuinely multi-speaker
@@ -545,49 +644,76 @@ class Bridge:
                 # never tagged "S1" on screen. The JSON turn keeps the raw
                 # label either way — export renderers apply the same gate.
                 self._put_event(("src", own_src,
-                                 spk if len(self._spk_seen) >= 2 else None))
+                                 spk if len(self._spk_seen) >= 2 else None, leg))
             # Engine re-speak guard: after an internal reconnect Gemini can
             # re-emit the tail utterance, producing two identical consecutive
             # turns (field transcript 2026-07-10, t=39s). A long turn that
             # exactly repeats the previous one is that artifact, not real
             # speech — keep the first, drop the echo. Short exact repeats
             # ("Evet." twice) are plausible dialogue and stay.
-            dup = (len(finished) >= 20 and self._turns
-                   and self._turns[-1].get("text") == finished)
+            #
+            # Matched on a NORMALIZED form: the re-speak is regenerated, not
+            # replayed, so it comes back lightly reworded — a leading connective
+            # or different punctuation defeated exact equality and let the echo
+            # through ("rezidans temel olarak 10 haftalık…" twice in a field
+            # session, spoken only once).
+            # Compared against this LEG's own previous turn: in a meeting the two
+            # sides interleave in the shared list, and the other side's line is
+            # never this side's echo.
+            prev = self._last_turn_text(leg)
+            dup = len(finished) >= 20 and bool(prev) and _near_duplicate(prev, finished)
             # Record the finalized turn with its start offset and paired source.
             if finished and not dup:
                 self._lines.append(finished)
                 self._last_line = finished   # survives stop(); see Bridge.__init__
                 turn = {
-                    "t": max(0.0, self._turn_start - self._session_start),
+                    "t": max(0.0, st.turn_start - self._session_start),
                     "dir": "out",
                     "src": own_src,
                     "text": finished,
                 }
                 if spk is not None:
                     turn["spk"] = spk
+                # Schema-additive, and only in a meeting: a Video/Game record must
+                # stay byte-identical to what it was before legs existed.
+                if getattr(self.controller, "mode", None) == "meeting":
+                    turn["leg"] = leg
                 self._turns.append(turn)
-        if not self._cur_line:
+        if not st.cur_line:
             # Mark when this (new) turn began so its cue start is the speech
             # onset, not the moment it finalized one LINE_GAP later. A fresh
             # turn boundary also satisfies any armed speaker break.
-            self._turn_start = now
-            self._pending_spk_break = False
-        self._cur_line += text
-        self._last_t = now
-        line = self._cur_line.strip()
-        hint = self._peek_spk()
+            st.turn_start = now
+            st.pending_spk_break = False
+        st.cur_line += text
+        st.last_t = now
+        line = st.cur_line.strip()
+        # Speaker labels come from the incoming capture only.
+        hint = self._peek_spk() if leg == "incoming" else None
         if hint is not None:
             line = f"S{hint}: {line}"
-        self._overlay_text = line
-        self._overlay_until = now + FADE_MS
-        self._obs_write(line)
+        # The overlay and the OBS file are single-line surfaces: the OTHER party
+        # is what the user needs read back to them, so the outgoing leg (their
+        # own words) never takes them over.
+        if leg == "incoming":
+            self._overlay_text = line
+            self._overlay_until = now + FADE_MS
+            self._obs_write(line)
         # Backlog only matters to the client when a NEW caption line is about
         # to appear (see index.html onTrans) — skip the stager read otherwise.
         backlog = self.controller.current_playback_backlog() if newline else 0.0
-        self._put_event(("trans", text, newline, hint, backlog))
+        self._put_event(("trans", text, newline, hint, backlog, leg))
 
-    def _pop_source(self, cutoff: float | None = None) -> tuple[int | None, str]:
+    def _last_turn_text(self, leg: str) -> str:
+        """Text of the most recent turn recorded for `leg`. Caller holds
+        _text_lock."""
+        for turn in reversed(self._turns):
+            if turn.get("leg", "incoming") == leg:
+                return turn.get("text", "")
+        return ""
+
+    def _pop_source(self, cutoff: float | None = None,
+                    st: "_LegState | None" = None) -> tuple[int | None, str]:
         """(speaker, text) for the translation turn that just finalized.
 
         `cutoff` is `now - SRC_LAG_S` (see that constant), captured by the
@@ -605,39 +731,41 @@ class Bridge:
         the previous cutoff-free version, which handed whatever the source
         stream had reached by the time output happened to pause —
         systematically over-claiming into the turn that finished first."""
-        while self._src_done:
-            spk, src, ts = self._src_done[0]
+        st = st if st is not None else self._legs["incoming"]
+        while st.src_done:
+            spk, src, ts = st.src_done[0]
             if cutoff is not None and ts > cutoff:
                 break  # not yet "reached" by this turn — leave queued
-            self._src_done.pop(0)
+            st.src_done.pop(0)
             src = src.strip()
             if src:
                 return spk, src
         if cutoff is None:
-            src = self._src_buf.strip()
-            self._src_buf = ""
-            self._src_marks = []
-            return (self._src_spk if src else self._cur_spk), src
-        if not self._src_buf or not self._src_marks:
-            return self._src_spk, ""
+            src = st.src_buf.strip()
+            st.src_buf = ""
+            st.src_marks = []
+            return (st.src_spk if src else self._cur_spk), src
+        if not st.src_buf or not st.src_marks:
+            return st.src_spk, ""
         split_len, idx = 0, 0
-        for i, (ts, ln) in enumerate(self._src_marks):
+        for i, (ts, ln) in enumerate(st.src_marks):
             if ts > cutoff:
                 break
             split_len, idx = ln, i + 1
         if split_len <= 0:
-            return self._src_spk, ""
-        src = self._src_buf[:split_len].strip()
-        self._src_buf = self._src_buf[split_len:]
-        self._src_marks = [(ts, ln - split_len) for ts, ln in self._src_marks[idx:]]
-        return self._src_spk, src
+            return st.src_spk, ""
+        src = st.src_buf[:split_len].strip()
+        st.src_buf = st.src_buf[split_len:]
+        st.src_marks = [(ts, ln - split_len) for ts, ln in st.src_marks[idx:]]
+        return st.src_spk, src
 
-    def _pending_source(self) -> str:
+    def _pending_source(self, st: "_LegState | None" = None) -> str:
         """All source not yet paired to a turn (queue + in-flight buffer), for the
         stop-time flush of a source-only session. Caller holds _text_lock."""
-        parts = [s for _, s, _ts in self._src_done if s.strip()]
-        if self._src_buf.strip():
-            parts.append(self._src_buf.strip())
+        st = st if st is not None else self._legs["incoming"]
+        parts = [s for _, s, _ts in st.src_done if s.strip()]
+        if st.src_buf.strip():
+            parts.append(st.src_buf.strip())
         return " ".join(parts).strip()
 
     def _emit_status(self, msg, level="info"):
@@ -669,7 +797,28 @@ class Bridge:
         # ModeController only forwards a localized string. Treat its events as
         # informational; error-badge state is set explicitly by the paths that
         # actually fail (e.g. _start), not by parsing a translated prefix.
+        self._record_session_event(msg)
         self._emit_status(msg, "info")
+
+    def _record_session_event(self, msg):
+        """Keep an engine-lifecycle line in the session record.
+
+        This channel carries only ModeController/translator events (connect,
+        rotation, reconnect, watchdog trips), so everything arriving here belongs
+        in the saved transcript. Bounded: a flapping link must not grow the record
+        without limit — the oldest entries are the least interesting once a
+        session has been dropping for a while."""
+        if not isinstance(msg, str) or not msg.strip():
+            return
+        with self._text_lock:
+            if not self._session_start:
+                return                      # no active session — nothing to anchor to
+            self._session_events.append({
+                "t": max(0.0, time.time() - self._session_start),
+                "msg": msg,
+            })
+            if len(self._session_events) > 200:
+                del self._session_events[:-200]
 
     def _on_usage_reported(self):
         self._put_event(("quota_refresh", None))
@@ -2097,11 +2246,30 @@ class Bridge:
                 # JSON saved on stop share one folder + stamp. The folder itself is
                 # created lazily on first write (recorder / save_txt), so a blocked
                 # Documents dir can't fail the start here.
-                self._session_dirname = transcript_store.session_dir_name(time.time())
+                t0 = time.time()
+                self._session_dirname = transcript_store.session_dir_name(t0)
                 self._session_dir = os.path.join(self._transcript_dir(),
                                                  self._session_dirname)
-                started = self.controller.start(mode, session_dir=self._session_dir)
+                # Anchor the transcript timeline to the SESSION, not to the first
+                # translated token. Capture (and the WAV recorder) start here, so
+                # turn offsets — and therefore every exported cue — line up with
+                # the recording; anchoring on first output silently shifted them
+                # by however long the room stayed quiet (7m46s in one field
+                # session). Sharing t0 with the folder stamp also keeps the JSON's
+                # `started` equal to the folder name it sits in. Set BEFORE start()
+                # so the engine's own connect/reconnect events can be timestamped.
+                with self._text_lock:
+                    self._session_start = t0
+                try:
+                    started = self.controller.start(mode, session_dir=self._session_dir)
+                except BaseException:
+                    with self._text_lock:
+                        self._session_start = 0.0
+                    raise
                 if started is False:
+                    with self._text_lock:
+                        self._session_start = 0.0
+                        self._session_events = []
                     self._badge = (t("badge_idle"), "#8593a6", "")
                     return
                 self._badge = (t("badge_active", mode=self._mode_name(mode)), "#34d399", "on")
@@ -2312,16 +2480,16 @@ class Bridge:
             # Guarded by _text_lock against any still-draining _on_text call.
             with self._text_lock:
                 self._turns = []
+                self._session_events = []
                 self._session_start = 0.0
-                self._turn_start = 0.0
                 self._session_dir = None
                 self._session_dirname = None
                 self._session_file = None
-                self._lines, self._cur_line = [], ""
-                self._src_buf, self._src_done, self._src_marks = "", [], []
-                self._cur_spk, self._src_spk = None, None
+                self._lines = []
+                for st in self._legs.values():
+                    st.reset()
+                self._cur_spk = None
                 self._spk_seen = set()
-                self._pending_spk_break = False
         # Tell the user where the auto-saved transcript went and offer open/reveal
         # actions, so pressing Stop confirms the save instead of leaving them to
         # click "Save transcript" and hit "nothing to save". Remember the path so
@@ -2339,9 +2507,18 @@ class Bridge:
         stopped mid-utterance still records its last line. Idempotent.
 
         Runs at stop() before the translators are joined, so it can race a live
-        _on_text — take the same lock to keep the shared buffers consistent."""
+        _on_text — take the same lock to keep the shared buffers consistent.
+
+        Both meeting legs are folded, then the shared turn list is re-sorted so
+        the record stays one chronological timeline regardless of which side
+        happened to be mid-utterance at stop."""
         with self._text_lock:
-            tail = self._cur_line.strip()
+            for leg, st in self._legs.items():
+                self._flush_leg_locked(leg, st)
+            self._turns.sort(key=lambda x: x.get("t", 0.0))
+
+    def _flush_leg_locked(self, leg, st):
+            tail = st.cur_line.strip()
             if not tail:
                 # No pending translation. If the whole session produced NO
                 # translation at all (Qwen can drop its text stream mid-session
@@ -2351,7 +2528,7 @@ class Bridge:
                 # lossy — instead of being reported as "nothing to save" and lost.
                 # A normal session already has turns/lines, so this never adds a
                 # spurious trailing source-only turn to it.
-                pend_src = self._pending_source()
+                pend_src = self._pending_source(st)
                 if pend_src and not self._turns and not self._lines:
                     if not self._session_start:
                         self._session_start = time.time()
@@ -2359,15 +2536,20 @@ class Bridge:
                         "t": 0.0, "dir": "out", "src": pend_src, "text": "",
                     })
                 return
-            if self._turns and self._turns[-1].get("text") == tail:
+            # Same re-speak guard the streaming path applies (see _near_duplicate):
+            # an exact tail repeat is always the echo, and a long reworded one is
+            # too. A short reworded line stays — it is plausible dialogue.
+            prev = self._last_turn_text(leg)
+            if prev and (prev == tail
+                         or (len(tail) >= 20 and _near_duplicate(prev, tail))):
                 return
             if not self._session_start:
                 self._session_start = time.time()
-            start = self._turn_start or self._session_start
+            start = st.turn_start or self._session_start
             # This is the session's LAST turn — take everything remaining
             # unconditionally (cutoff=None); there is no later turn to hand
             # off leftover source to.
-            spk, src = self._pop_source(None)
+            spk, src = self._pop_source(None, st)
             own_src = src or None
             turn = {
                 "t": max(0.0, start - self._session_start),
@@ -2377,6 +2559,9 @@ class Bridge:
             }
             if spk is not None:
                 turn["spk"] = spk
+            if getattr(self.controller, "mode", None) == "meeting":
+                turn["leg"] = leg
+            st.cur_line = ""          # folded — a second flush must be a no-op
             self._turns.append(turn)
 
     def _build_record(self):
@@ -2388,6 +2573,7 @@ class Bridge:
             ui_language=self.cfg.get("ui_language", ""),
             target_in=self.cfg.get("target_language_incoming", ""),
             target_out=self.cfg.get("target_language_outgoing", ""),
+            events=list(self._session_events),
         )
 
     def save_txt(self, silent=False):

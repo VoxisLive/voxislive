@@ -1213,16 +1213,31 @@ class ModeController:
         self.cfg["_pending_default_restore"] = None
         save_config(self.cfg)
 
+    def _text_sink(self, leg: str):
+        """Bind the caption callback to a conversation side.
+
+        Both meeting pipelines feed the same sink, so without this tag the two
+        translations interleave into one caption line and land in the transcript
+        indistinguishable from each other. Falls back to the untagged call for a
+        consumer that predates the leg argument (tests with a 2-arg stub)."""
+        def sink(direction, text):
+            try:
+                self.on_text(direction, text, leg)
+            except TypeError:
+                self.on_text(direction, text)
+        return sink
+
     def _build(self, mode: str) -> list:
         resolve = self.resolve
         session_dir = getattr(self, "_session_dir_out", None)
         if mode == "video":
-            return [IncomingPipeline(self.cfg, resolve, mode, self.on_text,
+            return [IncomingPipeline(self.cfg, resolve, mode,
+                                     self._text_sink("incoming"),
                                      self.on_status, session_dir=session_dir,
                                      on_speaker=self.on_speaker)]
         if mode == "meeting":
             pipes = [IncomingPipeline(self.cfg, resolve, "meeting",
-                                      self.on_text, self.on_status,
+                                      self._text_sink("incoming"), self.on_status,
                                       session_dir=session_dir,
                                       on_speaker=self.on_speaker)]
             try:
@@ -1230,7 +1245,8 @@ class ModeController:
                 # none is installed, the meeting gracefully falls back to
                 # listen-only.
                 pipes.append(OutgoingPipeline(self.cfg, resolve,
-                                              self.on_text, self.on_status))
+                                              self._text_sink("outgoing"),
+                                              self.on_status))
                 self._outgoing_ok = True
             except Exception:
                 self._outgoing_ok = False
@@ -1506,11 +1522,22 @@ class ModeController:
                 # which is exactly the bug this fixes.
                 self._start_volume_mirror()
                 self.on_status(t("st_mode_started", mode=mode))
-                voxis_client.report_event_async("session_live", sid, {
+                meta = {
                     "mode": mode,
                     "backend": self.cfg.get("capture_backend", "driverless"),
                     "engine": self.current_engine() or "",
-                })
+                }
+                if mode == "meeting":
+                    # Whether the OUTGOING leg actually came up (it needs a virtual
+                    # mic; without one the meeting degrades to listen-only). Pure
+                    # telemetry: it tells the cost dashboard how many meeting
+                    # minutes really ran two concurrent engines. Deliberately NOT
+                    # folded into the heartbeat's `source` — the server keys its
+                    # billing multiplier off that exact string
+                    # (handlers/usage.go billableMinutes), so changing it would
+                    # move money, and meeting is intentionally billed 1:1.
+                    meta["two_way"] = bool(getattr(self, "_outgoing_ok", False))
+                voxis_client.report_event_async("session_live", sid, meta)
                 return True
             except Exception as e:
                 for p in pipes:
