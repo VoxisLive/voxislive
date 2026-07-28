@@ -37,6 +37,10 @@ except ImportError:
 # inside the pipeline constructors so the heavy runtimes don't load until a
 # session actually starts — shaving ~1-2 s off cold app startup.
 _FRAME = 512  # 32 ms @ 16 kHz — Silero VAD v5 frame size
+# Translated-speech sample rate every engine emits (PCM16 mono). Only used to
+# convert produced BYTES into seconds for the audio track; the playback path
+# still passes 24000 explicitly where it configures devices.
+TTS_RATE = 24000
 
 
 def _f32_to_pcm16(x: np.ndarray) -> bytes:
@@ -369,8 +373,22 @@ class IncomingPipeline:
         # Bounded and audible-only: silence would replay as a dead button.
         self._pro_ring: collections.deque = collections.deque()
         self._pro_ring_bytes = 0
+        # Cumulative seconds of translated speech the engine has produced this
+        # session (see _tts_sink). Read by the bridge to record an audio track
+        # alongside the caption track, so "this text was never spoken" becomes
+        # measurable instead of anecdotal.
+        self._tts_seconds = 0.0
+        self._tts_rate = TTS_RATE
 
         def _tts_sink(data: bytes):
+            # Counted FIRST, before any branch that can return early (preview
+            # mute, cascade): this is "how much translated speech the engine
+            # produced", not "how much reached the speakers". A field session
+            # spoke only ~90 % of the words its captions showed and there was no
+            # way to see where the rest went — the caption stream was recorded,
+            # the audio stream was not. Bytes -> seconds at the engine's own
+            # output rate; PCM16 mono, hence /2.
+            self._tts_seconds += len(data) / (self._tts_rate * 2)
             # Gate the first-audio metric on AUDIBLE output: an initial near-silent
             # / padding chunk would otherwise understate latency.
             a = np.frombuffer(data, dtype=np.int16)
@@ -1307,6 +1325,16 @@ class ModeController:
             if live and tr.is_alive():
                 return True
         return False
+
+    def translated_audio_seconds(self) -> float:
+        """Seconds of translated speech produced so far this session.
+
+        Summed across pipelines (a meeting produces on both legs). Cheap enough
+        to sample from the caption path — it is a float read, no lock."""
+        total = 0.0
+        for p in self._pipelines:
+            total += float(getattr(p, "_tts_seconds", 0.0) or 0.0)
+        return total
 
     def _speech_idle_seconds(self) -> float:
         """Seconds since ANY pipeline last heard speech (inf when unknowable).

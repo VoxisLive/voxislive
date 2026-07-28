@@ -2,6 +2,7 @@
 the same interval must never be consumable twice, and outage time must be
 skipped (not deferred)."""
 import time
+import types
 
 from app.pipeline import ModeController
 
@@ -122,3 +123,22 @@ def test_idle_notice_fires_once_per_transition():
     mc._update_idle_notice(True)      # still idle — no repeat
     mc._update_idle_notice(False)
     assert len(seen) == 2
+
+
+# --- produced translated speech ---------------------------------------------
+
+def test_translated_audio_seconds_sums_both_meeting_legs():
+    """A meeting produces speech on both legs; the track must account for all
+    of it, or a two-way session would look like it spoke half as much."""
+    from app.pipeline import ModeController
+    mc = object.__new__(ModeController)
+    mc._pipelines = [types.SimpleNamespace(_tts_seconds=12.5),
+                     types.SimpleNamespace(_tts_seconds=3.25)]
+    assert mc.translated_audio_seconds() == 15.75
+
+
+def test_translated_audio_seconds_ignores_a_pipeline_without_the_counter():
+    from app.pipeline import ModeController
+    mc = object.__new__(ModeController)
+    mc._pipelines = [object(), types.SimpleNamespace(_tts_seconds=2.0)]
+    assert mc.translated_audio_seconds() == 2.0

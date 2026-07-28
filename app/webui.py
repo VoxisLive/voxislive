@@ -360,6 +360,11 @@ class Bridge:
         # measured after the fact, let alone re-derived. This track is the raw
         # material: what arrived, and when.
         self._src_track: list[dict] = []
+        # Its counterpart on the OUTPUT side: cumulative seconds of
+        # translated speech the engine produced, sampled on the caption
+        # clock. Together the two tracks say what was heard, what was
+        # shown, and where the two diverge.
+        self._audio_track: list[dict] = []
         self._session_start = 0.0
         # Per-session output folder, decided at start so the transcript JSON, its
         # caption exports, and the optional dual-track WAVs all land together in
@@ -702,6 +707,7 @@ class Bridge:
             st.pending_spk_break = False
         st.cur_line += text
         st.last_t = now
+        self._track_audio(now)
         line = st.cur_line.strip()
         # Speaker labels come from the incoming capture only.
         hint = self._peek_spk() if leg == "incoming" else None
@@ -721,6 +727,33 @@ class Bridge:
 
     SRC_TRACK_MERGE_S = 1.0        # coalesce increments closer than this
     SRC_TRACK_MAX = 4000           # bound the record; a long session stays sane
+
+    def _track_audio(self, now: float) -> None:
+        """Sample how much translated speech has been produced, on the caption
+        clock. Caller holds _text_lock.
+
+        The caption stream was already recorded; the audio stream was not, so a
+        session that SPOKE less than it CAPTIONED (a measured 968 spoken words
+        against 1067 captioned) left no evidence of where the difference went.
+        Sampling here rather than on a timer keeps it free of new threads and
+        puts the samples exactly where they matter — while text is flowing."""
+        if not self._session_start:
+            return
+        fn = getattr(self.controller, "translated_audio_seconds", None)
+        if not callable(fn):
+            return
+        try:
+            sec = float(fn())
+        except Exception:
+            return                          # instrumentation must never break a session
+        t = max(0.0, now - self._session_start)
+        last = self._audio_track[-1] if self._audio_track else None
+        if last is not None and t - last["t"] <= self.SRC_TRACK_MERGE_S:
+            last["sec"] = sec               # same bucket: keep the latest total
+            return
+        if len(self._audio_track) >= self.SRC_TRACK_MAX:
+            return
+        self._audio_track.append({"t": t, "sec": sec})
 
     def _track_source(self, now: float, text: str, leg: str) -> None:
         """Record a source increment with the time it ARRIVED. Caller holds
@@ -2549,6 +2582,7 @@ class Bridge:
                 self._turns = []
                 self._session_events = []
                 self._src_track = []
+                self._audio_track = []
                 self._session_start = 0.0
                 self._session_dir = None
                 self._session_dirname = None
@@ -2643,6 +2677,7 @@ class Bridge:
             target_out=self.cfg.get("target_language_outgoing", ""),
             events=list(self._session_events),
             source_track=list(self._src_track),
+            audio_track=list(self._audio_track),
         )
 
     def save_txt(self, silent=False):

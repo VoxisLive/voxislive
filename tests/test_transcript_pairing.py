@@ -22,6 +22,7 @@ def _bare_bridge():
     b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
     b._src_track = []
+    b._audio_track = []
     b._session_start = 0.0
     b._lines = []
     b._turns = []
@@ -296,3 +297,28 @@ def test_source_track_is_bounded():
     for i in range(b.SRC_TRACK_MAX + 50):
         _feed(b, "in", f"w{i}", 101.0 + i * 2.0)   # each past the merge window
     assert len(b._src_track) == b.SRC_TRACK_MAX
+
+
+# --- translated-audio track --------------------------------------------------
+
+def test_audio_track_samples_produced_speech():
+    b = _bare_bridge()
+    b._session_start = 100.0
+    produced = {"s": 0.0}
+    b.controller = type("C", (), {
+        "current_playback_backlog": lambda self: 0.0,
+        "translated_audio_seconds": lambda self: produced["s"],
+        "mode": "video"})()
+    _feed(b, "out", "bir", 101.0)
+    produced["s"] = 4.0
+    _feed(b, "out", "iki", 105.0)          # past the merge window
+    assert [(round(e["t"], 1), e["sec"]) for e in b._audio_track] == [(1.0, 0.0), (5.0, 4.0)]
+
+
+def test_audio_track_survives_a_controller_without_the_counter():
+    """Instrumentation must never break a session: an older/stub controller just
+    yields no samples."""
+    b = _bare_bridge()
+    b._session_start = 100.0
+    _feed(b, "out", "bir", 101.0)
+    assert b._audio_track == []
