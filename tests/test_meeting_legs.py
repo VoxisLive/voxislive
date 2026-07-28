@@ -22,6 +22,7 @@ def _bridge(mode="meeting"):
     b = object.__new__(Bridge)
     b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
+    b._src_track = []
     b._session_start = 0.0
     b._lines = []
     b._turns = []
