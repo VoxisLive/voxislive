@@ -102,6 +102,90 @@ def test_qwen_delta_cumulative_to_increments():
     assert tr._delta("_out_acc", "Bye") == " Bye"
 
 
+def test_qwen_sentence_boundary_keeps_the_separator():
+    """A *.done clears the accumulator, so the next response's first increment
+    extends an EMPTY one. Without a separator it returns bare text and webui's
+    `_cur_line += text` glues two sentences into one word."""
+    tr = _make(qwen.QwenTranslator)
+    assert tr._delta("_out_acc", "Bir dakika bekleyelim.") == "Bir dakika bekleyelim."
+    # The *.done handler's reset (qwen_translator: response.*.done branch).
+    tr._out_acc = ""
+    tr._boundary_pending.add("_out_acc")
+    assert tr._delta("_out_acc", "Bu arada,") == " Bu arada,"
+    # The boundary is spent — mid-sentence growth must not gain a space.
+    assert tr._delta("_out_acc", "Bu arada, eğer") == " eğer"
+
+
+def test_qwen_boundary_survives_a_no_growth_event():
+    """A repeated cumulative event emits nothing; the pending boundary must
+    still apply to the next event that DOES carry new text."""
+    tr = _make(qwen.QwenTranslator)
+    tr._out_acc = ""
+    tr._boundary_pending.add("_out_acc")
+    assert tr._delta("_out_acc", "") == ""
+    assert tr._delta("_out_acc", "Tamam.") == " Tamam."
+
+
+def test_qwen_boundary_does_not_double_space():
+    """Qwen sometimes sends its own leading space — never emit two."""
+    tr = _make(qwen.QwenTranslator)
+    tr._out_acc = ""
+    tr._boundary_pending.add("_out_acc")
+    assert tr._delta("_out_acc", " Tamam.") == " Tamam."
+
+
+def test_qwen_rotation_boundary_keeps_the_separator():
+    """A 13-min rotation clears the accumulators but not the open caption line
+    downstream, so the new session's first increment needs the separator too."""
+    tr = _make(qwen.QwenTranslator)
+    assert tr._delta("_out_acc", "Önceki oturumun sonu.") == "Önceki oturumun sonu."
+    tr._reset_session_state()
+    assert tr._delta("_out_acc", "Yeni oturum.") == " Yeni oturum."
+
+
+def test_qwen_full_event_stream_spaces_every_sentence():
+    """End-to-end over the real event shape (delta…delta, done, delta…) —
+    the field transcript rendered 'bekleyelim.Bu arada,Eğer giderseniz'."""
+    tr = _make(qwen.QwenTranslator)
+    line = ""
+    stream = [
+        ("delta", "Bir"), ("delta", "Bir dakika"), ("delta", "Bir dakika bekleyelim."),
+        ("done", "Bir dakika bekleyelim."),
+        ("delta", "Bu"), ("delta", "Bu arada,"), ("done", "Bu arada,"),
+        ("delta", "Eğer"), ("delta", "Eğer giderseniz"), ("done", "Eğer giderseniz"),
+    ]
+    for kind, txt in stream:
+        inc = tr._delta("_out_acc", txt)
+        if inc.strip():
+            line += inc
+        if kind == "done":                    # mirrors the response.*.done branch
+            tr._out_acc = ""
+            tr._boundary_pending.add("_out_acc")
+    assert line == "Bir dakika bekleyelim. Bu arada, Eğer giderseniz"
+
+
+def test_give_up_is_logged(caplog):
+    """Connection lifecycle used to reach the log file nowhere: base_translator
+    did not import logging at all, so a field report of "it reconnected and
+    dropped" had zero telemetry behind it (session audit 2026-07-28)."""
+    import logging
+    tr = _make(qwen.QwenTranslator)
+    with caplog.at_level(logging.INFO, logger="voxis"):
+        tr._give_up(RuntimeError("arrearage"))
+    assert any(r.levelno >= logging.ERROR and "abandoning the reconnect loop" in r.message
+               for r in caplog.records)
+    assert "arrearage" in caplog.text
+
+
+def test_give_up_logs_when_a_substitute_engine_takes_over(caplog):
+    import logging
+    tr = _make(qwen.QwenTranslator)
+    tr.on_fatal = lambda exc: True          # a replacement engine handled it
+    with caplog.at_level(logging.INFO, logger="voxis"):
+        tr._give_up(RuntimeError("quota"))
+    assert "a substitute engine took over" in caplog.text
+
+
 def test_qwen_duplicate_audio_detection():
     import numpy as np
     tr = _make(qwen.QwenTranslator)
@@ -201,7 +285,8 @@ def test_ws_main_sets_ready_only_after_session_event():
     assert ws.closed
 
 
-def test_ws_main_terminal_error_breaks_without_retry():
+def test_ws_main_terminal_error_breaks_without_retry(caplog):
+    import logging
     connects = []
     ws = _FakeWS(['{"type":"error","error":"unauthorized"}'])
 
@@ -209,10 +294,13 @@ def test_ws_main_terminal_error_breaks_without_retry():
         connects.append(1)
         return ws
 
-    tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
-    tr.join(timeout=6.0)
+    with caplog.at_level(logging.INFO, logger="voxis"):
+        tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
+        tr.join(timeout=6.0)
     assert not tr.is_alive()
     assert len(connects) == 1  # terminal → no reconnect spin
+    # The classification that ended the session must be in the log, not just on screen.
+    assert "terminal error, not retrying" in caplog.text
 
 
 def test_no_output_watchdog_self_heals_by_reconnecting():
@@ -255,7 +343,8 @@ def test_no_output_watchdog_self_heals_by_reconnecting():
     assert not tr.is_alive()
 
 
-def test_ws_main_transient_error_retries_then_succeeds():
+def test_ws_main_transient_error_retries_then_succeeds(caplog):
+    import logging
     calls = {"n": 0}
     ws = _FakeWS(['{"type":"session.updated"}'])
 
@@ -265,14 +354,18 @@ def test_ws_main_transient_error_retries_then_succeeds():
             raise ConnectionError("temporary reset")
         return ws
 
-    tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
-    try:
-        assert tr.wait_ready(8.0)   # succeeds on the 2nd attempt after backoff
-        assert calls["n"] == 2
-    finally:
-        tr.stop()
-        tr.join(timeout=6.0)
+    with caplog.at_level(logging.INFO, logger="voxis"):
+        tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
+        try:
+            assert tr.wait_ready(8.0)   # succeeds on the 2nd attempt after backoff
+            assert calls["n"] == 2
+        finally:
+            tr.stop()
+            tr.join(timeout=6.0)
     assert not tr.is_alive()
+    # Both the retry and the recovery are traceable after the fact.
+    assert "transient error" in caplog.text and "temporary reset" in caplog.text
+    assert "session connected" in caplog.text
 
 
 # --- driven _main loop: Gemini SDK family -----------------------------------
