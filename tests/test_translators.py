@@ -458,3 +458,80 @@ def test_gemini_goaway_rotates_and_keeps_resume_handle(monkeypatch):
         tr.stop()
         tr.join(timeout=5.0)
     assert not tr.is_alive()
+
+
+# --- per-response audio/text accounting -------------------------------------
+
+def _resp_translator():
+    tr = _make(qwen.QwenTranslator)
+    tr._resp, tr._cur_resp = {}, None
+    tr._silent_resp = tr._silent_chars = 0
+    return tr
+
+
+def test_response_with_text_but_no_audio_is_reported(caplog):
+    """Two recorded sessions captioned more than they spoke. Aggregate counts
+    could not say WHICH text was never voiced; pairing audio to text per
+    response can."""
+    import logging
+    tr = _resp_translator()
+    tr._note_response({"response_id": "r1"}, chars=40)
+    tr._note_response({"response_id": "r1"}, audio=9600)
+    tr._note_response({"response_id": "r2"}, chars=55)      # captioned, never voiced
+    with caplog.at_level(logging.INFO, logger="voxis"):
+        tr._flush_response_stats()
+    assert "NO AUDIO for 1 response" in caplog.text
+    assert tr._silent_resp == 1 and tr._silent_chars == 55
+
+
+def test_a_response_is_judged_only_at_session_end():
+    """Audio and text for one response interleave in no guaranteed order, so a
+    response judged at its own .done would report silence that had merely not
+    arrived yet."""
+    tr = _resp_translator()
+    tr._note_response({"response_id": "r1"}, chars=30)
+    assert tr._silent_resp == 0          # nothing concluded yet
+    tr._note_response({"response_id": "r1"}, audio=4800)
+    tr._flush_response_stats()
+    assert tr._silent_resp == 0
+
+
+def test_events_without_a_response_id_book_against_the_current_one():
+    """response_id rides the *.done events for certain; on deltas it is
+    best-effort."""
+    tr = _resp_translator()
+    tr._note_response({"response_id": "r7"}, chars=10)
+    tr._note_response({}, audio=2400)                # no id on this delta
+    tr._flush_response_stats()
+    assert tr._silent_resp == 0, "the audio must land on r7, not be dropped"
+
+
+def test_audio_only_response_is_not_reported():
+    """Audio with no caption is not the defect being hunted."""
+    tr = _resp_translator()
+    tr._note_response({"response_id": "r1"}, audio=4800)
+    tr._flush_response_stats()
+    assert tr._silent_resp == 0
+
+
+def test_stats_reset_between_sessions_but_totals_survive():
+    tr = _resp_translator()
+    tr._note_response({"response_id": "a"}, chars=20)
+    tr._flush_response_stats()
+    assert tr._resp == {} and tr._silent_chars == 20
+    tr._note_response({"response_id": "b"}, chars=5)
+    tr._flush_response_stats()
+    assert tr._silent_resp == 2 and tr._silent_chars == 25
+
+
+def test_thread_exit_hook_judges_the_final_session():
+    """A rotation-time flush only ever sees the sessions BEFORE the last one."""
+    tr = _resp_translator()
+    tr._note_response({"response_id": "last"}, chars=33)
+    tr._on_thread_exit()
+    assert tr._silent_chars == 33
+
+
+def test_base_thread_exit_hook_is_a_noop_by_default():
+    tr = _make(gem.LiveTranslator)
+    tr._on_thread_exit()          # must not raise

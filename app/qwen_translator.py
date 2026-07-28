@@ -73,6 +73,9 @@ class QwenTranslator(BaseTranslator):
     IN_BYTES_PER_SEC = IN_RATE * 2    # 16 kHz mono PCM16 → 32000 bytes/sec
     TERMINAL_PHRASES = _TERMINAL_PHRASES
     READY_ON_CONNECT = True
+    # Bound on the per-response accounting dict (see _note_response). Far
+    # above any real session's response count; a backstop, not a policy.
+    RESP_TRACK_MAX = 5000
 
     def __init__(self, api_key, target_lang, on_audio, on_text, on_status,
                  rotate_minutes: float = _DEFAULT_ROTATE_MINUTES,
@@ -101,6 +104,12 @@ class QwenTranslator(BaseTranslator):
         # Accumulators whose next increment opens a new sentence and must lead
         # with a separator — see _delta and the *.done handler.
         self._boundary_pending: set[str] = set()
+        # Per-response audio/text accounting (see _note_response). Lifetime
+        # totals survive a rotation; the per-response dict does not.
+        self._resp: dict = {}
+        self._cur_resp = None
+        self._silent_resp = 0
+        self._silent_chars = 0
         self._last_done_id = None
         # Duplicate-audio instrumentation (Ivo's "doubled audio" report). We do
         # NOT dedupe blind: the doubling may live in the user's capture/loopback
@@ -171,6 +180,9 @@ class QwenTranslator(BaseTranslator):
         await conn.send(self._session_update())
 
     def _reset_session_state(self):
+        # A rotation ends every response this session carried, so judge them now
+        # rather than letting them look silent forever in the next session's dict.
+        self._flush_response_stats()
         # Per-session parse state. _last_done_id is reset here too (it was NOT
         # reset per session before the base-class consolidation), so a new
         # session's first *.done event can never be deduped against a stale
@@ -252,6 +264,55 @@ class QwenTranslator(BaseTranslator):
                     "audio. Counting the rest silently.", kind, len(pcm))
         return kind
 
+    # ---- per-response audio/text accounting ---------------------------------
+    def _note_response(self, ev, *, chars: int = 0, audio: int = 0) -> None:
+        """Book a response's produced text and audio against its own id.
+
+        Two recorded sessions captioned more than they spoke (968 spoken words
+        against 1067 captioned, then 578 against 652). Part of that was the
+        caption repeating itself, which is fixed elsewhere; the rest is text the
+        engine described and never voiced, and nothing could say WHICH text —
+        the two streams were only ever counted in aggregate. This pairs them.
+
+        `response_id` rides the *.done events for certain; on the deltas it is
+        best-effort, so an event without one is booked against the response most
+        recently seen. Evaluated at session end, never per event: audio and text
+        for one response arrive interleaved and in no guaranteed order, so a
+        response judged at its own .done would report silence that simply had
+        not arrived yet."""
+        rid = ev.get("response_id") or self._cur_resp
+        if rid is None:
+            return
+        self._cur_resp = rid
+        st = self._resp.get(rid)
+        if st is None:
+            if len(self._resp) >= self.RESP_TRACK_MAX:
+                return                      # bounded; a long session stays sane
+            st = self._resp[rid] = {"chars": 0, "audio": 0}
+        st["chars"] += chars
+        st["audio"] += audio
+
+    def _flush_response_stats(self) -> None:
+        """Report responses that produced text but never any audio, then reset.
+
+        Called per session (a rotation ends every response it carried) and at
+        stop. Lifetime totals survive so one line at the end of a session says
+        how much was captioned and never spoken."""
+        silent = [(rid, st) for rid, st in self._resp.items()
+                  if st["chars"] > 0 and st["audio"] == 0]
+        if silent:
+            chars = sum(st["chars"] for _r, st in silent)
+            self._silent_resp += len(silent)
+            self._silent_chars += chars
+            _log.warning(
+                "qwen produced NO AUDIO for %d response(s) (%d caption chars) — "
+                "session totals now %d response(s) / %d chars",
+                len(silent), chars, self._silent_resp, self._silent_chars)
+        self._resp.clear()
+
+    def _on_thread_exit(self) -> None:
+        self._flush_response_stats()
+
     async def _receive_loop(self, conn):
         async for raw in conn:
             if self._stopping.is_set():
@@ -267,6 +328,7 @@ class QwenTranslator(BaseTranslator):
                 if b64:
                     pcm = base64.b64decode(b64)
                     self._detect_dup_audio(pcm)  # log-only instrumentation
+                    self._note_response(ev, audio=len(pcm))
                     self.on_audio(pcm)
                     self._record_usage("out_sec", len(pcm) / (OUT_RATE * 2))
                     self._mark_audio_output()
@@ -276,6 +338,7 @@ class QwenTranslator(BaseTranslator):
                 if txt:
                     inc = self._delta("_out_acc", txt)
                     if inc:
+                        self._note_response(ev, chars=len(inc))
                         self.on_text("out", inc)
                         self._mark_text_output()
             elif et in ("response.audio_transcript.done", "response.text.done"):
@@ -289,6 +352,7 @@ class QwenTranslator(BaseTranslator):
                 if txt:
                     inc = self._delta("_out_acc", txt)
                     if inc.strip():
+                        self._note_response(ev, chars=len(inc))
                         self.on_text("out", inc)
                 self._out_acc = ""
                 self._boundary_pending.add("_out_acc")
