@@ -165,3 +165,19 @@ def test_source_track_records_arrival_times_and_drops_internals():
         {"t": 1.5, "text": "Hello there."},
         {"t": 6.0, "text": "How are you?", "leg": "outgoing"},
     ]
+
+
+def test_audio_track_is_omitted_when_empty():
+    turns = [{"t": 0.0, "dir": "out", "src": "", "text": "selam"}]
+    assert "audio_track" not in ts.build_record(0.0, turns)
+    assert "audio_track" not in ts.build_record(0.0, turns, audio_track=[])
+
+
+def test_audio_track_records_produced_speech_seconds():
+    """Its slope against the turn timeline is what exposes captioned-but-never-
+    spoken text — a measured session spoke 968 words against 1067 captioned."""
+    turns = [{"t": 0.0, "dir": "out", "src": "", "text": "selam"}]
+    rec = ts.build_record(0.0, turns, audio_track=[
+        {"t": 1.0, "sec": 0.5}, {"t": 9.0, "sec": 6.25},
+    ])
+    assert rec["audio_track"] == [{"t": 1.0, "sec": 0.5}, {"t": 9.0, "sec": 6.25}]

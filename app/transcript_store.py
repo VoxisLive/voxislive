@@ -41,6 +41,11 @@ paired result on disk the error could not even be measured after the fact. This
 track is the raw material a corrected pairing can be derived and validated
 against. Omitted when empty.
 
+`audio_track` (optional, additive, top level) is the OUTPUT counterpart of
+`source_track`: cumulative seconds of translated speech the engine produced,
+sampled while captions flow. A stretch where the caption timeline advances but
+this does not is text that was never spoken aloud.
+
 `leg` (optional, additive) is the meeting direction a turn belongs to —
 "incoming" (the other party, translated for the user) or "outgoing" (the user,
 translated for the other party). Written only in meeting mode, so a Video/Game
@@ -84,7 +89,7 @@ def session_filename(started: float) -> str:
 
 def build_record(started, turns, *, app_version="", mode="",
                  ui_language="", target_in="", target_out="", events=(),
-                 source_track=()) -> dict:
+                 source_track=(), audio_track=()) -> dict:
     """Assemble a schema-v1 record from the in-memory turn list. `turns` is a
     list of {"t", "dir", "src", "text"} dicts (src may be empty).
 
@@ -130,6 +135,13 @@ def build_record(started, turns, *, app_version="", mode="",
     ]
     if track:
         record["source_track"] = track
+    # Cumulative seconds of translated speech, sampled on the caption clock. Its
+    # slope against the turn timeline is what shows a stretch that was captioned
+    # but never spoken.
+    atrack = [{"t": float(e.get("t", 0.0)), "sec": round(float(e.get("sec", 0.0)), 3)}
+              for e in (audio_track or [])]
+    if atrack:
+        record["audio_track"] = atrack
     return record
 
 
