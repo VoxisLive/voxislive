@@ -43,3 +43,52 @@ def test_language_swap_rolls_back_when_config_cannot_be_saved():
         "target_language_incoming": "ru",
         "target_language_outgoing": "en",
     }
+
+
+# --- meeting terms (hotwords) -----------------------------------------------
+
+def _hotword_bridge(cfg):
+    import threading
+    from app.webui import Bridge
+    b = object.__new__(Bridge)
+    b.cfg = cfg
+    b._cfg_lock = threading.RLock()
+    b._save_cfg = lambda: True
+    b._maybe_restart = lambda: None
+    return b
+
+
+def test_set_hotwords_keeps_the_other_beta_knobs():
+    """cfg["beta"] also holds clone / source_lang / vad_ms, which are
+    config-file-only. Writing the term list must not reset them."""
+    cfg = {"beta": {"enabled": False, "clone": "once",
+                    "source_lang": "en", "vad_ms": 400, "hotwords": ""}}
+    b = _hotword_bridge(cfg)
+    b.set_hotwords("Antler\nMENAP=MENAP")
+    assert cfg["beta"]["hotwords"] == "Antler\nMENAP=MENAP"
+    assert cfg["beta"]["clone"] == "once"
+    assert cfg["beta"]["source_lang"] == "en"
+    assert cfg["beta"]["vad_ms"] == 400
+
+
+def test_set_hotwords_creates_the_beta_block_when_absent():
+    cfg = {}
+    b = _hotword_bridge(cfg)
+    b.set_hotwords("Voxis")
+    assert cfg["beta"]["hotwords"] == "Voxis"
+
+
+def test_set_hotwords_is_bounded():
+    from app.webui import HOTWORDS_MAX_CHARS
+    cfg = {"beta": {}}
+    b = _hotword_bridge(cfg)
+    b.set_hotwords("x" * (HOTWORDS_MAX_CHARS + 500))
+    assert len(cfg["beta"]["hotwords"]) == HOTWORDS_MAX_CHARS
+
+
+def test_hotword_count_matches_the_engine_parser():
+    """The number shown in Settings must be the number actually sent, so it is
+    derived from the same parser engines.py feeds to the session."""
+    b = _hotword_bridge({"beta": {}})
+    assert b.hotword_count("Antler\n\n# a comment\nMENAP=MENAP") == 2
+    assert b.hotword_count("") == 0

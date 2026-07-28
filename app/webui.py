@@ -28,6 +28,7 @@ from .config import (
     IS_OFFICIAL_RELEASE,
     QUALITY_PRESETS,
     apply_profile,
+    parse_hotwords,
     save_config,
 )
 from .i18n import t
@@ -101,6 +102,10 @@ MAX_LINE_CHARS = 180
 MAX_LINE_SECONDS = 12.0
 HARD_LINE_CHARS = 400
 SENTENCE_END = (".", "!", "?", "…", "。", "！", "？")
+# Meeting-terms box. The engine keeps the first 50 pairs (a DashScope limit);
+# the character cap is just a sane bound on what gets written to config.json.
+HOTWORDS_MAX_CHARS = 4000
+HOTWORDS_MAX_TERMS = 50
 # Prefetched session-key freshness window (seconds). Short on purpose so a
 # stale entry falls back to the normal synchronous fetch. Only RAW keys are
 # ever cached — a single-use ephemeral token (2-min new-session window,
@@ -1104,6 +1109,31 @@ class Bridge:
             _log.exception("config save failed")
             self._emit_status(t("err_save_failed"), "error")
             return False
+
+    def set_hotwords(self, text):
+        """Persist the meeting-terms list into cfg["beta"]["hotwords"].
+
+        Nested under `beta` because that is where the engine already reads it
+        from (engines.py passes parse_hotwords(beta["hotwords"]) into every Qwen
+        session, beta opt-in or not) — the pipeline has always been there, only
+        the UI was missing. Written through a COPY so the other beta knobs
+        (clone / source_lang / vad_ms) survive: they are config-file-only and a
+        whole-dict overwrite would silently reset them.
+
+        Restarts a running session, like the other engine-config settings: the
+        term list rides the session handshake, so a live session cannot pick it
+        up without one."""
+        beta = dict(self.cfg.get("beta") or {})
+        beta["hotwords"] = str(text or "")[:HOTWORDS_MAX_CHARS]
+        self.cfg["beta"] = beta
+        ok = self._save_cfg()
+        self._maybe_restart()
+        return ok
+
+    def hotword_count(self, text):
+        """How many term pairs `text` actually yields, for the UI's limit hint.
+        Uses the same parser the engine does, so the number cannot drift."""
+        return len(parse_hotwords(str(text or "")))
 
     def set_cfg(self, key, value):
         # The attribution badge can only be turned off by a paid subscriber;
