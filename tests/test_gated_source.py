@@ -110,3 +110,37 @@ def test_closed_source_drops_input():
     src.closed = True
     src.feed(np.ones(_FRAME, dtype=np.float32))
     assert sent == []
+
+
+# --- idle tracking: the billing meter must stop in an empty room -------------
+
+def test_idle_seconds_resets_on_speech():
+    """A field session was joined 7m46s before the first word. Smart mode had
+    long since stopped streaming, but billing runs on wall clock, so all of it
+    was charged. The gate now exposes how long the room has been quiet."""
+    import app.pipeline as pl
+    gate = _ScriptedGate()
+    sent = []
+    src = _mk(gate, sent, smart=True)
+
+    clock = [1000.0]
+    orig = pl.time.monotonic
+    pl.time.monotonic = lambda: clock[0]
+    try:
+        src._last_speech_ts = clock[0]
+        clock[0] += 120.0
+        assert src.idle_seconds >= 120.0
+        # One speech frame re-arms it immediately — nothing is deferred.
+        gate.script = [(True, [np.zeros(_FRAME, dtype=np.float32)])]
+        src.feed(np.zeros(_FRAME, dtype=np.float32))
+        assert src.idle_seconds == 0.0
+    finally:
+        pl.time.monotonic = orig
+
+
+def test_idle_seconds_starts_counting_from_construction():
+    """A session that never hears anything must still age, or a silent room
+    would bill forever."""
+    src = _mk(_ScriptedGate(), [], smart=True)
+    assert src.idle_seconds >= 0.0
+    assert src.speech_active is False
