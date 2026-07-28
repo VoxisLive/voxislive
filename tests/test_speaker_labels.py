@@ -16,23 +16,16 @@ from app.webui import LINE_GAP, SPK_GAP, SRC_LAG_S, Bridge
 
 def _bare_bridge():
     b = object.__new__(Bridge)
+    # Per-direction accumulators (webui._LegState); a bare Bridge skips __init__.
+    b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
-    b._src_buf = ""
-    b._src_done = []
-    b._src_marks = []
-    b._last_src_t = 0.0
-    b._cur_line = ""
-    b._last_t = 0.0
     b._session_start = 0.0
-    b._turn_start = 0.0
     b._lines = []
     b._turns = []
     b._overlay_text = ""
     b._overlay_until = 0.0
     b._cur_spk = None
-    b._src_spk = None
     b._spk_seen = set()
-    b._pending_spk_break = False
     b.events = []
     b._put_event = b.events.append
     b._obs_write = lambda *a, **k: None
@@ -137,9 +130,9 @@ def test_source_buffer_split_tags_each_side():
     _feed(b, "in", "Alpha words.", 0.0)
     b._on_speaker(2)                      # splits + queues ("Alpha words.", spk 1)
     _feed(b, "in", "Beta words.", 0.3)    # new buffer starts under spk 2
-    assert b._src_done == [(1, "Alpha words.", 0.0)]
-    assert b._src_spk == 2
-    assert b._pending_spk_break
+    assert b._legs['incoming'].src_done == [(1, "Alpha words.", 0.0)]
+    assert b._legs['incoming'].src_spk == 2
+    assert b._legs['incoming'].pending_spk_break
 
 
 # ---- export renderers ----
