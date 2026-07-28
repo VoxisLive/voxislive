@@ -33,7 +33,7 @@ def test_cues_are_wrapped_and_lose_nothing():
            "turns": [{"t": 0.0, "dir": "out", "src": "", "text": long_tr}]}
     out = ts.render_srt(rec)
     body = out.split("\n", 2)[2].strip()
-    assert all(len(l) <= ts.CUE_WIDTH for l in body.split("\n"))
+    assert all(len(ln) <= ts.CUE_WIDTH for ln in body.split("\n"))
     assert body.split() == long_tr.split()          # every word survived
 
 
@@ -47,9 +47,9 @@ def test_bilingual_cue_wraps_each_language_separately():
         "t": 0.0, "dir": "out",
         "src": " ".join(["source"] * 20), "text": " ".join(["çeviri"] * 20)}]}
     body = ts.render_srt(rec).split("\n", 2)[2].strip()
-    assert all(len(l) <= ts.CUE_WIDTH for l in body.split("\n"))
+    assert all(len(ln) <= ts.CUE_WIDTH for ln in body.split("\n"))
     # No line may mix the two languages — the fold happens per language line.
-    assert not any("source" in l and "çeviri" in l for l in body.split("\n"))
+    assert not any("source" in ln and "çeviri" in ln for ln in body.split("\n"))
 
 
 def test_record_omits_the_events_key_when_nothing_happened():
