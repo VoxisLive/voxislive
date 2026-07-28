@@ -62,7 +62,7 @@ def test_two_directions_do_not_share_a_caption_line():
         ("incoming", "Uc yeni pazara giriyoruz."),
     ]
     # Neither side's words leaked into the other's line.
-    assert all("target" not in t for l, t in got if l == "incoming")
+    assert all("target" not in txt for side, txt in got if side == "incoming")
 
 
 def test_turns_stay_in_one_chronological_timeline():
