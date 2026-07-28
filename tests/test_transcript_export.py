@@ -24,6 +24,56 @@ def test_txt_mono_is_translation_only():
     assert "Merhaba" not in out
 
 
+def test_cues_are_wrapped_and_lose_nothing():
+    """A simultaneous engine that never pauses produces very long turns; an
+    unwrapped cue runs off the frame (a field session hit 548 characters on one
+    line). Wrapping must fold, never truncate."""
+    long_tr = " ".join(["kelime"] * 90)
+    rec = {"version": 1, "started": 0.0,
+           "turns": [{"t": 0.0, "dir": "out", "src": "", "text": long_tr}]}
+    out = ts.render_srt(rec)
+    body = out.split("\n", 2)[2].strip()
+    assert all(len(l) <= ts.CUE_WIDTH for l in body.split("\n"))
+    assert body.split() == long_tr.split()          # every word survived
+
+
+def test_wrap_keeps_an_overlong_word_intact():
+    word = "x" * 60
+    assert ts._wrap(f"bir {word} iki") == f"bir\n{word}\niki"
+
+
+def test_bilingual_cue_wraps_each_language_separately():
+    rec = {"version": 1, "started": 0.0, "turns": [{
+        "t": 0.0, "dir": "out",
+        "src": " ".join(["source"] * 20), "text": " ".join(["çeviri"] * 20)}]}
+    body = ts.render_srt(rec).split("\n", 2)[2].strip()
+    assert all(len(l) <= ts.CUE_WIDTH for l in body.split("\n"))
+    # No line may mix the two languages — the fold happens per language line.
+    assert not any("source" in l and "çeviri" in l for l in body.split("\n"))
+
+
+def test_record_omits_the_events_key_when_nothing_happened():
+    """Schema-additive: an uneventful session must serialize exactly as before."""
+    turns = [{"t": 0.0, "dir": "out", "src": "hi", "text": "selam"}]
+    assert "events" not in ts.build_record(0.0, turns)
+    assert "events" not in ts.build_record(0.0, turns, events=[])
+    # Blank messages are not events either.
+    assert "events" not in ts.build_record(0.0, turns, events=[{"t": 1.0, "msg": "  "}])
+
+
+def test_record_keeps_engine_lifecycle_events():
+    """A dropped/reconnected session must be answerable from the saved file —
+    the status line used to exist only on screen (session audit 2026-07-28)."""
+    turns = [{"t": 0.0, "dir": "out", "src": "hi", "text": "selam"}]
+    rec = ts.build_record(0.0, turns, events=[
+        {"t": 0.5, "msg": "Qwen: bağlandı (hedef: tr)"},
+        {"t": 812.0, "msg": "Qwen: oturum yenileniyor..."},
+    ])
+    assert [e["msg"] for e in rec["events"]] == [
+        "Qwen: bağlandı (hedef: tr)", "Qwen: oturum yenileniyor..."]
+    assert rec["events"][1]["t"] == 812.0
+
+
 def test_txt_bilingual_pairs_source_over_translation():
     out = ts.render_txt(_rec(), bilingual=True)
     assert "Merhaba dünya\nHello world" in out

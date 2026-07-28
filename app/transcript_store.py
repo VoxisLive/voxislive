@@ -32,12 +32,22 @@ local speaker-change tracker (1-based session-scoped int; see app/speaker_id).
 Exports render it as a language-neutral "S1:"/"S2:" prefix — only when the
 session actually saw more than one speaker, so single-voice transcripts stay
 clean.
+
+`leg` (optional, additive) is the meeting direction a turn belongs to —
+"incoming" (the other party, translated for the user) or "outgoing" (the user,
+translated for the other party). Written only in meeting mode, so a Video/Game
+record carries no `leg` at all and renders exactly as it always did. Exports
+prefix every turn of a two-way record with the localized side name, because in
+a meeting the sides alternate constantly and an omitted tag would read as "same
+side as before" precisely when it is not.
 """
 import json
 import os
 import tempfile
 import threading
 import time
+
+from .i18n import t as t_
 
 SCHEMA_VERSION = 1
 # Minimum on-screen duration for a caption cue (seconds) when we cannot derive a
@@ -65,10 +75,14 @@ def session_filename(started: float) -> str:
 
 
 def build_record(started, turns, *, app_version="", mode="",
-                 ui_language="", target_in="", target_out="") -> dict:
+                 ui_language="", target_in="", target_out="", events=()) -> dict:
     """Assemble a schema-v1 record from the in-memory turn list. `turns` is a
-    list of {"t", "dir", "src", "text"} dicts (src may be empty)."""
-    return {
+    list of {"t", "dir", "src", "text"} dicts (src may be empty).
+
+    `events` is the optional engine-lifecycle log ({"t", "msg"}); it is written
+    only when non-empty, so the on-disk shape of an uneventful session — and
+    every record written before this existed — stays byte-identical."""
+    record = {
         "version": SCHEMA_VERSION,
         "started": float(started),
         "started_iso": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(started)),
@@ -84,12 +98,18 @@ def build_record(started, turns, *, app_version="", mode="",
                 "src": (turn.get("src") or "").strip(),
                 "text": (turn.get("text") or "").strip(),
                 **({"spk": int(turn["spk"])} if turn.get("spk") is not None else {}),
+                **({"leg": turn["leg"]} if turn.get("leg") else {}),
             }
             for turn in turns
             if ((turn.get("src") or "").strip()
                 or (turn.get("text") or "").strip())
         ],
     }
+    clean = [{"t": float(e.get("t", 0.0)), "msg": str(e.get("msg", "")).strip()}
+             for e in (events or []) if str(e.get("msg", "")).strip()]
+    if clean:
+        record["events"] = clean
+    return record
 
 
 def save_record(directory: str, record: dict, *, subdir: str | None = None) -> str:
@@ -370,32 +390,78 @@ def _multi_speaker(turns) -> bool:
     return len(labels) >= 2
 
 
-def _spk_prefixes(turns, multi: bool) -> list[str]:
-    """Per-turn "S1: " prefixes, emitted ONLY where the speaker changes from
-    the previous labeled turn: one speaker talking across several consecutive
-    turns reads as one labeled run, not a re-tagged line each time (owner
-    feedback, 2026-07-10). Same rule as the live captions and History."""
+def _two_way(turns) -> bool:
+    """True when the record carries BOTH meeting directions — the gate for
+    rendering the "who said it" prefix. A Video/Game record has no `leg` at all
+    and must render exactly as it did before legs existed."""
+    legs = {t.get("leg") for t in turns if isinstance(t, dict) and t.get("leg")}
+    return len(legs) >= 2
+
+
+def _spk_prefixes(turns, multi: bool, two_way: bool = False) -> list[str]:
+    """Per-turn prefixes: the meeting direction, then "S1: " where the speaker
+    changes.
+
+    The speaker tag is emitted ONLY where the speaker changes from the previous
+    labeled turn: one speaker talking across several consecutive turns reads as
+    one labeled run, not a re-tagged line each time (owner feedback,
+    2026-07-10). Same rule as the live captions and History.
+
+    The direction tag, by contrast, is emitted on EVERY turn of a two-way
+    record: in a meeting the two sides alternate constantly, and an omitted tag
+    would read as "still the same side" exactly when it is not. Speaker labels
+    come from the incoming capture only, so they never ride an outgoing turn."""
     out, prev = [], None
     for t in turns:
         spk = t.get("spk") if isinstance(t, dict) else None
-        if multi and spk is not None and spk != prev:
-            out.append(f"S{int(spk)}: ")
-        else:
-            out.append("")
+        leg = t.get("leg") if isinstance(t, dict) else None
+        pre = ""
+        if two_way and leg:
+            pre = (t_("leg_them") if leg == "incoming" else t_("leg_me")) + ": "
+        if multi and spk is not None and spk != prev and leg != "outgoing":
+            pre += f"S{int(spk)}: "
+        out.append(pre)
         if spk is not None:
             prev = spk
     return out
 
 
+CUE_WIDTH = 42          # the conventional subtitle line budget
+
+
+def _wrap(line: str, width: int = CUE_WIDTH) -> str:
+    """Fold one caption line to `width` on word boundaries.
+
+    Players do not wrap for you: an unwrapped cue runs off the frame, and a
+    simultaneous engine that never pauses long enough to split a turn produces
+    very long ones (a field session rendered a single 548-character line).
+    Nothing is ever dropped — an over-long cue becomes several lines rather
+    than a truncated one — and a word longer than `width` is left intact
+    instead of being broken mid-token."""
+    words = line.split()
+    if not words:
+        return ""
+    out, cur = [], words[0]
+    for w in words[1:]:
+        if len(cur) + 1 + len(w) <= width:
+            cur += " " + w
+        else:
+            out.append(cur)
+            cur = w
+    out.append(cur)
+    return "\n".join(out)
+
+
 def _cue_text(turn, *, bilingual: bool, pre: str = "") -> str:
     """Caption body: translation, optionally with the source line above it.
-    A speaker-change cue carries the tag on both lines."""
+    A speaker-change cue carries the tag on both lines. Each language line is
+    wrapped independently so the two stay visually separate."""
     text = turn.get("text", "").strip()
     src = turn.get("src", "").strip()
     if bilingual and src:
-        return f"{pre}{src}" + (f"\n{pre}{text}" if text else "")
+        return _wrap(f"{pre}{src}") + (f"\n{_wrap(f'{pre}{text}')}" if text else "")
     # A bare prefix must not fabricate a cue for an empty turn.
-    return f"{pre}{text}" if text else ""
+    return _wrap(f"{pre}{text}") if text else ""
 
 
 def render_txt(record: dict, *, bilingual: bool = False) -> str:
@@ -404,7 +470,7 @@ def render_txt(record: dict, *, bilingual: bool = False) -> str:
     translation, turns separated by a blank line — for localization/dubbing work
     where both languages side by side beats a translated-only export."""
     turns = record.get("turns", [])
-    pres = _spk_prefixes(turns, _multi_speaker(turns))
+    pres = _spk_prefixes(turns, _multi_speaker(turns), _two_way(turns))
     if not bilingual:
         lines = [pres[i] + t.get("text", "").strip()
                  for i, t in enumerate(turns) if t.get("text", "").strip()]
@@ -425,7 +491,7 @@ def render_txt(record: dict, *, bilingual: bool = False) -> str:
 
 def render_srt(record: dict, *, bilingual: bool = True) -> str:
     turns = record.get("turns", [])
-    pres = _spk_prefixes(turns, _multi_speaker(turns))
+    pres = _spk_prefixes(turns, _multi_speaker(turns), _two_way(turns))
     blocks = []
     for i, turn in enumerate(turns):
         body = _cue_text(turn, bilingual=bilingual, pre=pres[i])
@@ -442,7 +508,7 @@ def render_srt(record: dict, *, bilingual: bool = True) -> str:
 
 def render_vtt(record: dict, *, bilingual: bool = True) -> str:
     turns = record.get("turns", [])
-    pres = _spk_prefixes(turns, _multi_speaker(turns))
+    pres = _spk_prefixes(turns, _multi_speaker(turns), _two_way(turns))
     blocks = ["WEBVTT\n"]
     for i, turn in enumerate(turns):
         body = _cue_text(turn, bilingual=bilingual, pre=pres[i])
