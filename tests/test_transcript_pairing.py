@@ -21,6 +21,7 @@ def _bare_bridge():
     # Per-direction accumulators (webui._LegState); a bare Bridge skips __init__.
     b._legs = {"incoming": webui._LegState(), "outgoing": webui._LegState()}
     b._text_lock = threading.RLock()
+    b._src_track = []
     b._session_start = 0.0
     b._lines = []
     b._turns = []
@@ -36,13 +37,13 @@ def _bare_bridge():
     return b
 
 
-def _feed(b, direction, text, t):
+def _feed(b, direction, text, t, leg="incoming"):
     """Drive _on_text_locked with a controlled monotonic clock so LINE_GAP
     boundaries are deterministic (no reliance on wall-clock spacing)."""
     orig = webui.time.time
     webui.time.time = lambda: t
     try:
-        b._on_text_locked(direction, text)
+        b._on_text_locked(direction, text, leg)
     finally:
         webui.time.time = orig
 
@@ -261,3 +262,37 @@ def test_different_long_sentences_are_both_kept():
     _feed(b, "out", c, 0.2 + webui.LINE_GAP)
     b._flush_turns()
     assert [t["text"] for t in b._turns] == [a, c]
+
+
+# --- source arrival track ----------------------------------------------------
+
+def test_source_track_captures_arrival_times():
+    """Recorded independently of the per-turn pairing, so the pairing can be
+    checked against it later."""
+    b = _bare_bridge()
+    b._session_start = 100.0
+    _feed(b, "in", "Hello ", 101.0)
+    _feed(b, "in", "there.", 101.2)      # same breath — merged into one entry
+    _feed(b, "in", "Second.", 110.0)     # a real gap — its own entry
+    assert [(round(e["t"], 1), e["text"]) for e in b._src_track] == [
+        (1.0, "Hello there."), (10.0, "Second."),
+    ]
+
+
+def test_source_track_separates_the_meeting_legs():
+    b = _bare_bridge()
+    # Non-zero: _session_start doubles as the "is a session running" sentinel
+    # everywhere in the Bridge, so 0.0 reads as "no session" and records nothing.
+    b._session_start = 100.0
+    _feed(b, "in", "Karsi taraf.", 101.0)
+    _feed(b, "in", "Benim sesim.", 101.0, leg="outgoing")
+    legs = [e.get("leg") for e in b._src_track]
+    assert legs == [None, "outgoing"]
+
+
+def test_source_track_is_bounded():
+    b = _bare_bridge()
+    b._session_start = 100.0
+    for i in range(b.SRC_TRACK_MAX + 50):
+        _feed(b, "in", f"w{i}", 101.0 + i * 2.0)   # each past the merge window
+    assert len(b._src_track) == b.SRC_TRACK_MAX
