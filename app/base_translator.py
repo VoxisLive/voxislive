@@ -236,6 +236,12 @@ class BaseTranslator(threading.Thread):
             except RuntimeError:
                 pass
 
+    def _on_thread_exit(self) -> None:
+        """Engine hook fired once as the translator thread unwinds. Default is a
+        no-op; an engine uses it to report per-session accounting whose LAST
+        session would otherwise never be judged (rotation-time hooks only ever
+        see the sessions before the final one)."""
+
     def wait_ready(self, timeout: float = 15) -> bool:
         return self._ready.wait(timeout)
 
@@ -366,6 +372,13 @@ class BaseTranslator(threading.Thread):
                 traceback.print_exc()
         finally:
             self._stopping.set()
+            # Last chance for an engine to report what its final session left
+            # behind — after this the thread is gone. Best-effort by contract:
+            # a broken hook must not take the teardown with it.
+            try:
+                self._on_thread_exit()
+            except Exception:
+                traceback.print_exc()
             try:
                 pending = asyncio.all_tasks(self._loop)
                 for task in pending:
