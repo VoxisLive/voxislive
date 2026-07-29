@@ -206,20 +206,8 @@ class _GatedSource:
         self._acc = _Accum(8 * _FRAME)
         self._lock = threading.Lock()
         self._silent_run = 0
-        # Wall-clock of the last frame the gate called speech. Read by the
-        # billing heartbeat to stop accruing through a genuinely empty room —
-        # smart mode already stops STREAMING after _SMART_SILENCE_MAX_FRAMES, so
-        # a long quiet stretch sends nothing yet still billed by wall clock (a
-        # field session opened 7m46s before anyone spoke). Seeded at
-        # construction so a session that never hears anything still ages.
-        self._last_speech_ts = time.monotonic()
         self.speech_active = False
         self.closed = False
-
-    @property
-    def idle_seconds(self) -> float:
-        """Seconds since the gate last decided a frame was speech."""
-        return max(0.0, time.monotonic() - self._last_speech_ts)
 
     def feed(self, chunk: np.ndarray):
         if self.closed:
@@ -235,8 +223,6 @@ class _GatedSource:
                 frame = self._acc.pop(_FRAME)
                 active, to_send = self._gate.process(frame)
                 self.speech_active = active
-                if active:
-                    self._last_speech_ts = time.monotonic()
                 if self._speech_tap is not None and to_send:
                     try:
                         self._speech_tap(to_send)
@@ -1126,11 +1112,6 @@ class ModeController:
     # Usage report interval. Smaller = less time lost when the process is
     # killed abruptly (Ctrl+C, crash, network drop).
     HEARTBEAT_SECONDS: float = 6.0
-    # Silence long enough to stop the billing meter. Well above any natural
-    # conversational pause (and above the ~1.5 s after which smart mode already
-    # stops streaming), so only a genuinely empty room trips it: a session
-    # opened early, a call on hold, a video paused mid-session.
-    IDLE_PAUSE_SECONDS: float = 60.0
 
     def __init__(self, cfg: dict, api_key: str | None, on_text, on_status,
                  on_usage_reported=None, on_quota_exceeded=None,
@@ -1171,9 +1152,6 @@ class ModeController:
         # the stop() tail can never both consume the same interval (double-count).
         self._last_report: float | None = None
         self._heartbeat_lock = threading.Lock()
-        # Whether the user has already been told the meter is paused (see
-        # _update_idle_notice) — one line per transition, not per heartbeat.
-        self._idle_notified = False
         self._heartbeat_stop = threading.Event()
         self._heartbeat_thread: threading.Thread | None = None
 
@@ -1336,38 +1314,6 @@ class ModeController:
             total += float(getattr(p, "_tts_seconds", 0.0) or 0.0)
         return total
 
-    def _speech_idle_seconds(self) -> float:
-        """Seconds since ANY pipeline last heard speech (inf when unknowable).
-
-        Meeting has two capture sources; the session is only idle when both have
-        been quiet, so the minimum wins."""
-        idle = None
-        for p in self._pipelines:
-            src = getattr(p, "_source", None)
-            secs = getattr(src, "idle_seconds", None) if src is not None else None
-            if secs is None:
-                return 0.0        # a source we cannot read is never "idle"
-            idle = secs if idle is None else min(idle, secs)
-        return idle if idle is not None else 0.0
-
-    def _idle_too_long(self) -> bool:
-        """True while the room has been silent long enough to stop the meter.
-
-        A session left open on a quiet call still billed by wall clock even
-        though smart mode had long since stopped streaming anything — a field
-        session was joined 7m46s before the first word and paid for all of it.
-        Accrual resumes on the very next speech frame; nothing is deferred, the
-        silent stretch is simply never billed."""
-        return self._speech_idle_seconds() >= self.IDLE_PAUSE_SECONDS
-
-    def _update_idle_notice(self, idle: bool):
-        """Tell the user once per transition why the meter stopped, so a paused
-        counter reads as intentional rather than broken."""
-        if idle == self._idle_notified:
-            return
-        self._idle_notified = idle
-        self.on_status(t("st_idle_paused") if idle else t("st_idle_resumed"))
-
     def _consume_minutes(self, accrue: bool) -> tuple[str | None, float, str | None]:
         """Atomic get-and-reset of billable minutes since the last watermark.
 
@@ -1396,10 +1342,7 @@ class ModeController:
         out to its own thread so a slow UI callback cannot stall the heartbeat
         cadence (and thus skew the next interval's billable delta)."""
         while not self._heartbeat_stop.wait(self.HEARTBEAT_SECONDS):
-            idle = self._idle_too_long()
-            self._update_idle_notice(idle)
-            sid, delta, source = self._consume_minutes(
-                accrue=self._is_session_live() and not idle)
+            sid, delta, source = self._consume_minutes(accrue=self._is_session_live())
             self._maybe_warn_capture_dead()
             self._maybe_handle_translator_dead()
             self._log_playback_health()
@@ -1593,7 +1536,6 @@ class ModeController:
                 self._session_start = time.monotonic()
                 self._last_report = self._session_start
                 self._session_mode = mode
-                self._idle_notified = False   # new session, re-arm the notice
                 # New session — re-arm the one-shot quota cutoff + capture-death
                 # notice + translator-death teardown.
                 self._quota_exhausted.clear()
@@ -1777,9 +1719,7 @@ class ModeController:
         # remaining reader. With the heartbeat gone there is no concurrent
         # writer, so the tail consume below sees a quiesced watermark and cannot
         # double-bill the interval the last beat may have been mid-way through.
-        # Same idle rule the heartbeat applies: a session stopped after sitting
-        # quiet must not bill its final silent stretch either.
-        accrue = self._is_session_live() and not self._idle_too_long()
+        accrue = self._is_session_live()
         self._heartbeat_stop.set()
         ht = self._heartbeat_thread
         if ht is not None and ht.is_alive():
