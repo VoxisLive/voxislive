@@ -6,6 +6,26 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 ## Unreleased
 
 ### Fixed
+- Captions no longer run words together at a sentence boundary
+  ("bekleyelim.Bu arada," instead of "bekleyelim. Bu arada,") — it affected
+  a quarter of all caption lines on the Qwen engine.
+- Repeated caption text is removed: both a whole line re-spoken as the next
+  turn, and a clause the engine emits twice inside one line. The translated
+  speech only ever said it once.
+- A caption line no longer swallows 20+ seconds of speech; past a length or
+  time budget it splits at the next sentence end.
+- Subtitle exports (SRT/VTT) are wrapped to a readable line width — cues used
+  to run off the frame, the longest being a single 548-character line.
+- Subtitle timings now start from the session, not from the first translated
+  word, so an export lines up with its own audio recording. A session that
+  began before anyone spoke shifted every cue.
+- Meeting mode keeps its two directions apart. Both translators fed one caption
+  line and one transcript, so the other party's words and your own interleaved
+  with no way to tell them apart. Each side is now labelled, on screen and in
+  the saved transcript.
+- The minute counter stops while nobody is speaking, so a session left open on
+  a quiet call no longer draws down the balance.
+
 - The "Original audio (while speaking)" control on VB-CABLE setups now ducks
   the original speaker, not the background music — a same-day regression had
   it scaling the whole ambient mix uniformly instead.
@@ -34,6 +54,9 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   could interrupt a Meeting session.
 
 ### Added
+- Settings > **General**: a **Meeting terms** box. Names your meetings use —
+  companies, products, people — can be listed one per line so the translator
+  spells them correctly instead of guessing.
 - Settings > **Saving** tab: transcript folder, audio recording, and
   automatic TXT/SRT/VTT export formats (generated alongside the JSON on
   every save) are now grouped in one place; quick TXT/SRT/VTT export
