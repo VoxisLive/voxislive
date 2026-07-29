@@ -6,8 +6,6 @@ so Voxis re-translates its own output back into the user's language (a phantom
 third voice, reported from the field). Driverless capture excludes our own
 process at the OS level, so the loop cannot form.
 """
-import types
-
 import pytest
 
 from app import pipeline
