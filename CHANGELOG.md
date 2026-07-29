@@ -6,6 +6,10 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 ## Unreleased
 
 ### Fixed
+- Meeting mode no longer translates its own outgoing voice back at you. On a PC
+  with VB-Cable installed, both directions shared the one cable, so the
+  translation Voxis had just sent into the call came back in as if the other
+  party had said it — a third, phantom voice in your own language.
 - Captions no longer run words together at a sentence boundary
   ("bekleyelim.Bu arada," instead of "bekleyelim. Bu arada,") — it affected
   a quarter of all caption lines on the Qwen engine.

@@ -1546,11 +1546,24 @@ class ModeController:
         # Premium auto-routing: when a virtual cable is present, run the
         # music-preserving spatial (vbcable) path; otherwise driverless. The user
         # never chooses. No-op on the OSS build (premium absent → stays driverless).
-        if _premium is not None and hasattr(_premium, "resolve_capture_backend"):
+        #
+        # MEETING IS EXEMPT, and it is not a preference: the two directions would
+        # share one cable. The outgoing leg writes the translated voice into CABLE
+        # Input (OutgoingPipeline), and the vbcable capture path listens on CABLE
+        # Output — the same cable read back — so Voxis hears its own outgoing
+        # translation as if the other party had spoken it and translates it again
+        # into the user's language. Reported from the field: a Meeting user heard
+        # a phantom third voice in their own language. Driverless capture excludes
+        # our own process at the OS level, so the loop cannot form there; the cable
+        # then carries the outgoing direction only.
+        if mode != "meeting" and _premium is not None and hasattr(
+                _premium, "resolve_capture_backend"):
             try:
                 self.cfg["capture_backend"] = _premium.resolve_capture_backend(self.cfg)
             except Exception:
                 pass
+        elif mode == "meeting":
+            self.cfg["capture_backend"] = "driverless"
         # Correlation id shared by this session's funnel milestones. Generated
         # before the retry loop so session_start/live/error all carry the same id.
         sid = uuid.uuid4().hex[:16]
