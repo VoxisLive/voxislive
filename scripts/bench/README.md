@@ -49,6 +49,14 @@ Start small: 20–50 clips per language pair is enough to track regressions. Kee
 
 - `run_session.py` feeds audio at **realtime** so the latency number is realistic; pass a
   short `drain` tail so the simultaneous model finishes the last utterance.
+- `--clone off|once|always` (Qwen only) A/Bs source-voice cloning. Compare arms **per clip**,
+  not median-vs-median — the per-clip spread is wider than the effect. Measured 2026-07-29:
+  `always` costs +0.23 s to first audio, `once` +1.06 s (`once` must build the clone before
+  it can speak at all), and neither changes the translation text.
+- `--prod` carries the server's **model** as well as its key. Do not reintroduce a path that
+  keeps one and drops the other: the server issues a dated Qwen snapshot while `resolve_model`
+  falls back to the undated alias, and on DashScope those have separate quotas — the mismatch
+  fails as `1007 free quota exhausted` and reads like a dead account.
 - It consumes **billed Gemini minutes** — it is a dev/CI tool, not user-facing.
 - The translation hypothesis is captured from the model's own `output_audio_transcription`
   (`on_text('out')`) — i.e. the text it speaks — so BLEU/chrF score the translation directly,

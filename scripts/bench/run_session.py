@@ -74,12 +74,28 @@ def _resolve_key(cli_key: str | None, engine: str) -> str:
                      "or store one (BYOK store / config.json).")
 
 
-def _resolve_prod_key() -> str:
-    """Fetch the PRODUCTION server-issued Gemini key (SaaS path) to A/B its tier
-    vs the local BYOK key. Needs the env override + the owner's credentials, all
+def _resolve_prod_key(engine: str = "gemini",
+                      target: str | None = None) -> tuple[str, str, str | None]:
+    """Fetch a PRODUCTION server-issued key (SaaS path) to A/B its tier vs the
+    local BYOK key. Needs the env override + the owner's credentials, all
     supplied by the caller's own `!` shell so no secret is relayed:
         VOXIS_OFFICIAL_RELEASE=1 VOXIS_EMAIL=... VOXIS_PW=... ... --prod
-    Never prints the key."""
+    Never prints the key.
+
+    Routing-aware: a bare call is the server's backward-compat path, which
+    ALWAYS answers Gemini — so benching any other engine has to ask for routing
+    by target and take whatever the server actually picks. The returned engine
+    is checked against the requested one rather than assumed, since silently
+    benching Gemini while labelling the run 'qwen' is the exact mistake this
+    harness exists to avoid. Returns (key, workspace, model); workspace is ''
+    off Qwen.
+
+    The MODEL must travel with the key. The server issues a DATED snapshot
+    (…-2026-05-19) while resolve_model() falls back to the undated client
+    alias, and on DashScope those do not share a quota — so a run that keeps
+    the server's key but drops its model benches an id production never uses,
+    and can die on an exhausted quota that production is nowhere near.
+    """
     if os.environ.get("VOXIS_OFFICIAL_RELEASE") not in ("1", "true", "yes", "on"):
         raise SystemExit("--prod needs VOXIS_OFFICIAL_RELEASE=1 (source override) so login/session-key are enabled.")
     email, pw = os.environ.get("VOXIS_EMAIL"), os.environ.get("VOXIS_PW")
@@ -89,11 +105,22 @@ def _resolve_prod_key() -> str:
     _, err = voxis_client.pb_login(email, pw)
     if err:
         raise SystemExit(f"login failed: {err}")
-    key, *_mid, err = voxis_client.get_session_key()
+    if engine == "gemini" and not target:
+        key, *_mid, err = voxis_client.get_session_key()
+        got, workspace, model = "gemini", "", None
+    else:
+        key, got, model, _q, _quota, workspace, _kt, err = voxis_client.get_session_key(
+            target=target, caps="engine-routing")
     if err or not key:
         raise SystemExit(f"session-key failed: {err}")
-    print("Production session key acquired (not printed).")
-    return key
+    if got and got != engine:
+        raise SystemExit(
+            f"server routed target={target!r} to engine {got!r}, not {engine!r}. "
+            f"Re-run with --engine {got}, or pick a target the server routes to {engine}.")
+    print(f"Production session key acquired (not printed): engine={got}"
+          + (f", model={model}" if model else "")
+          + (f", workspace={workspace}" if workspace else ""))
+    return key, (workspace or ""), model
 
 
 def _load_pcm16(path: str, rate: int) -> bytes:
@@ -109,33 +136,37 @@ def _load_pcm16(path: str, rate: int) -> bytes:
     return (x * 32767.0).astype(np.int16).tobytes()
 
 
-def _bench_cfg(engine: str) -> dict:
+def _bench_cfg(engine: str, clone: str = "off", workspace: str = "") -> dict:
     """Minimal config for engines.make_translator — DEFAULTS so the bench runs
     exactly the app's production translator settings per engine."""
     from app.config import DEFAULTS
     cfg = json.loads(json.dumps(DEFAULTS))  # deep copy, no shared mutables
     if engine == "qwen":
-        # The bench measures the ENGINE, not the beta voice-clone extras: keep
-        # the same defaults the spike validated (auto source, clone off, 500 ms).
-        cfg["beta"] = {"enabled": True, "source_lang": "auto", "clone": "off",
+        # Defaults are the spike-validated ones (auto source, 500 ms). clone is
+        # the one knob the bench varies: it costs first-audio latency and output
+        # length, so an A/B needs it addressable rather than pinned off.
+        cfg["beta"] = {"enabled": True, "source_lang": "auto", "clone": clone,
                        "hotwords": "", "vad_ms": 500}
         # DashScope keys are workspace-scoped; a key from another Model Studio
         # account needs its own ws-… id (else the built-in default is used).
-        ws = os.environ.get("VOXIS_BENCH_QWEN_WS", "").strip()
+        # A server-issued key carries its own workspace and must win: pairing it
+        # with a stale env/default id 401s the handshake.
+        ws = workspace.strip() or os.environ.get("VOXIS_BENCH_QWEN_WS", "").strip()
         if ws:
             cfg["qwen_workspace"] = ws
     return cfg
 
 
 def run_clip(clip: dict, api_key: str, *, engine: str = "gemini",
-             voice: str = "Aoede", drain_s: float = 8.0) -> dict:
+             voice: str = "Aoede", clone: str = "off", workspace: str = "",
+             model: str | None = None, drain_s: float = 8.0) -> dict:
     from app.engines import make_translator
 
     heard: list[str] = []   # on_text("in", ...)  -> source transcription
     trans: list[str] = []   # on_text("out", ...) -> translation
     first_audio = {"t": None}
     started = {"t": None}
-    audio_bytes = {"n": 0}          # audible translated audio received
+    audio_bytes = {"n": 0, "total": 0}   # audible / all translated audio received
     statuses: list[str] = []
     lock = threading.Lock()
 
@@ -147,6 +178,10 @@ def run_clip(clip: dict, api_key: str, *, engine: str = "gemini",
         a = np.frombuffer(data, dtype=np.int16)
         audible = a.size > 0 and int(np.abs(a).max()) > AUDIBLE_PEAK
         with lock:
+            # Total is every byte the engine emitted; audible drops the silent
+            # frames. The overrun ratio that drives playback backlog is a
+            # property of the WHOLE stream, so it needs the untrimmed total.
+            audio_bytes["total"] += len(data)
             if audible:
                 audio_bytes["n"] += len(data)
                 if first_audio["t"] is None:
@@ -155,11 +190,15 @@ def run_clip(clip: dict, api_key: str, *, engine: str = "gemini",
     def on_status(msg: str):
         statuses.append(str(msg))
 
-    cfg = _bench_cfg(engine)
+    cfg = _bench_cfg(engine, clone=clone, workspace=workspace)
     cfg["gemini_voice"] = voice
+    # beta_active is what actually gates cloning (engines.make_translator);
+    # without it cfg["beta"]["clone"] is read as "off" and an A/B would silently
+    # compare two identical clone-off arms.
     tr = make_translator(cfg, clip["target_lang"], engine=engine, key=api_key,
+                         model=model,
                          on_audio=on_audio, on_text=on_text, on_status=on_status,
-                         name="bench")
+                         name="bench", beta_active=(clone != "off"))
     tr.start()
     tr.wait_ready(timeout=15)
 
@@ -187,6 +226,7 @@ def run_clip(clip: dict, api_key: str, *, engine: str = "gemini",
     return {
         "id": clip.get("id"),
         "engine": engine,
+        "clone": clone,
         "target_lang": clip["target_lang"],
         "reference": clip.get("reference", ""),
         "hypothesis": " ".join(trans).strip(),
@@ -197,6 +237,7 @@ def run_clip(clip: dict, api_key: str, *, engine: str = "gemini",
         # source clip's length — the dead-air detector (an engine can emit fine
         # text but little/no voiced audio, which is what the user hears).
         "audio_s": round(audio_bytes["n"] / (OUT_RATE * 2), 2),
+        "audio_total_s": round(audio_bytes["total"] / (OUT_RATE * 2), 2),
         "source_s": round(source_s, 2),
         "status_tail": statuses[-3:],
     }
@@ -212,17 +253,27 @@ def main() -> int:
     ap.add_argument("--prod", action="store_true",
                     help="use the production server-issued key (needs VOXIS_OFFICIAL_RELEASE=1 + VOXIS_EMAIL/VOXIS_PW)")
     ap.add_argument("--voice", default="Aoede")
+    ap.add_argument("--clone", default="off", choices=["off", "once", "always"],
+                    help="Qwen source-voice cloning (qwen only; costs latency + output length)")
     args = ap.parse_args()
 
-    key = _resolve_prod_key() if args.prod else _resolve_key(args.key, args.engine)
     clips = [json.loads(line) for line in open(args.manifest, encoding="utf-8")
              if line.strip()]
+    if not clips:
+        raise SystemExit(f"no clips in {args.manifest}")
+    if args.prod:
+        # Routing is per TARGET language, so the key must be requested for the
+        # language actually being benched — the manifest's own target.
+        key, workspace, model = _resolve_prod_key(args.engine, clips[0]["target_lang"])
+    else:
+        key, workspace, model = _resolve_key(args.key, args.engine), "", None
     print(f"Running {len(clips)} clip(s) through engine={args.engine}...")
     with open(args.out, "w", encoding="utf-8") as out:
         for i, clip in enumerate(clips, 1):
             print(f"  [{i}/{len(clips)}] {clip.get('id')} -> {clip['target_lang']}")
             try:
-                rec = run_clip(clip, key, engine=args.engine, voice=args.voice)
+                rec = run_clip(clip, key, engine=args.engine, voice=args.voice,
+                               clone=args.clone, workspace=workspace, model=model)
             except Exception as e:
                 print(f"    FAILED: {e}")
                 continue
