@@ -8,7 +8,8 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 ### Added
 - Translated-voice gender, chosen per direction: "Translation voice" (what you
   hear) and "My voice" (what the other person hears you as, in Meeting mode).
-  Both sit beside the language pickers and in Settings › Translation. Available
+  Both live in Settings › Translation — it is set once for a meeting, not
+  adjusted per session, so it does not belong on the main screen. Available
   on the 31 targets served by the Qwen engine — measurement showed the Gemini
   translate model ignores voice selection entirely, so on the remaining targets
   the picker says so instead of silently doing nothing. Until now every session
