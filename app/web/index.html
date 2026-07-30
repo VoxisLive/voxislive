@@ -514,11 +514,6 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.18)}
 .langitem select{padding:10px 30px 10px 13px;font-size:15px;font-weight:600;color:var(--text);background:var(--surface-1)}
 [data-theme="light"] .langitem select{background:#fff}
 .langitem .selectwrap>svg{color:var(--text-3)}
-/* Language + its voice sit on one line: the voice belongs to that language, and a
-   separate langitem would read as a third language slot. */
-.langrow{display:flex;align-items:center;gap:8px}
-.langitem .selectwrap.vsel{width:124px}
-.langitem .vsel select{font-size:13.5px;font-weight:500;padding:10px 28px 10px 11px;color:var(--text-2)}
 .voicehint{color:var(--text-3)}
 .stagebar .spacer{flex:1}
 .switches{display:flex;align-items:center;gap:18px}
@@ -1132,21 +1127,13 @@ body.resizing,body.resizing *{user-select:none!important}
     <div class="card stagebar">
       <div class="langgroup">
         <div class="langitem"><span class="lbl" data-i18n="hear">Benim dilim</span>
-          <div class="langrow">
-            <div class="selectwrap"><select id="hear"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
-            <div class="selectwrap vsel"><select id="voice-in" data-i18n-title="voice_in_label" data-i18n-aria="voice_in_label"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
-          </div>
+          <div class="selectwrap"><select id="hear"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
           <span class="fieldhint" id="hear-novoice" data-i18n="no_voice_free" style="display:none">—</span>
-          <span class="fieldhint voicehint" id="voice-in-hint" data-i18n="no_voice_choice" style="display:none">—</span>
           <span class="fieldhint" data-i18n="hear_hint">Çeviriyi duyacağınız dil</span>
         </div>
         <button class="arrow langswap" id="langswap" type="button" title="Dilleri değiştir" data-i18n-title="swap_languages" aria-label="Dilleri değiştir" data-i18n-aria="swap_languages"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></button>
         <div class="langitem" id="send-item"><span class="lbl" data-i18n="to_other">Karşı tarafın dili</span>
-          <div class="langrow">
-            <div class="selectwrap"><select id="send"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
-            <div class="selectwrap vsel"><select id="voice-out" data-i18n-title="voice_out_label" data-i18n-aria="voice_out_label"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
-          </div>
-          <span class="fieldhint voicehint" id="voice-out-hint" data-i18n="no_voice_choice" style="display:none">—</span>
+          <div class="selectwrap"><select id="send"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
           <span class="fieldhint" data-i18n="to_other_hint">Yalnızca Toplantı modunda kullanılır</span>
         </div>
       </div>
@@ -6096,12 +6083,15 @@ async function syncHotwordCount(){
   out.textContent = T('terms_count').replace('{total}', s.total).replace('{max}', s.limit)
                                     .replace('{user}', s.user).replace('{builtin}', s.builtin);
 }
-// Voice gender. Only Qwen-routed targets can honor it (the Gemini translate model
-// ignores the voice field outright — measured), so the picker stays visible and a
-// hint says so rather than the setting silently doing nothing.
+// Voice gender. Lives in Settings › Translation only — it is set once for a
+// meeting, not adjusted per session, so a picker beside the language selects
+// crowded the main screen for a rarely-touched choice. Only Qwen-routed targets
+// can honor it (the Gemini translate model ignores the voice field outright —
+// measured), so the picker stays visible and a hint says so rather than the
+// setting silently doing nothing.
 const VOICE_GENDERS = ['auto','female','male'];
 function fillVoiceSelects(){
-  ['#voice-in','#voice-out','#voice-in-s','#voice-out-s'].forEach(sel=>{
+  ['#voice-in-s','#voice-out-s'].forEach(sel=>{
     const el=$(sel); if(!el) return;
     const cur=el.value;
     el.innerHTML='';
@@ -6129,10 +6119,8 @@ function renderVoiceChoiceHints(){
   const cfg=STATE.cfg||{};
   const inOk=voiceChoiceOk(cfg.target_language_incoming||'');
   const outOk=voiceChoiceOk(cfg.target_language_outgoing||'');
-  const show=(sel,ok)=>{ const el=$(sel); if(el) el.style.display = ok ? 'none' : ''; };
-  show('#voice-in-hint', inOk);
-  show('#voice-out-hint', outOk);
-  show('#voice-s-hint', inOk && outOk);
+  const el=$('#voice-s-hint');
+  if(el) el.style.display = (inOk && outOk) ? 'none' : '';
 }
 function applyI18n(lang){
   LANG = I18N[lang] ? lang : 'en';
@@ -6165,8 +6153,7 @@ function applyI18n(lang){
   if(typeof fillVoiceSelects==='function'){
     fillVoiceSelects();
     const cfg=STATE.cfg||{};
-    [['#voice-in','incoming'],['#voice-in-s','incoming'],
-     ['#voice-out','outgoing'],['#voice-out-s','outgoing']].forEach(([sel,leg])=>{
+    [['#voice-in-s','incoming'],['#voice-out-s','outgoing']].forEach(([sel,leg])=>{
       const el=$(sel); if(el) el.value = cfg['voice_gender_'+leg] || 'auto';
     });
   }
@@ -6494,13 +6481,9 @@ async function init(){
   { const hw = $('#hotwords');
     if(hw){ hw.value = (cfg.beta && cfg.beta.hotwords) || ''; } }
   renderBuiltinTerms(); renderHotwordCount();
-  // Both faces of the same setting: the picker beside the language and the copy
-  // in Settings › Translation read from one config value and write through one
-  // handler, so they can never disagree.
   fillVoiceSelects();
-  { const gi = cfg.voice_gender_incoming || 'auto', go = cfg.voice_gender_outgoing || 'auto';
-    [['#voice-in',gi],['#voice-in-s',gi],['#voice-out',go],['#voice-out-s',go]]
-      .forEach(([sel,v])=>{ const el=$(sel); if(el) el.value=v; }); }
+  { const e = $('#voice-in-s');  if(e) e.value = cfg.voice_gender_incoming || 'auto'; }
+  { const e = $('#voice-out-s'); if(e) e.value = cfg.voice_gender_outgoing || 'auto'; }
   renderVoiceChoiceHints();
   { const mi = $('#allow-multiple-instances'); if(mi) mi.checked = !!cfg.allow_multiple_instances; }
   { const mo = $('#monitor-outgoing'); if(mo) mo.checked = !!cfg.monitor_outgoing_translation; }
@@ -6613,22 +6596,18 @@ $('#obs').onchange    = e=>api().set_cfg('obs_subtitle_enabled', e.target.checke
     tg.textContent = T(show ? 'terms_hide' : 'terms_show');
     tg.dataset.i18n = show ? 'terms_hide' : 'terms_show';
   }; }
-// One handler for both copies of each leg's picker; writes through the validated
-// bridge door (set_voice_gender), which restarts a live session because the voice
-// is chosen during the session handshake.
-function bindVoiceGender(sel, leg, other){
+// Writes through the validated bridge door (set_voice_gender), which restarts a
+// live session because the voice is chosen during the session handshake.
+function bindVoiceGender(sel, leg){
   const el=$(sel); if(!el) return;
   el.onchange = e=>{
     const v=e.target.value;
-    const twin=$(other); if(twin) twin.value=v;
     if(STATE.cfg) STATE.cfg['voice_gender_'+leg] = v;
     return api().set_voice_gender(leg, v);
   };
 }
-bindVoiceGender('#voice-in','incoming','#voice-in-s');
-bindVoiceGender('#voice-in-s','incoming','#voice-in');
-bindVoiceGender('#voice-out','outgoing','#voice-out-s');
-bindVoiceGender('#voice-out-s','outgoing','#voice-out');
+bindVoiceGender('#voice-in-s','incoming');
+bindVoiceGender('#voice-out-s','outgoing');
 { const mi = $('#allow-multiple-instances'); if(mi) mi.onchange = e=>api().set_cfg('allow_multiple_instances', e.target.checked); }
 { const mo = $('#monitor-outgoing'); if(mo) mo.onchange = e=>api().set_cfg('monitor_outgoing_translation', e.target.checked); }
 $('#brandbadge').onchange = e=>api().set_cfg('branding_badge_enabled', e.target.checked);
