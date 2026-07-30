@@ -5,7 +5,28 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 
 ## Unreleased
 
+### Added
+- Translated-voice gender, chosen per direction: "Translation voice" (what you
+  hear) and "My voice" (what the other person hears you as, in Meeting mode).
+  Both sit beside the language pickers and in Settings › Translation. Available
+  on the 31 targets served by the Qwen engine — measurement showed the Gemini
+  translate model ignores voice selection entirely, so on the remaining targets
+  the picker says so instead of silently doing nothing. Until now every session
+  used one server-default voice, which is female.
+- Release notes in the app: after an update you see what changed once, in your
+  own UI language, instead of having to find the Microsoft Store listing. A
+  fresh install is not shown a changelog — it gets the onboarding tour.
+- A ready-made list of ~31 proper nouns ships with the term box, so brand and
+  product names are spelled right before anyone types anything. It can be
+  switched off, and your own terms always win over a shipped one.
+
+### Changed
+- The term box moved out of General into its own Settings › Translation tab and
+  is no longer called "Meeting terms": it has always applied to Video mode too.
+
 ### Fixed
+- The close button of the translation-history window sits at the top right,
+  like every other window, instead of next to the title.
 - Meeting mode no longer translates its own outgoing voice back at you. On a PC
   with VB-Cable installed, both directions shared the one cable, so the
   translation Voxis had just sent into the call came back in as if the other
@@ -27,9 +48,6 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   line and one transcript, so the other party's words and your own interleaved
   with no way to tell them apart. Each side is now labelled, on screen and in
   the saved transcript.
-- The minute counter stops while nobody is speaking, so a session left open on
-  a quiet call no longer draws down the balance.
-
 - The "Original audio (while speaking)" control on VB-CABLE setups now ducks
   the original speaker, not the background music — a same-day regression had
   it scaling the whole ambient mix uniformly instead.

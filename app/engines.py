@@ -16,7 +16,8 @@ from .config import ENGINE_CASCADE, ENGINE_QWEN, resolve_model
 
 def make_translator(cfg, target_lang, *, engine, key, model=None,
                     on_audio, on_text, on_status, name,
-                    on_fatal=None, key_provider=None, beta_active=False):
+                    on_fatal=None, key_provider=None, beta_active=False,
+                    voice=None):
     """Build the translator thread for an ALREADY-RESOLVED engine + key + model.
     The caller resolves per target (locally for BYOK, server-side for SaaS) so the
     capture send-rate can match. Returns an object honoring the translator
@@ -30,6 +31,11 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
     key_provider (Gemini only) fetches a fresh api key per reconnect once a
     single-use ephemeral token has been spent (see LiveTranslator); the other
     engines receive raw multi-use keys and ignore it.
+
+    voice is the engine-specific voice name the CALLER already resolved for its own
+    leg (config.resolve_voice), because the two legs of a meeting carry different
+    genders and share this cfg. None = leave the engine on its default. Only the
+    Qwen branch uses it; Gemini ignores the field (measured — see config.py).
 
     beta_active gates Qwen voice-cloning: cfg["beta"]["clone"] is honored ONLY
     when this is True (a genuine, server-authorized beta session — webui sets
@@ -62,7 +68,7 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
         # beta_active (a genuine server-authorized beta session) so a stale
         # beta.clone from an old soak can't silently mis-gender speakers.
         from .qwen_translator import QwenTranslator  # lazy: keep websockets off cold start
-        from .config import QWEN_WORKSPACE, parse_hotwords  # noqa: PLC0415
+        from .config import QWEN_WORKSPACE, merge_hotwords  # noqa: PLC0415
         beta = cfg.get("beta") or {}
         clone = beta.get("clone", "off") if beta_active else "off"
         tr = QwenTranslator(
@@ -72,8 +78,10 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             model=model,
             source_lang=beta.get("source_lang", "auto"),
             clone=clone,
-            hotwords=parse_hotwords(beta.get("hotwords", "")),
+            hotwords=merge_hotwords(beta.get("hotwords", ""),
+                                    builtin=cfg.get("builtin_terms", True)),
             vad_silence_ms=int(beta.get("vad_ms", 500)),
+            voice=voice,
             # DashScope intl keys are workspace-scoped (the WS host carries the
             # workspace id) — a key from a different Model Studio account needs
             # its own workspace here, or the handshake 401s.

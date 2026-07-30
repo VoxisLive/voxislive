@@ -86,9 +86,19 @@ def test_set_hotwords_is_bounded():
     assert len(cfg["beta"]["hotwords"]) == HOTWORDS_MAX_CHARS
 
 
-def test_hotword_count_matches_the_engine_parser():
+def test_hotword_stats_match_the_engine_parser():
     """The number shown in Settings must be the number actually sent, so it is
-    derived from the same parser engines.py feeds to the session."""
-    b = _hotword_bridge({"beta": {}})
-    assert b.hotword_count("Antler\n\n# a comment\nMENAP=MENAP") == 2
-    assert b.hotword_count("") == 0
+    derived from the same parser engines.py feeds to the session. Since the
+    prepacked list rides along, the readout also has to separate what the user
+    typed from what shipped with the app."""
+    from app.config import DEFAULT_TERMS
+    b = _hotword_bridge({"beta": {}, "builtin_terms": False})
+    assert b.hotword_stats("Antler\n\n# a comment\nMENAP=MENAP")["user"] == 2
+    assert b.hotword_stats("")["user"] == 0
+    assert b.hotword_stats("Antler")["total"] == 1      # list off: user only
+
+    b = _hotword_bridge({"beta": {}, "builtin_terms": True})
+    stats = b.hotword_stats("Antler")
+    assert stats["user"] == 1
+    assert stats["builtin"] == len(DEFAULT_TERMS)
+    assert stats["total"] == 1 + len(DEFAULT_TERMS)
