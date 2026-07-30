@@ -19,8 +19,16 @@ Verified protocol + behavior (all live-measured, 2026-07-04):
          conversation.item.* / input_audio_transcription.* -> source ASR stream
 
 Hard-won rules baked in here — do not "improve" these without re-measuring:
-  * NEVER send `voice` unless cloning; with clone frequency once/always the
-    voice MUST be "default" (anything else / omission -> InvalidParameter).
+  * `voice` and voice CLONING are mutually exclusive: a named voice alongside
+    enable_voice_clone is rejected outright ("Multilingual voice does not support
+    voice clone"), and with clone frequency once/always the voice MUST be
+    "default". Omitting the field is fine — the server then uses its own default
+    (measured: Tina). A named voice with cloning OFF is accepted and honored.
+  * A voice NAME is validated lazily — session.update echoes any string back,
+    including a garbage one, and the rejection only arrives with the first
+    response, which strands the session in the retry loop producing no audio.
+    So only names verified by synthesis belong in config.VOICE_BY_GENDER
+    (`Cherry`/`Dylan` are published for this model and rejected live).
   * NEVER send input_audio_buffer.commit and NEVER use semantic_vad — both
     flip the session into a turn-based mode that silently drops or rejects
     continuous audio (coverage collapses from ~99% to ~35-55%).
@@ -82,7 +90,7 @@ class QwenTranslator(BaseTranslator):
                  name: str = "translator", model: str = QWEN_TRANSLATE_MODEL,
                  source_lang: str = "auto", clone: str = "off",
                  hotwords: dict | None = None, vad_silence_ms: int = 500,
-                 workspace: str = QWEN_WORKSPACE):
+                 workspace: str = QWEN_WORKSPACE, voice: str | None = None):
         # Qwen wants base ISO codes: Voxis's 79-language BCP-47 targets
         # (pt-BR, zh-Hans, …) are normalized via the shared routing helper, so
         # a regional variant can't bounce the session with InvalidParameter.
@@ -94,6 +102,9 @@ class QwenTranslator(BaseTranslator):
         self.engine = "qwen"
         self.source_lang = source_lang or "auto"
         self.clone = clone if clone in ("once", "always") else "off"
+        # Requested voice name, or None to leave the engine on its own default.
+        # Ignored while cloning (the two cannot be combined — see module docstring).
+        self.voice = voice or None
         self.hotwords = dict(list((hotwords or {}).items())[:50])
         self.vad_silence_ms = int(vad_silence_ms)
         self.workspace = workspace
@@ -154,11 +165,15 @@ class QwenTranslator(BaseTranslator):
             session["turn_detection"] = {"type": "server_vad",
                                          "silence_duration_ms": self.vad_silence_ms}
         if self.clone != "off":
-            # Docs + live: cloning REQUIRES voice="default"; plain mode requires
-            # the field to be ABSENT.
+            # Cloning REQUIRES voice="default" and refuses a named voice, so a
+            # requested gender is dropped here: reproducing the source speaker's
+            # own voice is the more specific intent and it already carries their
+            # gender. Cloning is config-file-only and off by default.
             session["voice"] = "default"
             session["enable_voice_clone"] = True
             session["voice_clone_options"] = {"frequency": self.clone}
+        elif self.voice:
+            session["voice"] = self.voice
         if self.hotwords:
             session["translation"]["corpus"] = {"phrases": self.hotwords}
         return json.dumps({"type": "session.update", "session": session})

@@ -2650,6 +2650,13 @@ def set_language(lang: str):
     _current = lang if lang in STRINGS else "en"
 
 
+def current_language() -> str:
+    """The language engine strings are currently rendered in — always a key of
+    STRINGS, so callers that key their own tables by it (app/whatsnew.py) never
+    have to re-resolve "" / an unknown code."""
+    return _current
+
+
 def t(key: str, **kw) -> str:
     s = STRINGS.get(_current, STRINGS["en"]).get(key) or STRINGS["en"].get(key, key)
     return s.format(**kw) if kw else s

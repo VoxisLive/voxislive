@@ -81,6 +81,59 @@ QWEN_AUDIO_LANGS = ["zh", "en", "ar", "de", "fr", "es", "pt", "id", "it", "ko",
                     "ru", "th", "vi", "ja", "tr", "hi", "ms", "nl", "ur", "nb",
                     "sv", "da", "he", "fi", "pl", "is", "cs", "fil", "fa"]
 
+# Translated-speech voice per engine per requested gender. MEASURED, not read off
+# a doc page (2026-07-30, see the vault measurement note):
+#   * Qwen HONORS session.voice — Tina (the server's own default, F0 ~261 Hz) vs
+#     Ethan (~170 Hz); CAM++ cosine between the two arms 0.34 = different voice,
+#     while default-vs-Tina is 0.92 = the same one. Both verified by SYNTHESIS on
+#     two different targets (tr->en and en->tr), because the name is validated
+#     LAZILY: an unsupported voice is echoed back by session.update and only
+#     rejected at the first response, which strands the session in the transient
+#     retry loop with no audio at all. `Cherry` and `Dylan` — both listed for
+#     this model by Alibaba's own voice-list page — are rejected live, so the
+#     published roster is NOT a safe source. Only add a name here after hearing it.
+#   * Gemini is deliberately ABSENT: the translate-preview model ignores
+#     speech_config.voice_config entirely. Five valid names AND a garbage name all
+#     returned the same voice (pairwise cosine 0.62-0.82, F0 104-122 Hz), and the
+#     garbage name was not even rejected. A gender request cannot be honored there,
+#     so resolve_voice returns None and the field is never sent.
+VOICE_BY_GENDER = {
+    "qwen": {"female": "Tina", "male": "Ethan"},
+}
+VOICE_GENDERS = ("auto", "female", "male")
+
+
+def resolve_voice(engine: str, gender: str) -> str | None:
+    """Voice name for (engine, gender), or None when the request cannot be met —
+    unknown engine, `auto`, or an engine whose voice field is a no-op. None means
+    "send no voice field", which leaves the engine on its own default."""
+    if gender not in ("female", "male"):
+        return None
+    return (VOICE_BY_GENDER.get(engine) or {}).get(gender)
+
+
+# Prepacked hotword list: proper nouns the ASR reliably mangles, shipped so the
+# term box is useful before anyone types in it (field audit: "Antler" spoken 33
+# times, spelled right 4; "MENAP" 14 times, right 0). Deliberately conservative —
+# every entry is a name that is NOT also an ordinary word in the languages we
+# serve. Brands like Meta, Apple, Oracle, Slack or Notion are EXCLUDED on purpose:
+# a hotword biases recognition toward the term, so pinning a common word would
+# corrupt ordinary speech, which is the opposite of the point. Merged with the
+# user's own list in engines.make_translator (user wins on conflict, 50-pair cap).
+DEFAULT_TERMS = [
+    # AI / model vendors
+    "Anthropic", "OpenAI", "ChatGPT", "DeepSeek", "Hugging Face", "Midjourney",
+    "Alibaba Cloud", "DashScope",
+    # Silicon / infrastructure
+    "NVIDIA", "Qualcomm", "TSMC", "Cloudflare", "Kubernetes", "PostgreSQL",
+    "Redis", "GitHub", "DigitalOcean", "Vercel",
+    # SaaS / enterprise
+    "Salesforce", "HubSpot", "Atlassian", "Shopify", "Datadog", "Snowflake",
+    "Databricks", "Stripe", "Twilio", "Okta",
+    # Conferencing / the words a meeting says about itself
+    "Google Meet", "Microsoft Teams", "Webex",
+]
+
 DEFAULTS = {
     "engine": DEFAULT_ENGINE,
     "model": GEMINI_LIVE_MODEL,
@@ -98,6 +151,22 @@ DEFAULTS = {
     },
     "target_language_incoming": "tr",
     "target_language_outgoing": "en",
+    # Requested gender of the translated voice, per leg (see VOICE_BY_GENDER).
+    # incoming = the voice that speaks the other party / the video to the user;
+    # outgoing = the voice the other party hears as the user in Meeting mode.
+    # "auto" keeps whatever the engine picks on its own, which is what every
+    # session did before this existed — so an upgrade changes nothing until the
+    # user chooses. Honored on Qwen-routed targets only; Gemini ignores the field.
+    "voice_gender_incoming": "auto",
+    "voice_gender_outgoing": "auto",
+    # Ship the curated proper-noun list (config.DEFAULT_TERMS) alongside whatever
+    # the user typed. On by default: the terms only help recognition of names the
+    # ASR already mangles, and they stay visible + switchable in Settings.
+    "builtin_terms": True,
+    # APP_VERSION whose release notes have been shown. "" on a fresh config; the
+    # first-run path marks it silently so a brand-new install gets the tour, not a
+    # changelog. See app/whatsnew.py.
+    "whatsnew_seen": "",
     "devices": {
         "system_capture": "CABLE Output (VB-Audio Virtual Cable)",
         "meeting_mic_playback": "CABLE Input (VB-Audio Virtual Cable)",
@@ -276,6 +345,26 @@ def parse_hotwords(text: str) -> dict:
         if term:
             phrases[term] = tr or term
     return phrases
+
+
+# Engine-side ceiling on corpus.phrases (server limit). Kept here so the merge and
+# the UI's counter read the same number the engine enforces.
+HOTWORDS_LIMIT = 50
+
+
+def merge_hotwords(text: str, builtin: bool = True, limit: int = HOTWORDS_LIMIT) -> dict:
+    """The user's term list plus the prepacked DEFAULT_TERMS, as one phrases dict.
+
+    The user's own entries are inserted FIRST and win any conflict, so when the
+    combined list would exceed the engine's cap it is always a shipped default
+    that gets dropped — never something the user typed."""
+    phrases = parse_hotwords(text)
+    if builtin:
+        for term in DEFAULT_TERMS:
+            if len(phrases) >= limit:
+                break
+            phrases.setdefault(term, term)
+    return dict(list(phrases.items())[:limit])
 
 
 def _norm_lang(code: str) -> str:

@@ -23,6 +23,7 @@ from .audio_io import (
     play_test_tone,
 )
 from .config import (
+    DEFAULT_TERMS,
     ENGINE_CASCADE,
     GEMINI_VOICES,
     IS_OFFICIAL_RELEASE,
@@ -67,6 +68,20 @@ def _free_voiced_langs():
         return [lang for lang in LANGS if local_tts.voice_available(lang)]
     except Exception:  # a broken registry must not take the whole UI down
         _log.exception("voiced-language list unavailable")
+        return []
+
+
+def _voice_choice_langs(cfg):
+    """Targets whose translated voice can be gendered (see config.VOICE_BY_GENDER).
+
+    Mirrors _free_voiced_langs' shape so the UI treats both the same way: a list
+    of picker codes, empty on any failure — a broken list must dim a hint, never
+    take the window down."""
+    try:
+        from .config import qwen_can_voice  # noqa: PLC0415
+        return [lang for lang in LANGS if qwen_can_voice(cfg, lang)]
+    except Exception:
+        _log.exception("voice-choice language list unavailable")
         return []
 
 
@@ -1139,6 +1154,17 @@ class Bridge:
             # silence mid-session. Paid engines voice every target; the JS only
             # consults this when the licence is on the free tier.
             "voiced_langs": _free_voiced_langs(),
+            # Targets whose translated voice can be GENDERED. Only the Qwen-routed
+            # ones qualify: the Gemini translate model ignores the voice field
+            # entirely (measured 2026-07-30 — five valid names and a garbage name
+            # all returned the same voice, and the garbage name was not rejected).
+            # Computed here with the engine's own predicate, over the real picker
+            # list, so the UI never has to re-implement BCP-47 normalization and
+            # cannot drift from routing (which the server can also override).
+            "voice_choice_langs": _voice_choice_langs(self.cfg),
+            # The prepacked term list, so Settings can show exactly what ships
+            # instead of a second copy that could drift from config.DEFAULT_TERMS.
+            "builtin_terms_list": list(DEFAULT_TERMS),
             "profiles": [[k, t(f"profile_{k}")] for k in ("custom", "meeting", "film", "conference")],
             "qualities": self._quality_options(),
             "gemini_voices": GEMINI_VOICES,
@@ -1252,10 +1278,66 @@ class Bridge:
         self._maybe_restart()
         return ok
 
-    def hotword_count(self, text):
-        """How many term pairs `text` actually yields, for the UI's limit hint.
-        Uses the same parser the engine does, so the number cannot drift."""
-        return len(parse_hotwords(str(text or "")))
+    def hotword_stats(self, text):
+        """Term counts for the UI's limit hint: the user's own, the prepacked ones
+        that still fit, and the total actually sent.
+
+        Computed with the SAME merge the engine uses (config.merge_hotwords), so
+        the number on screen cannot drift from what rides the session — including
+        the case where the combined list is capped."""
+        from .config import HOTWORDS_LIMIT, merge_hotwords  # noqa: PLC0415
+        text = str(text or "")
+        builtin_on = bool(self.cfg.get("builtin_terms", True))
+        user = len(parse_hotwords(text))
+        total = len(merge_hotwords(text, builtin=builtin_on))
+        return {"user": user, "builtin": max(0, total - user),
+                "total": total, "limit": HOTWORDS_LIMIT}
+
+    def set_voice_gender(self, leg, gender):
+        """Persist the requested voice gender for one leg and restart if live.
+
+        Both arguments are allow-listed: this is a JS-reachable door into the
+        config, and the value ends up in a session handshake where an unknown
+        voice name would strand the engine (see qwen_translator's module
+        docstring). Restarts a running session because the voice is chosen at
+        connect time — same reason set_hotwords does."""
+        from .config import VOICE_GENDERS  # noqa: PLC0415
+        key = {"incoming": "voice_gender_incoming",
+               "outgoing": "voice_gender_outgoing"}.get(str(leg))
+        if key is None or str(gender) not in VOICE_GENDERS:
+            return False
+        if self.cfg.get(key) == gender:
+            return True          # no-op: never restart a session for nothing
+        self.cfg[key] = str(gender)
+        ok = self._save_cfg()
+        if ok:
+            self._maybe_restart()
+        return ok
+
+    def whatsnew(self):
+        """Release notes to show ONCE after an update, in the UI language.
+
+        Returns None when there is nothing to show: already seen, this version
+        ships no notes, or this is a first-ever run. The fresh-install case is
+        marked seen silently — a brand-new user gets the onboarding tour, and a
+        changelog for a version they never ran would be noise."""
+        from . import whatsnew as wn  # noqa: PLC0415
+        if str(self.cfg.get("whatsnew_seen", "")) == APP_VERSION:
+            return None
+        if not wn.has_notes(APP_VERSION):
+            return None
+        if not self.cfg.get("onboarding_done", False):
+            self.mark_whatsnew_seen()
+            return None
+        return {"version": APP_VERSION,
+                "bullets": wn.entry(APP_VERSION, i18n.current_language())}
+
+    def mark_whatsnew_seen(self):
+        """Record that this version's notes were shown. Separate from mark_seen:
+        that door writes booleans, this one stores a version string so the next
+        update opens the card again."""
+        self.cfg["whatsnew_seen"] = APP_VERSION
+        return self._save_cfg()
 
     def set_cfg(self, key, value):
         # The attribution badge can only be turned off by a paid subscriber;
@@ -1273,7 +1355,11 @@ class Bridge:
             self.controller.set_tts_volume(float(value))
         elif key in ("quality_preset", "target_language_incoming",
                      "target_language_outgoing", "gemini_voice", "engine",
-                     "monitor_outgoing_translation"):
+                     "monitor_outgoing_translation",
+                     # The prepacked term list rides the session handshake, so a
+                     # live session has to be rebuilt to pick it up (same reason
+                     # set_hotwords restarts).
+                     "builtin_terms"):
             if key == "quality_preset":
                 self._mark_custom()
             if key == "target_language_incoming":

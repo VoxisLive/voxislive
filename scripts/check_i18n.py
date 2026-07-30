@@ -54,8 +54,10 @@ function extract(anchor){
   throw new Error('unbalanced: ' + anchor);
 }
 const I18N = extract('const I18N =');
-const EX = extract('const I18N_EXTRA =');
-for (const l in EX){ if (!I18N[l]) I18N[l] = {}; for (const k in EX[l]) I18N[l][k] = EX[l][k]; }
+for (const anchor of ['const I18N_EXTRA =', 'const I18N_VOICE_TERMS =']){
+  const EX = extract(anchor);
+  for (const l in EX){ if (!I18N[l]) I18N[l] = {}; for (const k in EX[l]) I18N[l][k] = EX[l][k]; }
+}
 const out = {};
 for (const l in I18N) out[l] = Object.keys(I18N[l]);
 process.stdout.write(JSON.stringify(out));
@@ -63,7 +65,11 @@ process.stdout.write(JSON.stringify(out));
 
 
 def js_blocks():
-    """{lang: set(keys)} of merged I18N+I18N_EXTRA via node; None if node absent/fails."""
+    """{lang: set(keys)} of the merged JS tables via node; None if node absent/fails.
+
+    Merges every block index.html itself merges into I18N (I18N_EXTRA and
+    I18N_VOICE_TERMS) — a key added to only one of them, or a language left out of
+    a new block, is exactly the drift this gate exists to catch."""
     node = next((c for c in ("node", "node.exe")
                  if _runs([c, "--version"])), None)
     if node is None:
@@ -103,7 +109,8 @@ def main():
     py = {lang: set(d.keys()) for lang, d in i18n.STRINGS.items()}
     rc = _report("Python  app/i18n.py STRINGS", py)
     print()
-    rc |= _report("JS  app/web/index.html  I18N + I18N_EXTRA", js_blocks())
+    rc |= _report("JS  app/web/index.html  I18N + I18N_EXTRA + I18N_VOICE_TERMS",
+                  js_blocks())
     print("\n" + ("i18n drift detected (exit 1)." if rc else "No i18n drift."))
     return rc
 

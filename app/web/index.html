@@ -514,6 +514,12 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.18)}
 .langitem select{padding:10px 30px 10px 13px;font-size:15px;font-weight:600;color:var(--text);background:var(--surface-1)}
 [data-theme="light"] .langitem select{background:#fff}
 .langitem .selectwrap>svg{color:var(--text-3)}
+/* Language + its voice sit on one line: the voice belongs to that language, and a
+   separate langitem would read as a third language slot. */
+.langrow{display:flex;align-items:center;gap:8px}
+.langitem .selectwrap.vsel{width:124px}
+.langitem .vsel select{font-size:13.5px;font-weight:500;padding:10px 28px 10px 11px;color:var(--text-2)}
+.voicehint{color:var(--text-3)}
 .stagebar .spacer{flex:1}
 .switches{display:flex;align-items:center;gap:18px}
 .stream{display:flex;flex-direction:column;min-height:0;overflow:hidden}
@@ -841,6 +847,10 @@ body.resizing,body.resizing *{user-select:none!important}
 .modal .mnote svg{flex:none;margin-top:1px;color:var(--amber)}
 .modal .mfoot{display:flex;align-items:center;gap:12px;padding:18px 24px 22px;flex-wrap:wrap}
 .modal .mfoot .spacer{flex:1}
+/* Same rule for a modal HEAD, so its close button lands at the top RIGHT like
+   every other window instead of hugging the title (the History panel's spacer
+   was inert without this). */
+.modal .mhead .spacer{flex:1}
 .modal .dontshow{display:inline-flex;align-items:center;gap:9px;font-size:12px;color:var(--text-2);cursor:pointer;user-select:none;margin-right:auto}
 .modal .ostep{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
 /* ---- first-run spotlight tour: dims the app, cuts a lit hole around the
@@ -1122,13 +1132,21 @@ body.resizing,body.resizing *{user-select:none!important}
     <div class="card stagebar">
       <div class="langgroup">
         <div class="langitem"><span class="lbl" data-i18n="hear">Benim dilim</span>
-          <div class="selectwrap"><select id="hear"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+          <div class="langrow">
+            <div class="selectwrap"><select id="hear"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="selectwrap vsel"><select id="voice-in" data-i18n-title="voice_in_label" data-i18n-aria="voice_in_label"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
           <span class="fieldhint" id="hear-novoice" data-i18n="no_voice_free" style="display:none">—</span>
+          <span class="fieldhint voicehint" id="voice-in-hint" data-i18n="no_voice_choice" style="display:none">—</span>
           <span class="fieldhint" data-i18n="hear_hint">Çeviriyi duyacağınız dil</span>
         </div>
         <button class="arrow langswap" id="langswap" type="button" title="Dilleri değiştir" data-i18n-title="swap_languages" aria-label="Dilleri değiştir" data-i18n-aria="swap_languages"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></button>
         <div class="langitem" id="send-item"><span class="lbl" data-i18n="to_other">Karşı tarafın dili</span>
-          <div class="selectwrap"><select id="send"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+          <div class="langrow">
+            <div class="selectwrap"><select id="send"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="selectwrap vsel"><select id="voice-out" data-i18n-title="voice_out_label" data-i18n-aria="voice_out_label"></select><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+          <span class="fieldhint voicehint" id="voice-out-hint" data-i18n="no_voice_choice" style="display:none">—</span>
           <span class="fieldhint" data-i18n="to_other_hint">Yalnızca Toplantı modunda kullanılır</span>
         </div>
       </div>
@@ -1182,6 +1200,10 @@ body.resizing,body.resizing *{user-select:none!important}
       <button class="dtab active" data-pane="general" role="tab" aria-selected="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 3.6h.09A1.65 1.65 0 0 0 9 2.09V2a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 14 3.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 20.4 8v.09c.27.49.7.88 1.21 1.09"/></svg>
         <span data-i18n="general">Genel</span>
+      </button>
+      <button class="dtab" data-pane="translation" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h10M8 4v2c0 4-2.5 6-5 7M6 11c1.5 2.5 3.5 4 7 4M13 20l4-9 4 9M14.7 17h4.6"/></svg>
+        <span data-i18n="tab_translation">Çeviri</span>
       </button>
       <button class="dtab" data-pane="recording" role="tab" aria-selected="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -1245,15 +1267,35 @@ body.resizing,body.resizing *{user-select:none!important}
           <div style="margin-top:18px">
             <label class="switch"><input type="checkbox" id="spk-labels"><span class="track"></span><span data-i18n="spk_labels">Konuşmacı etiketleri (S1/S2)</span></label>
             <div class="fieldhint" style="margin-top:6px" data-i18n="spk_labels_hint">Farklı kişiler ard arda konuştuğunda ses değişimini cihazında algılar ve altyazı satırlarını S1/S2 olarak etiketler. Tamamen yerel çalışır — ek bulut çağrısı yoktur. Etiketler ancak ikinci bir ses duyulduğunda görünür; kaydedilen transkriptlere de yazılır. Sesli çeviri yine tek sesle konuşur.</div>
-            <div style="margin-top:18px">
-              <div class="fieldlabel" data-i18n="hotwords_label">Toplantı terimleri</div>
-              <div class="fieldhint" style="margin-bottom:8px" data-i18n="hotwords_hint">Marka, kişi ve ürün adlarını buraya yaz — çeviri motoru onları doğru yazsın. Her satıra bir terim; farklı yazılsın istiyorsan <b>terim=karşılığı</b> biçimini kullan. En fazla 50 terim.</div>
-              <textarea id="hotwords" rows="4" spellcheck="false" data-i18n-ph="hotwords_ph" placeholder="Antler&#10;MENAP=MENAP&#10;Voxis"></textarea>
-              <div class="fieldhint" id="hotwords-count" style="margin-top:6px"></div>
-            </div>
-            <label class="switch" style="margin-top:12px"><input type="checkbox" id="allow-multiple-instances"><span class="track"></span><span data-i18n="allow_multiple_instances">Birden fazla uygulama örneğine izin ver</span></label>
+            <label class="switch" style="margin-top:18px"><input type="checkbox" id="allow-multiple-instances"><span class="track"></span><span data-i18n="allow_multiple_instances">Birden fazla uygulama örneğine izin ver</span></label>
             <div class="fieldhint" style="margin-top:6px" data-i18n="allow_multiple_instances_hint">Bir sonraki başlatmada etkinleşir. Eşzamanlı oturumlar ses cihazları ve sistem yönlendirmesi için çakışabilir.</div>
           </div>
+        </div>
+      </section>
+      <section class="dpane" data-pane="translation" role="tabpanel" hidden>
+        <div class="dsection">
+          <h3 data-i18n="voice_section">Ses</h3>
+          <div class="fieldlabel" data-i18n="voice_in_label">Çeviri sesi</div>
+          <div class="selectwrap"><select id="voice-in-s"></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+          <div class="fieldhint" style="margin-top:6px" data-i18n="voice_in_hint">Videoda ve toplantıda karşı tarafı bu sesle duyarsınız.</div>
+          <div style="margin-top:16px">
+            <div class="fieldlabel" data-i18n="voice_out_label">Benim sesim</div>
+            <div class="selectwrap"><select id="voice-out-s"></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="fieldhint" style="margin-top:6px" data-i18n="voice_out_hint">Toplantıda karşı taraf sizi bu sesle duyar.</div>
+          </div>
+          <div class="fieldhint voicehint" id="voice-s-hint" data-i18n="no_voice_choice" style="display:none;margin-top:10px">—</div>
+        </div>
+        <div class="dsection">
+          <h3 data-i18n="terms_section">Terimler</h3>
+          <div class="fieldlabel" data-i18n="terms_label">Terimler ve özel adlar</div>
+          <div class="fieldhint" style="margin-bottom:8px" data-i18n="terms_hint">Marka, kişi ve ürün adlarını buraya yaz — çeviri motoru onları doğru yazsın. Video ve toplantı modunda geçerlidir.</div>
+          <textarea id="hotwords" rows="4" spellcheck="false" data-i18n-ph="hotwords_ph" placeholder="Antler&#10;MENAP=MENAP&#10;Voxis"></textarea>
+          <div class="fieldhint" id="hotwords-count" style="margin-top:6px"></div>
+          <div style="margin-top:14px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 0">
+            <label class="switch"><input type="checkbox" id="builtin-terms"><span class="track"></span><span id="builtin-terms-lbl" data-i18n="terms_builtin">Hazır terim listesi</span></label>
+            <a id="builtin-terms-toggle" data-i18n="terms_show" style="font-size:11.5px;color:var(--accent);cursor:pointer;margin-left:10px">Göster</a>
+          </div>
+          <div class="fieldhint" id="builtin-terms-list" style="display:none;margin-top:8px;line-height:1.7"></div>
         </div>
       </section>
       <section class="dpane" data-pane="recording" role="tabpanel" hidden>
@@ -1365,6 +1407,23 @@ body.resizing,body.resizing *{user-select:none!important}
 </div>
 <!-- Store rating ask. Raised once, after the third clean session — never with an
      offer attached (incentivised ratings breach Store policy). -->
+<!-- Release notes, once per version. Updates arrive silently through the Store,
+     so without this the only place a returning user could read what changed was
+     the Store listing — which nobody reopens after installing. Content comes from
+     the bridge (app/whatsnew.py) already resolved to the UI language. -->
+<div class="modal limitmodal" id="whatsnew-modal" role="dialog" aria-modal="true" aria-labelledby="whatsnew-title">
+  <div class="mhead">
+    <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z"/><path d="M19 3v3M20.5 4.5h-3"/></svg></span>
+    <h2 id="whatsnew-title" data-i18n="wn_title">Yenilikler</h2>
+    <span class="spacer"></span>
+    <span class="ostep" id="whatsnew-ver"></span>
+  </div>
+  <div class="mbody"><ul id="whatsnew-list" style="margin:0;padding-left:18px"></ul></div>
+  <div class="mfoot">
+    <span class="spacer"></span>
+    <button class="btn btn-primary" id="whatsnew-ok" style="width:auto" data-i18n="wn_ok">Anladım</button>
+  </div>
+</div>
 <div class="modal limitmodal" id="review-modal" role="dialog" aria-modal="true" aria-labelledby="review-title" aria-describedby="review-body">
   <div class="mhead">
     <span class="micon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></span>
@@ -5764,9 +5823,39 @@ const I18N_EXTRA = {"en":{"hotwords_label":"Meeting terms","hotwords_hint":"Bran
     report_queued:"บันทึกแล้ว — จะส่งเมื่อเปิด Voxis ครั้งถัดไป",
     report_err_empty:"กรุณาอธิบายปัญหา",
     report_err_failed:"ส่งรายงานไม่สำเร็จ กรุณาลองใหม่","record_audio":"บันทึกเสียง (ต้นฉบับ + คำแปล แยกไฟล์)","record_audio_hint":"บันทึกเสียงต้นฉบับและเสียงคำแปลของแต่ละเซสชันเป็นไฟล์ WAV แยกกันสองไฟล์ในโฟลเดอร์คำบรรยายของคุณ ปิดไว้เป็นค่าเริ่มต้นเพราะแทร็กต้นฉบับมีเสียงพูดของคนจริง ใช้ได้เฉพาะโหมดวิดีโอ/เกมเท่านั้น — จะปิดอัตโนมัติในโหมดประชุม เพื่อไม่ให้เสียงสดของอีกฝ่ายถูกบันทึก","tab_recording":"การบันทึก","auto_export_label":"รูปแบบบันทึกอัตโนมัติ","auto_export_hint":"ไฟล์ JSON จะถูกบันทึกเสมอ เมื่อทำเครื่องหมาย รูปแบบเหล่านี้จะถูกสร้างขึ้นโดยอัตโนมัติควบคู่กันทุกครั้งที่คุณกดบันทึกหรือหยุดเซสชัน","tab_membership":"สมาชิก","tab_about":"เกี่ยวกับ","al_pricing":"ราคา","al_terms":"ข้อกำหนด","al_privacy":"ความเป็นส่วนตัว","al_contact":"ติดต่อ","about_powered":"ขับเคลื่อนด้วยการแปลด้วย AI ขั้นสูง","mem_active_plan":"แพ็กเกจที่ใช้งานอยู่","mem_unlimited":"นาทีไม่จำกัด","mem_this_month":"เดือนนี้: ","mem_your_plan":"แพ็กเกจของคุณ","mem_upgrade":"อัปเกรด","mem_creator_meta":"700 นาที/เดือน · ทุกภาษา · ถอดเสียงเป็นข้อความ","mem_pro_meta":"1,500 นาที/เดือน · ลำดับความสำคัญ · โหมดประชุม","mem_dev_byok":"นักพัฒนา (BYOK)","mem_your_key":"คีย์ของคุณ","mem_byok_note":"บิลด์นี้ทำงานด้วยคีย์ Gemini ของคุณเอง ไม่ต้องสมัครสมาชิก จัดการได้ในแท็บทั่วไป","badge_upgrade":"อัปเกรดเพื่อนำออก →","auth_no_account":"ยังไม่มีบัญชี? ","auth_create":"สร้างบัญชี","auth_forgot":"ลืมรหัสผ่าน?","auth_offline":"ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณ","auth_retry":"ลองอีกครั้ง","store_view":"ดูใน Microsoft Store","open_file":"เปิดไฟล์","open_folder":"เปิดโฟลเดอร์","transcript_folder":"โฟลเดอร์ถอดเสียง","browse":"เรียกดู…","reset_default":"รีเซ็ตเป็นค่าเริ่มต้น","st_capture_lost":"การจับเสียงหยุดลง (อุปกรณ์อาจมีการเปลี่ยนแปลง) โปรดเริ่มเซสชันใหม่","privacy_policy_link":"นโยบายความเป็นส่วนตัวฉบับเต็ม"}};
+/* Voice-gender picker, the Translation settings tab (terms moved out of General)
+   and the What's-New card. Kept as its own block rather than appended to the 23
+   giant I18N_EXTRA lines: same merge, far easier to review. scripts/check_i18n.py
+   extracts this block too, so a missing language still fails the parity gate. */
+const I18N_VOICE_TERMS = {
+  tr:{tab_translation:"Çeviri",voice_section:"Ses",voice_in_label:"Çeviri sesi",voice_out_label:"Benim sesim",voice_in_hint:"Videoda ve toplantıda karşı tarafı bu sesle duyarsınız.",voice_out_hint:"Toplantıda karşı taraf sizi bu sesle duyar.",vg_auto:"Otomatik",vg_female:"Kadın",vg_male:"Erkek",no_voice_choice:"Bu dilde ses seçimi henüz yok.",terms_section:"Terimler",terms_label:"Terimler ve özel adlar",terms_hint:"Marka, kişi ve ürün adlarını buraya yaz — çeviri motoru onları doğru yazsın. Video ve toplantı modunda geçerlidir. Her satıra bir terim; farklı yazılsın istiyorsan terim=karşılığı biçimini kullan.",terms_builtin:"Hazır terim listesi ({n} ad)",terms_show:"Göster",terms_hide:"Gizle",terms_count:"{total} / {max} terim · {user} sizin, {builtin} hazır",wn_title:"Yenilikler",wn_ver:"Sürüm {v}",wn_ok:"Anladım"},
+  en:{tab_translation:"Translation",voice_section:"Voice",voice_in_label:"Translation voice",voice_out_label:"My voice",voice_in_hint:"The voice you hear the video or the other person in.",voice_out_hint:"The voice the other person hears you in, in Meeting mode.",vg_auto:"Automatic",vg_female:"Female",vg_male:"Male",no_voice_choice:"Voice choice isn't available in this language yet.",terms_section:"Terms",terms_label:"Terms and proper names",terms_hint:"Brand, person and product names go here so the engine spells them right. Applies in Video and Meeting mode. One per line; use term=replacement if it should come out differently.",terms_builtin:"Ready-made term list ({n} names)",terms_show:"Show",terms_hide:"Hide",terms_count:"{total} / {max} terms · {user} yours, {builtin} ready-made",wn_title:"What's new",wn_ver:"Version {v}",wn_ok:"Got it"},
+  de:{tab_translation:"Übersetzung",voice_section:"Stimme",voice_in_label:"Übersetzungsstimme",voice_out_label:"Meine Stimme",voice_in_hint:"Die Stimme, in der du das Video oder die andere Person hörst.",voice_out_hint:"Die Stimme, in der die andere Person dich im Meeting-Modus hört.",vg_auto:"Automatisch",vg_female:"Weiblich",vg_male:"Männlich",no_voice_choice:"Stimmauswahl ist in dieser Sprache noch nicht verfügbar.",terms_section:"Begriffe",terms_label:"Begriffe und Eigennamen",terms_hint:"Marken-, Personen- und Produktnamen hier eintragen, damit die Engine sie richtig schreibt. Gilt im Video- und Meeting-Modus. Einer pro Zeile; Begriff=Ersetzung, wenn er anders erscheinen soll.",terms_builtin:"Fertige Begriffsliste ({n} Namen)",terms_show:"Anzeigen",terms_hide:"Ausblenden",terms_count:"{total} / {max} Begriffe · {user} von dir, {builtin} vorgegeben",wn_title:"Neu in dieser Version",wn_ver:"Version {v}",wn_ok:"Verstanden"},
+  cs:{tab_translation:"Překlad",voice_section:"Hlas",voice_in_label:"Hlas překladu",voice_out_label:"Můj hlas",voice_in_hint:"Hlas, ve kterém slyšíš video nebo druhou osobu.",voice_out_hint:"Hlas, ve kterém tě druhá osoba slyší v režimu schůzky.",vg_auto:"Automaticky",vg_female:"Ženský",vg_male:"Mužský",no_voice_choice:"Volba hlasu v tomto jazyce ještě není dostupná.",terms_section:"Pojmy",terms_label:"Pojmy a vlastní jména",terms_hint:"Sem napiš názvy firem, osob a produktů, aby je engine psal správně. Platí v režimu videa i schůzky. Jeden na řádek; pokud má vyjít jinak, použij pojem=náhrada.",terms_builtin:"Připravený seznam pojmů ({n} názvů)",terms_show:"Zobrazit",terms_hide:"Skrýt",terms_count:"{total} / {max} pojmů · {user} tvých, {builtin} připravených",wn_title:"Co je nového",wn_ver:"Verze {v}",wn_ok:"Rozumím"},
+  fr:{tab_translation:"Traduction",voice_section:"Voix",voice_in_label:"Voix de traduction",voice_out_label:"Ma voix",voice_in_hint:"La voix dans laquelle vous entendez la vidéo ou votre interlocuteur.",voice_out_hint:"La voix dans laquelle votre interlocuteur vous entend en mode Réunion.",vg_auto:"Automatique",vg_female:"Féminine",vg_male:"Masculine",no_voice_choice:"Le choix de la voix n'est pas encore disponible dans cette langue.",terms_section:"Termes",terms_label:"Termes et noms propres",terms_hint:"Saisissez ici les noms de marques, de personnes et de produits pour que le moteur les écrive correctement. Valable en mode Vidéo et Réunion. Un par ligne ; utilisez terme=remplacement s'il doit sortir différemment.",terms_builtin:"Liste de termes prête à l'emploi ({n} noms)",terms_show:"Afficher",terms_hide:"Masquer",terms_count:"{total} / {max} termes · {user} à vous, {builtin} fournis",wn_title:"Nouveautés",wn_ver:"Version {v}",wn_ok:"J'ai compris"},
+  es:{tab_translation:"Traducción",voice_section:"Voz",voice_in_label:"Voz de la traducción",voice_out_label:"Mi voz",voice_in_hint:"La voz con la que oyes el vídeo o a la otra persona.",voice_out_hint:"La voz con la que la otra persona te oye en el modo Reunión.",vg_auto:"Automática",vg_female:"Femenina",vg_male:"Masculina",no_voice_choice:"La elección de voz aún no está disponible en este idioma.",terms_section:"Términos",terms_label:"Términos y nombres propios",terms_hint:"Escribe aquí nombres de marcas, personas y productos para que el motor los escriba bien. Se aplica en modo Vídeo y Reunión. Uno por línea; usa término=reemplazo si debe salir de otra forma.",terms_builtin:"Lista de términos lista para usar ({n} nombres)",terms_show:"Mostrar",terms_hide:"Ocultar",terms_count:"{total} / {max} términos · {user} tuyos, {builtin} incluidos",wn_title:"Novedades",wn_ver:"Versión {v}",wn_ok:"Entendido"},
+  pt:{tab_translation:"Tradução",voice_section:"Voz",voice_in_label:"Voz da tradução",voice_out_label:"A minha voz",voice_in_hint:"A voz com que ouves o vídeo ou a outra pessoa.",voice_out_hint:"A voz com que a outra pessoa te ouve no modo Reunião.",vg_auto:"Automática",vg_female:"Feminina",vg_male:"Masculina",no_voice_choice:"A escolha de voz ainda não está disponível neste idioma.",terms_section:"Termos",terms_label:"Termos e nomes próprios",terms_hint:"Escreve aqui nomes de marcas, pessoas e produtos para o motor os escrever corretamente. Aplica-se nos modos Vídeo e Reunião. Um por linha; usa termo=substituição se deve sair diferente.",terms_builtin:"Lista de termos pronta ({n} nomes)",terms_show:"Mostrar",terms_hide:"Ocultar",terms_count:"{total} / {max} termos · {user} teus, {builtin} incluídos",wn_title:"Novidades",wn_ver:"Versão {v}",wn_ok:"Entendi"},
+  ja:{tab_translation:"翻訳",voice_section:"音声",voice_in_label:"翻訳の声",voice_out_label:"自分の声",voice_in_hint:"動画や相手の声をこの声で聞きます。",voice_out_hint:"会議モードで相手があなたを聞くときの声です。",vg_auto:"自動",vg_female:"女性",vg_male:"男性",no_voice_choice:"この言語では声の選択はまだ使えません。",terms_section:"用語",terms_label:"用語・固有名詞",terms_hint:"ブランド名・人名・製品名をここに入れると、エンジンが正しく表記します。動画モードと会議モードの両方に適用されます。1 行に 1 つ。別の表記にしたい場合は 用語=置き換え の形式で。",terms_builtin:"用語リスト（{n} 件）",terms_show:"表示",terms_hide:"非表示",terms_count:"{total} / {max} 件 · あなた {user}、既定 {builtin}",wn_title:"新機能",wn_ver:"バージョン {v}",wn_ok:"了解"},
+  ko:{tab_translation:"번역",voice_section:"음성",voice_in_label:"번역 음성",voice_out_label:"내 목소리",voice_in_hint:"영상이나 상대방을 이 음성으로 듣습니다.",voice_out_hint:"회의 모드에서 상대방이 나를 듣는 음성입니다.",vg_auto:"자동",vg_female:"여성",vg_male:"남성",no_voice_choice:"이 언어에서는 아직 음성을 선택할 수 없습니다.",terms_section:"용어",terms_label:"용어 및 고유명사",terms_hint:"브랜드·사람·제품 이름을 여기에 적으면 엔진이 정확하게 표기합니다. 영상 모드와 회의 모드에 모두 적용됩니다. 한 줄에 하나씩, 다르게 표기하려면 용어=대체 형식을 쓰세요.",terms_builtin:"기본 용어 목록 ({n}개)",terms_show:"보기",terms_hide:"숨기기",terms_count:"{total} / {max}개 · 내 것 {user}, 기본 {builtin}",wn_title:"새로운 기능",wn_ver:"버전 {v}",wn_ok:"확인"},
+  ru:{tab_translation:"Перевод",voice_section:"Голос",voice_in_label:"Голос перевода",voice_out_label:"Мой голос",voice_in_hint:"Голос, которым вы слышите видео или собеседника.",voice_out_hint:"Голос, которым собеседник слышит вас в режиме встречи.",vg_auto:"Автоматически",vg_female:"Женский",vg_male:"Мужской",no_voice_choice:"Выбор голоса пока недоступен для этого языка.",terms_section:"Термины",terms_label:"Термины и имена собственные",terms_hint:"Впишите здесь названия брендов, имена людей и продуктов, чтобы движок писал их правильно. Действует в режимах «Видео» и «Встреча». По одному в строке; используйте термин=замена, если он должен выглядеть иначе.",terms_builtin:"Готовый список терминов ({n} назв.)",terms_show:"Показать",terms_hide:"Скрыть",terms_count:"{total} / {max} терминов · ваших {user}, готовых {builtin}",wn_title:"Что нового",wn_ver:"Версия {v}",wn_ok:"Понятно"},
+  zh:{tab_translation:"翻译",voice_section:"语音",voice_in_label:"翻译语音",voice_out_label:"我的声音",voice_in_hint:"你听到视频或对方时使用的声音。",voice_out_hint:"会议模式中对方听到你时的声音。",vg_auto:"自动",vg_female:"女声",vg_male:"男声",no_voice_choice:"该语言暂不支持选择声音。",terms_section:"术语",terms_label:"术语与专有名词",terms_hint:"把品牌、人名和产品名写在这里，引擎就会正确书写。视频模式和会议模式均生效。每行一个；若希望输出不同，请使用 术语=替换 的格式。",terms_builtin:"内置术语表（{n} 个）",terms_show:"显示",terms_hide:"隐藏",terms_count:"{total} / {max} 个 · 你的 {user}，内置 {builtin}",wn_title:"新增功能",wn_ver:"版本 {v}",wn_ok:"知道了"},
+  "zh-Hant":{tab_translation:"翻譯",voice_section:"語音",voice_in_label:"翻譯語音",voice_out_label:"我的聲音",voice_in_hint:"你聽到影片或對方時使用的聲音。",voice_out_hint:"會議模式中對方聽到你時的聲音。",vg_auto:"自動",vg_female:"女聲",vg_male:"男聲",no_voice_choice:"這個語言暫時無法選擇聲音。",terms_section:"術語",terms_label:"術語與專有名詞",terms_hint:"把品牌、人名和產品名寫在這裡，引擎就會正確書寫。影片模式與會議模式都適用。每行一個；若希望輸出不同，請使用 術語=替換 的格式。",terms_builtin:"內建術語表（{n} 個）",terms_show:"顯示",terms_hide:"隱藏",terms_count:"{total} / {max} 個 · 你的 {user}，內建 {builtin}",wn_title:"新增功能",wn_ver:"版本 {v}",wn_ok:"知道了"},
+  pl:{tab_translation:"Tłumaczenie",voice_section:"Głos",voice_in_label:"Głos tłumaczenia",voice_out_label:"Mój głos",voice_in_hint:"Głos, którym słyszysz film lub drugą osobę.",voice_out_hint:"Głos, którym druga osoba słyszy Ciebie w trybie spotkania.",vg_auto:"Automatycznie",vg_female:"Kobiecy",vg_male:"Męski",no_voice_choice:"Wybór głosu nie jest jeszcze dostępny w tym języku.",terms_section:"Terminy",terms_label:"Terminy i nazwy własne",terms_hint:"Wpisz tu nazwy marek, osób i produktów, aby silnik pisał je poprawnie. Działa w trybie wideo i spotkania. Jeden na wiersz; użyj termin=zamiennik, jeśli ma wyglądać inaczej.",terms_builtin:"Gotowa lista terminów ({n} nazw)",terms_show:"Pokaż",terms_hide:"Ukryj",terms_count:"{total} / {max} terminów · {user} Twoich, {builtin} gotowych",wn_title:"Co nowego",wn_ver:"Wersja {v}",wn_ok:"Rozumiem"},
+  it:{tab_translation:"Traduzione",voice_section:"Voce",voice_in_label:"Voce della traduzione",voice_out_label:"La mia voce",voice_in_hint:"La voce con cui senti il video o l'altra persona.",voice_out_hint:"La voce con cui l'altra persona ti sente in modalità Riunione.",vg_auto:"Automatica",vg_female:"Femminile",vg_male:"Maschile",no_voice_choice:"La scelta della voce non è ancora disponibile in questa lingua.",terms_section:"Termini",terms_label:"Termini e nomi propri",terms_hint:"Scrivi qui nomi di marchi, persone e prodotti così il motore li scrive correttamente. Vale in modalità Video e Riunione. Uno per riga; usa termine=sostituzione se deve uscire diverso.",terms_builtin:"Elenco di termini pronto ({n} nomi)",terms_show:"Mostra",terms_hide:"Nascondi",terms_count:"{total} / {max} termini · {user} tuoi, {builtin} inclusi",wn_title:"Novità",wn_ver:"Versione {v}",wn_ok:"Ho capito"},
+  id:{tab_translation:"Terjemahan",voice_section:"Suara",voice_in_label:"Suara terjemahan",voice_out_label:"Suara saya",voice_in_hint:"Suara yang kamu dengar untuk video atau orang lain.",voice_out_hint:"Suara yang didengar orang lain sebagai kamu di mode Rapat.",vg_auto:"Otomatis",vg_female:"Perempuan",vg_male:"Laki-laki",no_voice_choice:"Pilihan suara belum tersedia untuk bahasa ini.",terms_section:"Istilah",terms_label:"Istilah dan nama diri",terms_hint:"Tulis nama merek, orang, dan produk di sini agar mesin menuliskannya dengan benar. Berlaku di mode Video dan Rapat. Satu per baris; pakai istilah=pengganti jika harus muncul berbeda.",terms_builtin:"Daftar istilah siap pakai ({n} nama)",terms_show:"Tampilkan",terms_hide:"Sembunyikan",terms_count:"{total} / {max} istilah · {user} milikmu, {builtin} bawaan",wn_title:"Yang baru",wn_ver:"Versi {v}",wn_ok:"Mengerti"},
+  nl:{tab_translation:"Vertaling",voice_section:"Stem",voice_in_label:"Vertaalstem",voice_out_label:"Mijn stem",voice_in_hint:"De stem waarin je de video of de ander hoort.",voice_out_hint:"De stem waarin de ander jou hoort in de vergadermodus.",vg_auto:"Automatisch",vg_female:"Vrouwelijk",vg_male:"Mannelijk",no_voice_choice:"Stemkeuze is nog niet beschikbaar in deze taal.",terms_section:"Termen",terms_label:"Termen en eigennamen",terms_hint:"Zet merk-, persoons- en productnamen hier zodat de engine ze goed spelt. Geldt in Video- en vergadermodus. Eén per regel; gebruik term=vervanging als het anders moet verschijnen.",terms_builtin:"Kant-en-klare termenlijst ({n} namen)",terms_show:"Weergeven",terms_hide:"Verbergen",terms_count:"{total} / {max} termen · {user} van jou, {builtin} standaard",wn_title:"Wat is er nieuw",wn_ver:"Versie {v}",wn_ok:"Duidelijk"},
+  vi:{tab_translation:"Dịch",voice_section:"Giọng nói",voice_in_label:"Giọng bản dịch",voice_out_label:"Giọng của tôi",voice_in_hint:"Giọng bạn nghe thấy video hoặc người kia.",voice_out_hint:"Giọng mà người kia nghe thấy bạn trong chế độ Họp.",vg_auto:"Tự động",vg_female:"Nữ",vg_male:"Nam",no_voice_choice:"Ngôn ngữ này chưa cho chọn giọng.",terms_section:"Thuật ngữ",terms_label:"Thuật ngữ và tên riêng",terms_hint:"Ghi tên thương hiệu, người và sản phẩm vào đây để công cụ viết đúng. Áp dụng ở chế độ Video và Họp. Mỗi dòng một thuật ngữ; dùng thuật ngữ=thay thế nếu muốn kết quả khác.",terms_builtin:"Danh sách thuật ngữ có sẵn ({n} tên)",terms_show:"Hiện",terms_hide:"Ẩn",terms_count:"{total} / {max} thuật ngữ · {user} của bạn, {builtin} có sẵn",wn_title:"Có gì mới",wn_ver:"Phiên bản {v}",wn_ok:"Đã hiểu"},
+  th:{tab_translation:"การแปล",voice_section:"เสียง",voice_in_label:"เสียงคำแปล",voice_out_label:"เสียงของฉัน",voice_in_hint:"เสียงที่คุณได้ยินวิดีโอหรืออีกฝ่าย",voice_out_hint:"เสียงที่อีกฝ่ายได้ยินเป็นคุณในโหมดประชุม",vg_auto:"อัตโนมัติ",vg_female:"ผู้หญิง",vg_male:"ผู้ชาย",no_voice_choice:"ภาษานี้ยังเลือกเสียงไม่ได้",terms_section:"คำศัพท์",terms_label:"คำศัพท์และชื่อเฉพาะ",terms_hint:"ใส่ชื่อแบรนด์ ชื่อคน และชื่อสินค้าไว้ที่นี่ เพื่อให้ระบบสะกดถูก ใช้ได้ทั้งโหมดวิดีโอและโหมดประชุม บรรทัดละหนึ่งคำ ถ้าต้องการให้ออกมาต่างไปให้ใช้รูปแบบ คำ=คำแทน",terms_builtin:"รายการคำศัพท์พร้อมใช้ ({n} ชื่อ)",terms_show:"แสดง",terms_hide:"ซ่อน",terms_count:"{total} / {max} คำ · ของคุณ {user} พร้อมใช้ {builtin}",wn_title:"มีอะไรใหม่",wn_ver:"เวอร์ชัน {v}",wn_ok:"รับทราบ"},
+  ro:{tab_translation:"Traducere",voice_section:"Voce",voice_in_label:"Vocea traducerii",voice_out_label:"Vocea mea",voice_in_hint:"Vocea în care auzi videoclipul sau cealaltă persoană.",voice_out_hint:"Vocea în care cealaltă persoană te aude în modul Întâlnire.",vg_auto:"Automat",vg_female:"Feminină",vg_male:"Masculină",no_voice_choice:"Alegerea vocii nu este încă disponibilă în această limbă.",terms_section:"Termeni",terms_label:"Termeni și nume proprii",terms_hint:"Scrie aici nume de mărci, persoane și produse ca motorul să le scrie corect. Se aplică în modul Video și Întâlnire. Unul pe linie; folosește termen=înlocuire dacă trebuie să apară altfel.",terms_builtin:"Listă de termeni gata făcută ({n} nume)",terms_show:"Arată",terms_hide:"Ascunde",terms_count:"{total} / {max} termeni · {user} ai tăi, {builtin} incluși",wn_title:"Ce e nou",wn_ver:"Versiunea {v}",wn_ok:"Am înțeles"},
+  hi:{tab_translation:"अनुवाद",voice_section:"आवाज़",voice_in_label:"अनुवाद की आवाज़",voice_out_label:"मेरी आवाज़",voice_in_hint:"वीडियो या सामने वाले को आप इस आवाज़ में सुनते हैं।",voice_out_hint:"मीटिंग मोड में सामने वाला आपको इस आवाज़ में सुनता है।",vg_auto:"स्वचालित",vg_female:"महिला",vg_male:"पुरुष",no_voice_choice:"इस भाषा में आवाज़ चुनने की सुविधा अभी नहीं है।",terms_section:"शब्द",terms_label:"शब्द और विशेष नाम",terms_hint:"ब्रांड, व्यक्ति और उत्पाद के नाम यहाँ लिखें ताकि इंजन उन्हें सही लिखे। वीडियो और मीटिंग दोनों मोड में लागू होता है। हर पंक्ति में एक; अलग लिखवाना हो तो शब्द=बदल रूप का प्रयोग करें।",terms_builtin:"तैयार शब्द-सूची ({n} नाम)",terms_show:"दिखाएँ",terms_hide:"छिपाएँ",terms_count:"{total} / {max} शब्द · {user} आपके, {builtin} पहले से",wn_title:"क्या नया है",wn_ver:"संस्करण {v}",wn_ok:"समझ गया"},
+  hu:{tab_translation:"Fordítás",voice_section:"Hang",voice_in_label:"Fordítás hangja",voice_out_label:"Az én hangom",voice_in_hint:"Ezen a hangon hallod a videót vagy a másik felet.",voice_out_hint:"Ezen a hangon hall téged a másik fél megbeszélés módban.",vg_auto:"Automatikus",vg_female:"Nő",vg_male:"Férfi",no_voice_choice:"Ezen a nyelven a hang kiválasztása még nem érhető el.",terms_section:"Kifejezések",terms_label:"Kifejezések és tulajdonnevek",terms_hint:"Írd ide a márka-, személy- és terméknevek, hogy a motor helyesen írja őket. Videó és megbeszélés módban is érvényes. Soronként egy; ha máshogy kell megjelennie, használd a kifejezés=csere formát.",terms_builtin:"Kész kifejezéslista ({n} név)",terms_show:"Megjelenítés",terms_hide:"Elrejtés",terms_count:"{total} / {max} kifejezés · {user} a tiéd, {builtin} beépített",wn_title:"Újdonságok",wn_ver:"{v} verzió",wn_ok:"Értem"},
+  sv:{tab_translation:"Översättning",voice_section:"Röst",voice_in_label:"Översättningsröst",voice_out_label:"Min röst",voice_in_hint:"Rösten du hör videon eller den andra personen i.",voice_out_hint:"Rösten den andra personen hör dig i, i mötesläget.",vg_auto:"Automatiskt",vg_female:"Kvinnlig",vg_male:"Manlig",no_voice_choice:"Röstval är inte tillgängligt på det här språket än.",terms_section:"Termer",terms_label:"Termer och egennamn",terms_hint:"Skriv varumärkes-, person- och produktnamn här så att motorn stavar dem rätt. Gäller i video- och mötesläget. En per rad; använd term=ersättning om den ska komma ut annorlunda.",terms_builtin:"Färdig termlista ({n} namn)",terms_show:"Visa",terms_hide:"Dölj",terms_count:"{total} / {max} termer · {user} dina, {builtin} färdiga",wn_title:"Nyheter",wn_ver:"Version {v}",wn_ok:"Uppfattat"},
+  sr:{tab_translation:"Prevod",voice_section:"Glas",voice_in_label:"Glas prevoda",voice_out_label:"Moj glas",voice_in_hint:"Glas u kom slušaš video ili drugu osobu.",voice_out_hint:"Glas u kom te druga osoba sluša u režimu sastanka.",vg_auto:"Automatski",vg_female:"Ženski",vg_male:"Muški",no_voice_choice:"Izbor glasa na ovom jeziku još nije dostupan.",terms_section:"Pojmovi",terms_label:"Pojmovi i vlastita imena",terms_hint:"Upiši imena brendova, osoba i proizvoda ovde da ih motor ispravno napiše. Važi u režimu videa i sastanka. Jedan po redu; koristi pojam=zamena ako treba da izađe drugačije.",terms_builtin:"Gotov spisak pojmova ({n} imena)",terms_show:"Prikaži",terms_hide:"Sakrij",terms_count:"{total} / {max} pojmova · {user} tvojih, {builtin} gotovih",wn_title:"Šta je novo",wn_ver:"Verzija {v}",wn_ok:"Razumem"}
+};
 /* Settings/auth strings (1.0.18) merged into the 16 language blocks above so
    they need no per-block edits; T()/applyI18n resolve them (en fallback if any). */
 Object.keys(I18N_EXTRA).forEach(function(l){ if(!I18N[l]) I18N[l]={}; var s=I18N_EXTRA[l]; for(var k in s) I18N[l][k]=s[k]; });
+Object.keys(I18N_VOICE_TERMS).forEach(function(l){ if(!I18N[l]) I18N[l]={}; var s=I18N_VOICE_TERMS[l]; for(var k in s) I18N[l][k]=s[k]; });
 /* The output diagnostic is deliberately separate from system-audio capture:
    the latter excludes Voxis itself, so its meter must not be presented as an
    output-device meter. Keep these four short labels localized together. */
@@ -5968,11 +6057,12 @@ function detectLang(){
 let LANG = detectLang();
 document.documentElement.lang = LANG;  // set before render to avoid a lang flash
 function T(k){ return (I18N[LANG] && I18N[LANG][k]) ?? I18N.en[k] ?? I18N.tr[k] ?? k; }
-// Meeting-terms box: mirror the ENGINE's own parse rule (one term per line,
-// blanks and #comments skipped) so the count on screen is the count that will
-// actually be sent, and warn rather than silently truncate at the 50 the
-// engine keeps.
+// Terms box: mirror the ENGINE's own parse rule (one term per line, blanks and
+// #comments skipped) so the count on screen is the count that will actually be
+// sent, and warn rather than silently truncate at the 50 the engine keeps.
 const HOTWORDS_MAX_TERMS = 50;
+// The prepacked proper-noun list (config.DEFAULT_TERMS), filled from the bridge.
+let BUILTIN_TERMS = [];
 function countHotwords(text){
   return (text||'').split('\n')
     .map(l=>l.trim())
@@ -5982,11 +6072,67 @@ function countHotwords(text){
 function renderHotwordCount(){
   const hw=$('#hotwords'), out=$('#hotwords-count');
   if(!hw||!out) return;
-  const n=countHotwords(hw.value);
-  const over=n>HOTWORDS_MAX_TERMS;
-  out.textContent = over ? T('hotwords_over').replace('{n}', n).replace('{max}', HOTWORDS_MAX_TERMS)
-                         : T('hotwords_count').replace('{n}', n).replace('{max}', HOTWORDS_MAX_TERMS);
+  const user=countHotwords(hw.value);
+  // The prepacked list fills whatever room the user's own terms leave — same
+  // rule as config.merge_hotwords, so this never promises more than is sent.
+  const builtin = ($('#builtin-terms')||{}).checked ? Math.max(0, Math.min(BUILTIN_TERMS.length, HOTWORDS_MAX_TERMS-user)) : 0;
+  const total=user+builtin, over=user>HOTWORDS_MAX_TERMS;
+  out.textContent = over ? T('hotwords_over').replace('{n}', user).replace('{max}', HOTWORDS_MAX_TERMS)
+                         : T('terms_count').replace('{total}', total).replace('{max}', HOTWORDS_MAX_TERMS)
+                                           .replace('{user}', user).replace('{builtin}', builtin);
   out.style.color = over ? 'var(--amber)' : '';
+  const lbl=$('#builtin-terms-lbl');
+  if(lbl) lbl.textContent = T('terms_builtin').replace('{n}', BUILTIN_TERMS.length);
+}
+// At rest (on save, or when Settings opens) the number comes from the bridge,
+// which runs the SAME merge the session handshake gets — so the count above,
+// which is only a local mirror for live typing, can never quietly drift from it.
+async function syncHotwordCount(){
+  const hw=$('#hotwords'), out=$('#hotwords-count');
+  if(!hw||!out) return;
+  let s=null;
+  try{ s = await api().hotword_stats(hw.value); }catch(_){ return; }
+  if(!s || s.user>s.limit) return;      // over-limit keeps the warning above
+  out.textContent = T('terms_count').replace('{total}', s.total).replace('{max}', s.limit)
+                                    .replace('{user}', s.user).replace('{builtin}', s.builtin);
+}
+// Voice gender. Only Qwen-routed targets can honor it (the Gemini translate model
+// ignores the voice field outright — measured), so the picker stays visible and a
+// hint says so rather than the setting silently doing nothing.
+const VOICE_GENDERS = ['auto','female','male'];
+function fillVoiceSelects(){
+  ['#voice-in','#voice-out','#voice-in-s','#voice-out-s'].forEach(sel=>{
+    const el=$(sel); if(!el) return;
+    const cur=el.value;
+    el.innerHTML='';
+    VOICE_GENDERS.forEach(g=>{
+      const o=document.createElement('option');
+      o.value=g; o.textContent=T('vg_'+g);
+      el.appendChild(o);
+    });
+    if(cur) el.value=cur;
+  });
+}
+function renderBuiltinTerms(){
+  BUILTIN_TERMS = Array.isArray(STATE.builtin_terms_list) ? STATE.builtin_terms_list : [];
+  const box=$('#builtin-terms-list');
+  // textContent, never innerHTML: the list is ours, but a term box is exactly
+  // where injected markup would hide.
+  if(box) box.textContent = BUILTIN_TERMS.join(' · ');
+}
+function voiceChoiceOk(lang){
+  const list=STATE.voice_choice_langs;
+  // No list (old bridge) => say nothing rather than claim the setting is dead.
+  return !Array.isArray(list) || list.length===0 || list.indexOf(lang)>=0;
+}
+function renderVoiceChoiceHints(){
+  const cfg=STATE.cfg||{};
+  const inOk=voiceChoiceOk(cfg.target_language_incoming||'');
+  const outOk=voiceChoiceOk(cfg.target_language_outgoing||'');
+  const show=(sel,ok)=>{ const el=$(sel); if(el) el.style.display = ok ? 'none' : ''; };
+  show('#voice-in-hint', inOk);
+  show('#voice-out-hint', outOk);
+  show('#voice-s-hint', inOk && outOk);
 }
 function applyI18n(lang){
   LANG = I18N[lang] ? lang : 'en';
@@ -6014,6 +6160,17 @@ function applyI18n(lang){
     if(typeof localizeSettings==='function') localizeSettings();
     if(typeof renderMembership==='function') renderMembership();
   }
+  // Option labels and the two counted strings are built in JS, so a live language
+  // switch has to rebuild them — data-i18n only reaches static nodes.
+  if(typeof fillVoiceSelects==='function'){
+    fillVoiceSelects();
+    const cfg=STATE.cfg||{};
+    [['#voice-in','incoming'],['#voice-in-s','incoming'],
+     ['#voice-out','outgoing'],['#voice-out-s','outgoing']].forEach(([sel,leg])=>{
+      const el=$(sel); if(el) el.value = cfg['voice_gender_'+leg] || 'auto';
+    });
+  }
+  if(typeof renderHotwordCount==='function') renderHotwordCount();
 }
 /* ---------- tema ---------- */
 function applyTheme(t){
@@ -6333,8 +6490,18 @@ async function init(){
   { const e = $('#auto-export-srt'); if(e) e.checked = !!cfg.auto_export_srt; }
   { const e = $('#auto-export-vtt'); if(e) e.checked = !!cfg.auto_export_vtt; }
   { const sl = $('#spk-labels'); if(sl) sl.checked = cfg.speaker_labels !== false; }
+  { const bt = $('#builtin-terms'); if(bt) bt.checked = cfg.builtin_terms !== false; }
   { const hw = $('#hotwords');
-    if(hw){ hw.value = (cfg.beta && cfg.beta.hotwords) || ''; renderHotwordCount(); } }
+    if(hw){ hw.value = (cfg.beta && cfg.beta.hotwords) || ''; } }
+  renderBuiltinTerms(); renderHotwordCount();
+  // Both faces of the same setting: the picker beside the language and the copy
+  // in Settings › Translation read from one config value and write through one
+  // handler, so they can never disagree.
+  fillVoiceSelects();
+  { const gi = cfg.voice_gender_incoming || 'auto', go = cfg.voice_gender_outgoing || 'auto';
+    [['#voice-in',gi],['#voice-in-s',gi],['#voice-out',go],['#voice-out-s',go]]
+      .forEach(([sel,v])=>{ const el=$(sel); if(el) el.value=v; }); }
+  renderVoiceChoiceHints();
   { const mi = $('#allow-multiple-instances'); if(mi) mi.checked = !!cfg.allow_multiple_instances; }
   { const mo = $('#monitor-outgoing'); if(mo) mo.checked = !!cfg.monitor_outgoing_translation; }
   // Badge removal is a paid perk: only an official build with a paid subscription
@@ -6377,7 +6544,10 @@ async function init(){
     bindByokHandlers();
   }
   // First-run onboarding once the app is ready (gated by the bridge flag).
+  // A returning user gets the release notes instead — never both, and the bridge
+  // decides which by looking at whether onboarding was ever completed.
   if(!STATE.onboarding_done) openOnboard();
+  else maybeWhatsNew();
   poll();
 }
 /* ---------- kontroller ---------- */
@@ -6392,10 +6562,14 @@ duck.oninput=()=>{updRange(duck,'duckv'); saveDuck(duck.value/100)};
 vol.oninput =()=>{updRange(vol,'volv');   saveVol(vol.value/100)};
 $('#hear').onchange   = e=>{
   if(STATE.cfg) STATE.cfg.target_language_incoming = e.target.value;
-  renderVoiceHint();
+  renderVoiceHint(); renderVoiceChoiceHints();
   return api().set_cfg('target_language_incoming', e.target.value);
 };
-$('#send').onchange   = e=>api().set_cfg('target_language_outgoing', e.target.value);
+$('#send').onchange   = e=>{
+  if(STATE.cfg) STATE.cfg.target_language_outgoing = e.target.value;
+  renderVoiceChoiceHints();
+  return api().set_cfg('target_language_outgoing', e.target.value);
+};
 $('#langswap').onclick = async()=>{
   const b=$('#langswap'); b.disabled=true;
   try{
@@ -6406,7 +6580,7 @@ $('#langswap').onclick = async()=>{
         STATE.cfg.target_language_incoming=r.incoming;
         STATE.cfg.target_language_outgoing=r.outgoing;
       }
-      renderVoiceHint();
+      renderVoiceHint(); renderVoiceChoiceHints();
     }
   }finally{ b.disabled=false; }
 };
@@ -6425,8 +6599,36 @@ $('#obs').onchange    = e=>api().set_cfg('obs_subtitle_enabled', e.target.checke
     hw.oninput = renderHotwordCount;
     // Saved on blur, not per keystroke: this setting restarts a running
     // session, which must not happen between two letters of a word.
-    hw.onchange = e=>{ api().set_hotwords(e.target.value); renderHotwordCount(); };
+    hw.onchange = e=>{ api().set_hotwords(e.target.value); renderHotwordCount(); syncHotwordCount(); };
   } }
+{ const bt = $('#builtin-terms');
+  if(bt) bt.onchange = e=>{ if(STATE.cfg) STATE.cfg.builtin_terms = e.target.checked;
+                            api().set_cfg('builtin_terms', e.target.checked);
+                            renderHotwordCount(); syncHotwordCount(); }; }
+{ const tg = $('#builtin-terms-toggle');
+  if(tg) tg.onclick = ()=>{
+    const box=$('#builtin-terms-list'); if(!box) return;
+    const show = box.style.display==='none';
+    box.style.display = show ? '' : 'none';
+    tg.textContent = T(show ? 'terms_hide' : 'terms_show');
+    tg.dataset.i18n = show ? 'terms_hide' : 'terms_show';
+  }; }
+// One handler for both copies of each leg's picker; writes through the validated
+// bridge door (set_voice_gender), which restarts a live session because the voice
+// is chosen during the session handshake.
+function bindVoiceGender(sel, leg, other){
+  const el=$(sel); if(!el) return;
+  el.onchange = e=>{
+    const v=e.target.value;
+    const twin=$(other); if(twin) twin.value=v;
+    if(STATE.cfg) STATE.cfg['voice_gender_'+leg] = v;
+    return api().set_voice_gender(leg, v);
+  };
+}
+bindVoiceGender('#voice-in','incoming','#voice-in-s');
+bindVoiceGender('#voice-in-s','incoming','#voice-in');
+bindVoiceGender('#voice-out','outgoing','#voice-out-s');
+bindVoiceGender('#voice-out-s','outgoing','#voice-out');
 { const mi = $('#allow-multiple-instances'); if(mi) mi.onchange = e=>api().set_cfg('allow_multiple_instances', e.target.checked); }
 { const mo = $('#monitor-outgoing'); if(mo) mo.onchange = e=>api().set_cfg('monitor_outgoing_translation', e.target.checked); }
 $('#brandbadge').onchange = e=>api().set_cfg('branding_badge_enabled', e.target.checked);
@@ -6548,7 +6750,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='Escape' && activeModal && modalOnEsc){ modalOnEsc(); }
   else trapTab(e);
 });
-function openDrawer(){ $('#scrim').classList.add('open'); $('#drawer').classList.add('open'); localizeSettings(); renderMembership(); refreshTxDir(); switchSettingsTab('general'); openModal($('#drawer'), closeDrawer, $('#gear')); }
+function openDrawer(){ $('#scrim').classList.add('open'); $('#drawer').classList.add('open'); localizeSettings(); renderMembership(); refreshTxDir(); syncHotwordCount(); switchSettingsTab('general'); openModal($('#drawer'), closeDrawer, $('#gear')); }
 function closeDrawer(){ $('#scrim').classList.remove('open'); $('#drawer').classList.remove('open'); closeModal(); }
 // Settings tabs (Genel / Kısayollar / Üyelik / Hakkında)
 function switchSettingsTab(pane){
@@ -6721,6 +6923,24 @@ function showPaywallCard(){
   const el=$('#limit-min'); if(el) el.textContent=String(cap);
   openLimitModal();
 }
+/* Release notes: ask the bridge whether anything is pending (it owns the
+   seen-version bookkeeping and the language fallback), render, and mark seen only
+   when the card is actually shown — a bridge hiccup must not burn the version. */
+async function maybeWhatsNew(){
+  let wn=null;
+  try{ wn = await api().whatsnew(); }catch(_){ return; }
+  if(!wn || !Array.isArray(wn.bullets) || !wn.bullets.length) return;
+  const list=$('#whatsnew-list'); if(!list) return;
+  list.innerHTML='';
+  wn.bullets.forEach(b=>{ const li=document.createElement('li');
+                          li.style.marginBottom='8px'; li.textContent=b; list.appendChild(li); });
+  const ver=$('#whatsnew-ver'); if(ver) ver.textContent = T('wn_ver').replace('{v}', wn.version||'');
+  $('#scrim').classList.add('open'); $('#whatsnew-modal').classList.add('open');
+  openModal($('#whatsnew-modal'), closeWhatsNew, null);
+  try{ api().mark_whatsnew_seen(); }catch(_){}
+}
+function closeWhatsNew(){ $('#whatsnew-modal').classList.remove('open'); if(!$('#drawer').classList.contains('open')) $('#scrim').classList.remove('open'); closeModal(); }
+{ const ok=$('#whatsnew-ok'); if(ok) ok.onclick = closeWhatsNew; }
 function closeReviewModal(){ $('#review-modal').classList.remove('open'); if(!$('#drawer').classList.contains('open')) $('#scrim').classList.remove('open'); closeModal(); }
 function showReviewCard(){
   // Python decides WHEN (third clean session, Store build, asked once ever) and

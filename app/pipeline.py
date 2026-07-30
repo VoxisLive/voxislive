@@ -16,7 +16,7 @@ import numpy as np
 
 from .audio_io import Capture, Player, find_device, resolve_name, _make_resampler
 from .config import (ENGINE_CASCADE, ENGINE_GEMINI, ENGINE_QWEN,
-                     gate_params, stream_gated)
+                     gate_params, resolve_voice, stream_gated)
 from .engines import make_translator
 from .i18n import t
 from .playback_sync import AdaptivePlaybackStager
@@ -407,6 +407,10 @@ class IncomingPipeline:
                 # Qwen voice-cloning only when this is a real beta session (webui
                 # sets it on the beta resolver); off on the standard Qwen route.
                 beta_active=getattr(resolve, "beta_active", False),
+                # Each leg resolves its OWN voice: a meeting speaks with two
+                # genders and both legs share this cfg.
+                voice=resolve_voice(self._engine,
+                                    cfg.get("voice_gender_incoming", "auto")),
             )
         except Exception:
             self._teardown_resources()
@@ -969,6 +973,10 @@ class OutgoingPipeline:
                 on_fatal=self._failover_to_gemini,
                 key_provider=getattr(resolve, "gemini_key_provider", None),
                 beta_active=getattr(resolve, "beta_active", False),
+                # The voice the OTHER party hears as the user — its own setting,
+                # independent of the incoming leg's.
+                voice=resolve_voice(self._engine,
+                                    cfg.get("voice_gender_outgoing", "auto")),
             )
         except Exception:
             self._teardown_resources()
