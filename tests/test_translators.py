@@ -303,6 +303,43 @@ def test_ws_main_terminal_error_breaks_without_retry(caplog):
     assert "terminal error, not retrying" in caplog.text
 
 
+def test_asr_failures_alone_still_arm_the_no_output_watchdog():
+    # Field regression (CORFO meeting, 2026-07-29): DashScope answered every
+    # utterance with input_audio_transcription.failed and produced no output.
+    # Those frames reset the stall watchdog, and the .failed branch used not to
+    # mark input — so the no-output watchdog stayed disarmed and the session sat
+    # dead for 12m52s with the meter running. A .failed-ONLY stream must still
+    # force a self-heal reconnect. INPUT_RECENT_SECONDS is left at its real
+    # value here: the point is that .failed refreshes _last_input_ts.
+    connects = []
+    failed = ('{"type":"conversation.item.input_audio_transcription.failed",'
+              '"error":{"type":"transcription_error",'
+              '"code":"UNEXPECTED_ASR_ERROR"}}')
+    first = _FakeWS([failed, failed, failed])
+
+    class _Driven(qwen.QwenTranslator):
+        NO_OUTPUT_WARN_SECONDS = 0.05
+        NO_OUTPUT_ROTATE_SECONDS = 0.1
+
+        async def _connect(self):
+            connects.append(1)
+            # Only the first socket errors; the healed session is idle, so the
+            # watchdog disarms instead of spinning further reconnects.
+            return first if len(connects) == 1 else _FakeWS()
+
+    tr = _Driven("k", "en", on_audio=_noop, on_text=_noop, on_status=_noop)
+    tr.start()
+    try:
+        deadline = time.monotonic() + 8.0
+        while time.monotonic() < deadline and len(connects) < 2:
+            time.sleep(0.05)
+        assert len(connects) >= 2, "ASR errors alone left the session black-holed"
+    finally:
+        tr.stop()
+        tr.join(timeout=5.0)
+    assert not tr.is_alive()
+
+
 def test_no_output_watchdog_self_heals_by_reconnecting():
     # Input transcription is flowing but the engine emits NO output — the
     # Beta-off→Gemini "translation stops" failure. The watchdog must escalate

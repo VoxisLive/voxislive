@@ -26,121 +26,98 @@ from . import APP_VERSION
 FALLBACK_LANG = "en"
 
 NOTES = {
-    "1.0.50": {
-        "en": [
-            "Choose whether the translated voice sounds female or male — with a separate setting for the voice the other person hears as you in Meeting mode.",
-            "Brand and product names are spelled correctly out of the box: a ready-made term list now ships with Voxis, and your own terms moved to Settings › Translation.",
-            "Release notes now live in the app: after every update you see what changed once, in your own language.",
-        ],
-        "tr": [
-            "Çeviri sesinin kadın ya da erkek olmasını seçin — toplantıda karşı tarafın sizi hangi sesle duyacağı ayrı bir ayar.",
-            "Marka ve ürün adları kutudan çıktığı gibi doğru yazılıyor: Voxis artık hazır bir terim listesiyle geliyor, kendi terimleriniz Ayarlar › Çeviri sekmesine taşındı.",
-            "Sürüm notları artık uygulamanın içinde: her güncellemeden sonra neyin değiştiğini kendi dilinizde bir kez görüyorsunuz.",
+    "1.0.51": {
+        "cs": [
+            "Překlad už uprostřed relace neztichne: když překladová služba přestane odpovídat, Voxis to teď pozná a sám se znovu připojí.",
+            "Dlouhé schůzky se zotaví samy — už není nutné relaci zastavit a spustit znovu, aby se hlas vrátil.",
         ],
         "de": [
-            "Wähle, ob die übersetzte Stimme weiblich oder männlich klingt — mit einer separaten Einstellung für die Stimme, in der dich andere im Meeting-Modus hören.",
-            "Marken- und Produktnamen werden von Anfang an korrekt geschrieben: Voxis bringt jetzt eine fertige Begriffsliste mit, deine eigenen Begriffe findest du unter Einstellungen › Übersetzung.",
-            "Versionshinweise stehen jetzt in der App: Nach jedem Update siehst du einmal, was sich geändert hat — in deiner Sprache.",
+            "Die Übersetzung verstummt nicht mehr mitten in einer Sitzung: Wenn der Übersetzungsdienst nicht mehr antwortet, merkt Voxis das jetzt und verbindet sich von selbst neu.",
+            "Lange Meetings erholen sich von allein — du musst die Sitzung nicht mehr stoppen und neu starten, damit die Stimme zurückkommt.",
         ],
-        "cs": [
-            "Vyber, zda má přeložený hlas znít žensky nebo mužsky — s vlastním nastavením pro hlas, kterým tě ostatní slyší v režimu schůzky.",
-            "Názvy firem a produktů se píší správně hned od začátku: Voxis nyní obsahuje připravený seznam pojmů a tvoje vlastní pojmy najdeš v Nastavení › Překlad.",
-            "Poznámky k verzi jsou nově přímo v aplikaci: po každé aktualizaci jednou uvidíš, co se změnilo, ve svém jazyce.",
-        ],
-        "fr": [
-            "Choisissez si la voix traduite sonne féminine ou masculine, avec un réglage distinct pour la voix dans laquelle votre interlocuteur vous entend en mode Réunion.",
-            "Les noms de marques et de produits sont correctement orthographiés dès le départ : Voxis intègre désormais une liste de termes prête à l'emploi, et vos propres termes se trouvent dans Paramètres › Traduction.",
-            "Les nouveautés s'affichent maintenant dans l'application : après chaque mise à jour, vous voyez une fois ce qui a changé, dans votre langue.",
+        "en": [
+            "Translation no longer goes quiet in the middle of a session: if the translation service stops responding, Voxis now notices and reconnects on its own.",
+            "Long meetings recover by themselves — no more stopping and restarting the session to get the voice back.",
         ],
         "es": [
-            "Elige si la voz traducida suena femenina o masculina, con un ajuste aparte para la voz con la que la otra persona te oye en el modo Reunión.",
-            "Los nombres de marcas y productos se escriben bien desde el principio: Voxis ya incluye una lista de términos lista para usar y tus propios términos están en Ajustes › Traducción.",
-            "Las novedades ahora están en la app: después de cada actualización ves una vez qué ha cambiado, en tu idioma.",
+            "La traducción ya no se queda en silencio a mitad de una sesión: si el servicio de traducción deja de responder, Voxis lo detecta y se reconecta solo.",
+            "Las reuniones largas se recuperan por sí solas: ya no hace falta detener y reiniciar la sesión para recuperar la voz.",
         ],
-        "pt": [
-            "Escolhe se a voz traduzida soa feminina ou masculina, com uma definição separada para a voz com que a outra pessoa te ouve no modo Reunião.",
-            "Nomes de marcas e produtos ficam escritos corretamente desde o início: o Voxis já inclui uma lista de termos pronta e os teus próprios termos estão em Definições › Tradução.",
-            "As novidades passam a estar na aplicação: depois de cada atualização vês uma vez o que mudou, no teu idioma.",
-        ],
-        "ja": [
-            "翻訳音声を女性の声か男性の声かを選べます。会議モードで相手に聞こえるあなたの声は別に設定できます。",
-            "ブランド名や製品名が最初から正しく表記されます。用語リストが同梱され、自分の用語は「設定 › 翻訳」に移りました。",
-            "更新内容がアプリ内で読めるようになりました。アップデートのたびに、変更点を自分の言語で一度だけ表示します。",
-        ],
-        "ko": [
-            "번역 음성을 여성 또는 남성으로 선택할 수 있습니다. 회의 모드에서 상대방이 나를 듣는 음성은 따로 설정합니다.",
-            "브랜드와 제품 이름이 처음부터 정확하게 표기됩니다. 기본 용어 목록이 함께 제공되며, 직접 추가한 용어는 설정 › 번역으로 옮겼습니다.",
-            "업데이트 내용을 이제 앱에서 봅니다. 업데이트할 때마다 무엇이 바뀌었는지 내 언어로 한 번 보여 줍니다.",
-        ],
-        "ru": [
-            "Выберите, будет ли переведённый голос женским или мужским — и отдельно голос, которым собеседник слышит вас в режиме встречи.",
-            "Названия брендов и продуктов сразу пишутся правильно: в Voxis теперь есть готовый список терминов, а ваши собственные термины переехали в «Настройки › Перевод».",
-            "Список изменений теперь внутри приложения: после каждого обновления вы один раз увидите, что нового, на своём языке.",
-        ],
-        "zh": [
-            "可以选择翻译语音是女声还是男声——会议模式中对方听到你的声音是单独的设置。",
-            "品牌和产品名称一开始就拼写正确：Voxis 现在内置术语表，你自己的术语已移到“设置 › 翻译”。",
-            "更新说明现在在应用内：每次更新后，你会用自己的语言看到一次变更内容。",
-        ],
-        "zh-Hant": [
-            "可以選擇翻譯語音是女聲還是男聲——會議模式中對方聽到你的聲音是獨立的設定。",
-            "品牌與產品名稱一開始就拼寫正確：Voxis 現在內建術語表，你自己的術語已移到「設定 › 翻譯」。",
-            "更新說明現在在應用程式內：每次更新後，你會用自己的語言看到一次變更內容。",
-        ],
-        "pl": [
-            "Wybierz, czy przetłumaczony głos ma brzmieć kobieco czy męsko — z osobnym ustawieniem głosu, którym słyszy Cię druga osoba w trybie spotkania.",
-            "Nazwy marek i produktów są od razu pisane poprawnie: Voxis zawiera teraz gotową listę terminów, a Twoje własne terminy trafiły do Ustawienia › Tłumaczenie.",
-            "Informacje o zmianach są teraz w aplikacji: po każdej aktualizacji raz zobaczysz, co się zmieniło, w swoim języku.",
-        ],
-        "it": [
-            "Scegli se la voce tradotta suona femminile o maschile, con un'impostazione separata per la voce con cui l'altra persona ti sente in modalità Riunione.",
-            "I nomi di marchi e prodotti sono scritti correttamente sin da subito: Voxis include ora un elenco di termini pronto e i tuoi termini si trovano in Impostazioni › Traduzione.",
-            "Le novità ora sono nell'app: dopo ogni aggiornamento vedi una volta che cosa è cambiato, nella tua lingua.",
-        ],
-        "id": [
-            "Pilih apakah suara terjemahan terdengar perempuan atau laki-laki — dengan pengaturan terpisah untuk suara yang didengar orang lain sebagai kamu di mode Rapat.",
-            "Nama merek dan produk langsung ditulis dengan benar: Voxis kini membawa daftar istilah siap pakai, dan istilahmu sendiri pindah ke Pengaturan › Terjemahan.",
-            "Catatan rilis kini ada di dalam aplikasi: setiap selesai memperbarui, kamu melihat sekali apa yang berubah dalam bahasamu.",
-        ],
-        "nl": [
-            "Kies of de vertaalde stem vrouwelijk of mannelijk klinkt — met een aparte instelling voor de stem waarin de ander jou hoort in de vergadermodus.",
-            "Merk- en productnamen worden meteen goed geschreven: Voxis bevat nu een kant-en-klare termenlijst en je eigen termen staan in Instellingen › Vertaling.",
-            "Release-opmerkingen staan nu in de app: na elke update zie je één keer wat er is veranderd, in je eigen taal.",
-        ],
-        "vi": [
-            "Chọn giọng dịch là nữ hay nam — kèm thiết lập riêng cho giọng mà người kia nghe thấy bạn trong chế độ Họp.",
-            "Tên thương hiệu và sản phẩm được viết đúng ngay từ đầu: Voxis nay có sẵn danh sách thuật ngữ, còn thuật ngữ của bạn chuyển sang Cài đặt › Dịch.",
-            "Ghi chú phát hành giờ nằm trong ứng dụng: sau mỗi lần cập nhật, bạn xem một lần những gì đã thay đổi bằng ngôn ngữ của mình.",
-        ],
-        "th": [
-            "เลือกได้ว่าเสียงแปลจะเป็นเสียงผู้หญิงหรือผู้ชาย พร้อมการตั้งค่าแยกสำหรับเสียงที่อีกฝ่ายได้ยินเป็นคุณในโหมดประชุม",
-            "ชื่อแบรนด์และชื่อสินค้าสะกดถูกตั้งแต่แรก: Voxis มีรายการคำศัพท์พร้อมใช้มาให้แล้ว และคำศัพท์ของคุณย้ายไปที่ ตั้งค่า › การแปล",
-            "บันทึกรุ่นอยู่ในแอปแล้ว: หลังอัปเดตทุกครั้ง คุณจะเห็นสิ่งที่เปลี่ยนไปหนึ่งครั้งในภาษาของคุณ",
-        ],
-        "ro": [
-            "Alege dacă vocea tradusă sună feminin sau masculin — cu o setare separată pentru vocea în care cealaltă persoană te aude în modul Întâlnire.",
-            "Numele de mărci și produse sunt scrise corect din start: Voxis include acum o listă de termeni gata făcută, iar termenii tăi au trecut în Setări › Traducere.",
-            "Notele de versiune sunt acum în aplicație: după fiecare actualizare vezi o dată ce s-a schimbat, în limba ta.",
+        "fr": [
+            "La traduction ne devient plus silencieuse en pleine session : si le service de traduction cesse de répondre, Voxis s'en aperçoit et se reconnecte tout seul.",
+            "Les longues réunions se rétablissent d'elles-mêmes — plus besoin d'arrêter et de relancer la session pour retrouver la voix.",
         ],
         "hi": [
-            "तय करें कि अनुवादित आवाज़ महिला जैसी हो या पुरुष जैसी — मीटिंग मोड में सामने वाला आपको जिस आवाज़ में सुनता है, उसकी सेटिंग अलग है।",
-            "ब्रांड और उत्पाद के नाम शुरू से ही सही लिखे जाते हैं: Voxis के साथ अब तैयार शब्द-सूची आती है, और आपके अपने शब्द सेटिंग्स › अनुवाद में चले गए हैं।",
-            "रिलीज़ नोट्स अब ऐप में हैं: हर अपडेट के बाद आप एक बार अपनी भाषा में देखेंगे कि क्या बदला।",
+            "अनुवाद अब सेशन के बीच में चुप नहीं होता: अगर अनुवाद सेवा जवाब देना बंद कर दे, तो Voxis इसे पहचानकर खुद दोबारा जुड़ जाता है।",
+            "लंबी मीटिंग खुद ही सामान्य हो जाती हैं — आवाज़ वापस लाने के लिए सेशन रोककर दोबारा शुरू करने की ज़रूरत नहीं।",
         ],
         "hu": [
-            "Válaszd ki, hogy a lefordított hang nőies vagy férfias legyen — külön beállítással arra a hangra, amelyen a másik fél hall téged megbeszélés módban.",
-            "A márka- és terméknevek elsőre is helyesen íródnak: a Voxis mostantól kész kifejezéslistát hoz magával, a saját kifejezéseid pedig a Beállítások › Fordítás alá kerültek.",
-            "A verziójegyzet mostantól az alkalmazásban van: minden frissítés után egyszer látod, mi változott, a saját nyelveden.",
+            "A fordítás már nem némul el a munkamenet közepén: ha a fordítási szolgáltatás nem válaszol, a Voxis ezt észreveszi, és magától újracsatlakozik.",
+            "A hosszú megbeszélések maguktól helyreállnak — nem kell leállítani és újraindítani a munkamenetet, hogy visszatérjen a hang.",
         ],
-        "sv": [
-            "Välj om den översatta rösten ska låta kvinnlig eller manlig — med en separat inställning för rösten som den andra personen hör dig i, i mötesläget.",
-            "Varumärkes- och produktnamn stavas rätt från början: Voxis har nu en färdig termlista och dina egna termer finns under Inställningar › Översättning.",
-            "Versionsnyheterna finns nu i appen: efter varje uppdatering ser du en gång vad som ändrats, på ditt språk.",
+        "id": [
+            "Terjemahan tidak lagi mendadak senyap di tengah sesi: jika layanan terjemahan berhenti merespons, Voxis kini menyadarinya dan menyambung ulang sendiri.",
+            "Rapat panjang pulih dengan sendirinya — tidak perlu lagi menghentikan dan memulai ulang sesi agar suaranya kembali.",
+        ],
+        "it": [
+            "La traduzione non ammutolisce più a metà sessione: se il servizio di traduzione smette di rispondere, Voxis se ne accorge e si riconnette da solo.",
+            "Le riunioni lunghe si riprendono da sole — non serve più fermare e riavviare la sessione per far tornare la voce.",
+        ],
+        "ja": [
+            "セッションの途中で翻訳が止まらなくなりました。翻訳サービスが応答しなくなると、Voxis がそれを検知して自動的に接続し直します。",
+            "長い会議も自動で復帰します。音声を取り戻すためにセッションを停止して開始し直す必要はありません。",
+        ],
+        "ko": [
+            "세션 도중에 번역이 끊기지 않습니다. 번역 서비스가 응답을 멈추면 Voxis가 이를 감지해 스스로 다시 연결합니다.",
+            "긴 회의도 저절로 복구됩니다. 음성을 되살리려고 세션을 중지했다가 다시 시작할 필요가 없습니다.",
+        ],
+        "nl": [
+            "De vertaling valt niet meer stil midden in een sessie: als de vertaaldienst niet meer reageert, merkt Voxis dat nu en maakt vanzelf opnieuw verbinding.",
+            "Lange vergaderingen herstellen zichzelf — je hoeft de sessie niet meer te stoppen en opnieuw te starten om de stem terug te krijgen.",
+        ],
+        "pl": [
+            "Tłumaczenie nie milknie już w trakcie sesji: jeśli usługa tłumaczenia przestanie odpowiadać, Voxis to wykryje i sam połączy się ponownie.",
+            "Długie spotkania wracają do normy same — nie trzeba już zatrzymywać i uruchamiać sesji od nowa, żeby odzyskać głos.",
+        ],
+        "pt": [
+            "A tradução não fica mais muda no meio de uma sessão: se o serviço de tradução parar de responder, o Voxis percebe e se reconecta sozinho.",
+            "Reuniões longas se recuperam sozinhas — não é mais preciso parar e reiniciar a sessão para a voz voltar.",
+        ],
+        "ro": [
+            "Traducerea nu mai amuțește la mijlocul unei sesiuni: dacă serviciul de traducere nu mai răspunde, Voxis observă și se reconectează singur.",
+            "Ședințele lungi își revin de la sine — nu mai trebuie să oprești și să repornești sesiunea ca să revină vocea.",
+        ],
+        "ru": [
+            "Перевод больше не пропадает посреди сеанса: если служба перевода перестаёт отвечать, Voxis замечает это и переподключается сам.",
+            "Длинные встречи восстанавливаются сами — больше не нужно останавливать и запускать сеанс заново, чтобы вернуть голос.",
         ],
         "sr": [
-            "Izaberi da li prevedeni glas zvuči kao ženski ili muški — uz posebno podešavanje za glas kojim te druga osoba sluša u režimu sastanka.",
-            "Imena brendova i proizvoda odmah se pišu ispravno: Voxis sada dolazi sa gotovim spiskom pojmova, a tvoji sopstveni pojmovi su prešli u Podešavanja › Prevod.",
-            "Beleške o verziji su sada u aplikaciji: posle svakog ažuriranja jednom vidiš šta se promenilo, na svom jeziku.",
+            "Prevod više ne utihne usred sesije: ako servis za prevođenje prestane da odgovara, Voxis to sada primeti i sam se ponovo poveže.",
+            "Dugi sastanci se oporave sami — nema više zaustavljanja i ponovnog pokretanja sesije da bi se glas vratio.",
+        ],
+        "sv": [
+            "Översättningen tystnar inte längre mitt i en session: om översättningstjänsten slutar svara märker Voxis det och återansluter av sig själv.",
+            "Långa möten återhämtar sig på egen hand — du behöver inte längre stoppa och starta om sessionen för att få tillbaka rösten.",
+        ],
+        "th": [
+            "การแปลจะไม่เงียบไปกลางคันอีกต่อไป: ถ้าบริการแปลหยุดตอบสนอง Voxis จะรู้ตัวและเชื่อมต่อใหม่ให้เอง",
+            "การประชุมยาว ๆ กลับมาทำงานได้เอง ไม่ต้องหยุดแล้วเริ่มเซสชันใหม่เพื่อให้เสียงกลับมา",
+        ],
+        "tr": [
+            "Çeviri artık oturumun ortasında susmuyor: çeviri servisi yanıt vermeyi kesince Voxis bunu fark edip kendiliğinden yeniden bağlanıyor.",
+            "Uzun toplantılar kendi kendine toparlanıyor — sesi geri getirmek için oturumu durdurup yeniden başlatmanız gerekmiyor.",
+        ],
+        "vi": [
+            "Bản dịch không còn im bặt giữa phiên nữa: nếu dịch vụ dịch ngừng phản hồi, Voxis sẽ nhận ra và tự kết nối lại.",
+            "Các cuộc họp dài tự phục hồi — không cần dừng rồi khởi động lại phiên để lấy lại giọng nói.",
+        ],
+        "zh": [
+            "翻译不会再在会话中途中断：如果翻译服务停止响应，Voxis 现在会察觉并自动重新连接。",
+            "长时间会议可以自行恢复——不必再停止并重新开始会话才能让声音回来。",
+        ],
+        "zh-Hant": [
+            "翻譯不會再在工作階段中途中斷：如果翻譯服務停止回應，Voxis 現在會察覺並自動重新連線。",
+            "長時間會議可以自行恢復——不必再停止並重新開始工作階段才能讓聲音回來。",
         ],
     },
 }

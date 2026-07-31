@@ -378,6 +378,16 @@ class QwenTranslator(BaseTranslator):
                 # silently.
                 _log.warning("qwen input transcription FAILED: %s",
                              ev.get("error") or ev)
+                # A .failed still means the server HEARD an utterance and tried
+                # to transcribe it (silence produces none), so it counts as
+                # input. Without this mark the no-output watchdog — gated on
+                # recent input — never arms, and the stall watchdog can't fire
+                # either because _reset_stall() above accepts any server frame,
+                # .failed included. A run of ASR errors then black-holes the
+                # session: audio in, server answering, nothing out, no
+                # reconnect, meter running (field: CORFO meeting 2026-07-29,
+                # 12m52s dead).
+                self._mark_input()
             elif ("input_audio_transcription" in et
                   or et.startswith("conversation.item.input")):
                 txt = (ev.get("transcript") or ev.get("text")
