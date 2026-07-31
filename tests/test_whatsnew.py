@@ -88,3 +88,15 @@ def test_shipped_notes_cover_every_ui_language():
         missing = sorted(set(i18n.STRINGS) - set(per_lang))
         assert not missing, f"{version} missing: {missing}"
         assert all(per_lang.values()), f"{version} has an empty language"
+
+
+def test_the_version_being_shipped_has_notes():
+    """The gate degrades to silence on a version with no entry, which is the right
+    runtime behaviour but a bad release outcome: bumping APP_VERSION and forgetting
+    `python scripts/gen_whatsnew.py <ver>` ships an update nobody is told about, and
+    every other test here would still pass. Fail the build instead."""
+    from app import APP_VERSION
+    assert whatsnew.has_notes(APP_VERSION), (
+        f"app/whatsnew.py has no notes for {APP_VERSION} — "
+        f"run: python scripts/gen_whatsnew.py {APP_VERSION}"
+    )
