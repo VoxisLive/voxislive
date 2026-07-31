@@ -129,6 +129,14 @@ class RTTEstimator:
         the UI/analysis readout — backlog-proof and comparable across engines."""
         return self._first_audio_s
 
+    @property
+    def speech_seen(self) -> bool:
+        """Whether the VAD ever reported a speech onset this session. Reads the
+        marker the first-audio readout already sets, so it costs nothing extra:
+        it is the only signal that separates "we never heard anything to
+        translate" from "audio flowed but no translation came back"."""
+        return self._t_first_onset is not None
+
 
 # Smart-stream silence ceiling: after this many consecutive non-speech frames
 # stop padding with silence. ~512/16000 s per frame, so 48 frames ≈ 1.5 s of
@@ -262,6 +270,12 @@ class _GatedSource:
 
 
 class IncomingPipeline:
+    # Class-level default so the metering path never depends on how far __init__
+    # got: _ingest_input runs on the capture thread and must not raise on an
+    # attribute lookup (a fault there would make a healthy signal look like
+    # silence, which is the opposite of what this telemetry is for).
+    peak_input_level: float = 0.0
+
     def __init__(self, cfg: dict, resolve, mode: str, on_text, on_status,
                  session_dir: str | None = None, on_speaker=None):
         # Default the premium flag before either capture branch so callers and
@@ -309,6 +323,11 @@ class IncomingPipeline:
         self._rtt = RTTEstimator(self.player.rate)
         # UI telemetry: smoothed input level (0..1) and speech-onset edge tracking.
         self.input_level = 0.0
+        # Loudest level seen this session. The instantaneous meter is smoothed with
+        # a slow release, so it can read ~0 during an ordinary pause; the running
+        # peak is what answers "did ANY audio ever reach us", which is the question
+        # the no-input notice asks.
+        self.peak_input_level = 0.0
         self._prev_active = False
 
         # Optional speaker-change tracker (incoming direction only). Construct it
@@ -496,6 +515,8 @@ class IncomingPipeline:
         worker reports that downstream failure through its liveness channel.
         """
         self.input_level = _rms_level(self.input_level, mono)
+        if self.input_level > self.peak_input_level:
+            self.peak_input_level = self.input_level
         if self._recorder is not None:
             self._recorder.feed_source(mono)
         self._source.feed(mono)
@@ -1101,16 +1122,44 @@ def _stop_all(pipeline):
 
 def _event_error_class(exc: Exception) -> str:
     """Coarse, PII-free label for a session-start failure, for the activation
-    funnel. Never carries the raw message (which may hold device names/paths)."""
+    funnel. Never carries the raw message (which may hold device names/paths).
+
+    The `other` bucket used to swallow 82 of 143 recorded start failures, i.e.
+    the majority of the errors we most needed to name. Existing labels are kept
+    verbatim so historical rows stay comparable; the fallback now appends the
+    exception's CLASS name (a type, never a message — no device names, no paths,
+    no user text), so an unclassified failure is at least identifiable.
+
+    Keyword matching is deliberately secondary to type matching: several of our
+    own RuntimeErrors carry a LOCALIZED message, so an English keyword would
+    only ever match for English users."""
     msg = str(exc)
+    low = msg.lower()
     if "-9999" in msg or "PaError" in msg or "host error" in msg or "host API" in msg:
         return "audio_device"
-    if isinstance(exc, (ImportError, OSError)):
+    if isinstance(exc, ImportError):
         return "os_import"
-    low = msg.lower()
     if "timeout" in low or "ready" in low:
         return "translator_timeout"
-    return "other"
+    # Ordered before the generic OSError arm: a socket/DNS/TLS failure IS an
+    # OSError, and calling that "os_import" is what made the label useless.
+    if any(k in low for k in ("getaddrinfo", "connection", "unreachable",
+                              "ssl", "certificate", "network", "resolve host")):
+        return "network"
+    if any(k in low for k in ("api key", "api_key", "unauthorized", "401",
+                              "403", "permission")):
+        return "auth_key"
+    if "quota" in low or "402" in low:
+        return "quota"
+    if any(k in low for k in ("cable", "virtual mic", "virtual microphone")):
+        return "cable"
+    if "device" in low or "not found" in low or "no default" in low:
+        return "no_device"
+    if "heartbeat" in low:
+        return "busy_restart"
+    if isinstance(exc, OSError):
+        return "os_error"
+    return "other:" + type(exc).__name__
 
 
 class ModeController:
@@ -1120,6 +1169,20 @@ class ModeController:
     # Usage report interval. Smaller = less time lost when the process is
     # killed abruptly (Ctrl+C, crash, network drop).
     HEARTBEAT_SECONDS: float = 6.0
+
+    # No-input notice: how long a session may run without ANY audio reaching the
+    # capture before we say so out loud. Measured motivation: 40% of all sessions
+    # end under 30 s and 59% under a minute, and a short session is followed by
+    # another attempt 14 s later 71% of the time — people are not losing
+    # interest, they are staring at a silent app. The input meter already shows
+    # "waiting for system audio", but it is a small badge next to a video the
+    # user is watching full-screen, so nobody reads it.
+    #
+    # Threshold matches the UI meter's own "has signal" cut (index.html
+    # hasInputSignal, level > 0.02) so the badge and this notice can never
+    # disagree about whether audio is arriving.
+    NO_INPUT_WARN_SECONDS: float = 12.0
+    INPUT_SILENT_LEVEL: float = 0.02
 
     def __init__(self, cfg: dict, api_key: str | None, on_text, on_status,
                  on_usage_reported=None, on_quota_exceeded=None,
@@ -1145,6 +1208,7 @@ class ModeController:
         self._quota_exhausted = threading.Event()
         self._session_failed = threading.Event()
         self._capture_dead_notified = False
+        self._no_input_notified = False
         self._pipelines: list = []
         # backlog/skipped/sped watermarks per stager id, so the heartbeat only
         # logs playback health when catch-up compression or a stale-audio trim
@@ -1352,6 +1416,7 @@ class ModeController:
         while not self._heartbeat_stop.wait(self.HEARTBEAT_SECONDS):
             sid, delta, source = self._consume_minutes(accrue=self._is_session_live())
             self._maybe_warn_capture_dead()
+            self._maybe_warn_no_input()
             self._maybe_handle_translator_dead()
             self._log_playback_health()
             if not sid:
@@ -1422,6 +1487,88 @@ class ModeController:
                     pass
                 return
 
+    def _report_session_end(self, reason: str):
+        """Close the activation funnel's open end: why a LIVE session ended, and
+        whether the user ever heard a translation.
+
+        The funnel used to stop at session_live, so a session that started fine
+        and was abandoned 20 seconds later was indistinguishable from one that
+        ran to completion — and 40% of all sessions end under 30 s. Four fields
+        answer the questions that guesswork could not:
+          reason      user_stop | restart | quota | error | capture_lost | app_close
+          seconds     how long it actually ran
+          first_audio the measured first-speech→first-translated-audio span, which
+                      RTTEstimator has always computed for the UI but never
+                      reported; None means the user never heard one word
+          speech_seen whether any speech ever reached us, i.e. "nothing was
+                      playing / they spoke into their mic" vs "audio flowed but
+                      the translation didn't"
+
+        PII-free by construction: durations, booleans and a fixed label set.
+        Fires only for a session that actually went live (a start failure already
+        reports session_error), and never raises into teardown."""
+        try:
+            sid = self._session_id
+            started = self._session_start
+            if not sid or started is None:
+                return
+            if self._quota_exhausted.is_set():
+                reason = "quota"
+            elif self._session_failed.is_set():
+                reason = "error"
+            elif self._capture_dead_notified:
+                reason = "capture_lost"
+            inc = self.incoming()
+            peak = round(float(getattr(inc, "peak_input_level", 0.0)), 3) if inc else 0.0
+            rtt = getattr(inc, "_rtt", None) if inc else None
+            voxis_client.report_event_async("session_end", sid, {
+                "mode": self._session_mode or "",
+                "reason": reason,
+                "seconds": int(max(0.0, time.monotonic() - started)),
+                "first_audio_s": rtt.first_audio_seconds if rtt is not None else None,
+                "speech_seen": bool(rtt.speech_seen) if rtt is not None else False,
+                "peak_level": peak,
+                "engine": self.current_engine() or "",
+            })
+        except Exception:
+            _log.debug("session_end telemetry failed", exc_info=True)
+
+    def _maybe_warn_no_input(self):
+        """Once per session, if no audio at all has reached the capture after
+        NO_INPUT_WARN_SECONDS, say so and name the two things that actually cause
+        it. Until now the app stayed completely silent in this state: a user who
+        had nothing playing, or who was speaking into their microphone expecting
+        Video mode to translate it, got no signal, no caption and no explanation.
+
+        VIDEO MODE ONLY, and not as a preference: on the incoming leg of a
+        meeting, total silence is the normal state of a call nobody is talking in
+        yet (a muted remote party is digital zero), so the same notice there
+        would cry wolf during real calls. Video/Game is 95% of sessions.
+
+        Billing is untouched — this is a status line, nothing else. It is NOT the
+        idle-pause machinery that was removed by owner decision on 2026-07-29:
+        accrual still runs on wall clock, and no session is ever paused or
+        stopped from here."""
+        if self._no_input_notified or self._session_mode != "video":
+            return
+        started = self._session_start
+        if started is None or time.monotonic() - started < self.NO_INPUT_WARN_SECONDS:
+            return
+        inc = self.incoming()
+        if inc is None:
+            return
+        # Peak, not the instantaneous meter: the meter's slow release can dip to
+        # ~0 in a pause, but a session that has heard anything at all keeps a peak.
+        if (inc.peak_input_level > self.INPUT_SILENT_LEVEL
+                or getattr(inc, "_rtt", None) is not None and inc._rtt.speech_seen):
+            self._no_input_notified = True   # audio arrived — never ask again
+            return
+        self._no_input_notified = True
+        try:
+            self.on_status(t("st_no_input_audio"))
+        except Exception:
+            pass
+
     def _maybe_handle_translator_dead(self):
         """Tear the session down (once) if a translator thread died mid-session.
 
@@ -1480,7 +1627,11 @@ class ModeController:
             pass
 
     def start(self, mode: str, session_dir: str | None = None):
-        self.stop()
+        # "restart", not a user stop: this stop() is the implicit teardown of a
+        # session the user is replacing (a mode switch, or a settings change that
+        # has to re-open the engine handshake). Labeling it keeps config churn
+        # out of the give-up numbers.
+        self.stop(reason="restart")
         if self.resolve is None:
             raise RuntimeError(t("st_no_key"))
         # No native OS audio backend on this platform (e.g. a Linux box without
@@ -1549,6 +1700,7 @@ class ModeController:
                 self._quota_exhausted.clear()
                 self._session_failed.clear()
                 self._capture_dead_notified = False
+                self._no_input_notified = False
                 # Never run two heartbeats at once: a prior thread that survived
                 # stop()'s bounded join would race this one on _last_report and
                 # double-bill. Refuse to start until it is truly gone.
@@ -1722,12 +1874,19 @@ class ModeController:
         return any(getattr(getattr(p, "player", None), "tts_active", False)
                    for p in self._pipelines)
 
-    def stop(self):
+    def stop(self, reason: str = "user_stop"):
+        """Tear the session down. `reason` is telemetry only — it never changes
+        what is billed or restored. start() passes "restart" so a config change
+        that re-opens the session (language, quality, voice, terms) is
+        distinguishable from a user who actually pressed Stop; without that,
+        settings fiddling and genuine give-ups look identical in the funnel."""
         # Stop and JOIN the heartbeat FIRST so _last_report has exactly one
         # remaining reader. With the heartbeat gone there is no concurrent
         # writer, so the tail consume below sees a quiesced watermark and cannot
         # double-bill the interval the last beat may have been mid-way through.
         accrue = self._is_session_live()
+        # Read the session's outcome while the pipelines are still attached.
+        self._report_session_end(reason)
         self._heartbeat_stop.set()
         ht = self._heartbeat_thread
         if ht is not None and ht.is_alive():

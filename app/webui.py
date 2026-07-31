@@ -1317,20 +1317,30 @@ class Bridge:
     def whatsnew(self):
         """Release notes to show ONCE after an update, in the UI language.
 
-        Returns None when there is nothing to show: already seen, this version
-        ships no notes, or this is a first-ever run. The fresh-install case is
-        marked seen silently — a brand-new user gets the onboarding tour, and a
-        changelog for a version they never ran would be noise."""
+        Covers EVERY version the user skipped, not just the running one. Store
+        updates land in the background and skip versions freely — someone can go
+        from 1.0.49 to 1.0.52 in one step — and showing only the running version
+        made every release in between invisible (1.0.50's notes reached nobody
+        who jumped 1.0.49 -> 1.0.51 that way).
+
+        Returns None when there is nothing to show: already seen, no notes for
+        anything unread, or a first-ever run. The fresh-install case is marked
+        seen silently — a brand-new user gets the onboarding tour, and a
+        changelog for versions they never ran would be noise."""
         from . import whatsnew as wn  # noqa: PLC0415
-        if str(self.cfg.get("whatsnew_seen", "")) == APP_VERSION:
-            return None
-        if not wn.has_notes(APP_VERSION):
+        seen = str(self.cfg.get("whatsnew_seen", ""))
+        if seen == APP_VERSION:
             return None
         if not self.cfg.get("onboarding_done", False):
             self.mark_whatsnew_seen()
             return None
-        return {"version": APP_VERSION,
-                "bullets": wn.entry(APP_VERSION, i18n.current_language())}
+        entries = wn.entries_since(seen, i18n.current_language(), APP_VERSION)
+        if not entries:
+            # Nothing written for anything unread (a release can forget its
+            # notes). Degrade to the old silence rather than an empty dialog —
+            # and do NOT mark seen, so the next release's card still opens.
+            return None
+        return {"version": APP_VERSION, "entries": entries}
 
     def mark_whatsnew_seen(self):
         """Record that this version's notes were shown. Separate from mark_seen:
@@ -3676,7 +3686,10 @@ def _shutdown(bridge, grace: float = 8.0):
     def _stop_session():
         try:
             if bridge.controller.mode:
-                bridge.controller.stop()
+                # Closing the window is not the same signal as pressing Stop —
+                # the funnel needs to tell "watched, then quit the app" apart
+                # from "stopped the session and stayed".
+                bridge.controller.stop(reason="app_close")
         except Exception:
             _log.debug("final session stop failed", exc_info=True)
 
