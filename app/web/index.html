@@ -711,6 +711,11 @@ body.resizing,body.resizing *{user-select:none!important}
 /* error/warn transcript status lines (level carried in the status event) */
 .line.sys.err{color:var(--red)}
 .line.sys.warn{color:var(--amber)}
+/* Waiting cue: alive-looking, so the silence before the first caption reads as
+   "working" rather than "broken". Removed the moment a translation lands. */
+.line.sys.waitcue{color:var(--text-2);animation:waitpulse 1.8s var(--ease) infinite}
+@keyframes waitpulse{0%,100%{opacity:.55}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.line.sys.waitcue{animation:none;opacity:.9}}
 /* Boot/loading state: shown until check_auth resolves so returning users
    never see a flash of the login form. */
 .auth-boot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
@@ -842,6 +847,15 @@ body.resizing,body.resizing *{user-select:none!important}
 .modal .mnote svg{flex:none;margin-top:1px;color:var(--amber)}
 .modal .mfoot{display:flex;align-items:center;gap:12px;padding:18px 24px 22px;flex-wrap:wrap}
 .modal .mfoot .spacer{flex:1}
+/* Release-notes card: one group per skipped version. A Store update can jump
+   several versions at once, so the body scrolls rather than growing the modal. */
+#whatsnew-modal .mbody{max-height:52vh;overflow-y:auto}
+#whatsnew-modal .wn-ver{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--text-3);margin:0 0 8px}
+#whatsnew-modal .wn-ver+ul{margin:0 0 18px}
+#whatsnew-modal .wn-group+.wn-group{border-top:1px solid var(--border);padding-top:14px}
+.modal .mfoot .mlink{font-size:12px;color:var(--text-3);text-decoration:none;border-bottom:1px solid var(--border-strong)}
+.modal .mfoot .mlink:hover{color:var(--text-2)}
 /* Same rule for a modal HEAD, so its close button lands at the top RIGHT like
    every other window instead of hugging the title (the History panel's spacer
    was inert without this). */
@@ -1405,8 +1419,9 @@ body.resizing,body.resizing *{user-select:none!important}
     <span class="spacer"></span>
     <span class="ostep" id="whatsnew-ver"></span>
   </div>
-  <div class="mbody"><ul id="whatsnew-list" style="margin:0;padding-left:18px"></ul></div>
+  <div class="mbody" id="whatsnew-body"></div>
   <div class="mfoot">
+    <a href="#" id="whatsnew-all" class="mlink" data-i18n="wn_all">Tüm değişiklikler</a>
     <span class="spacer"></span>
     <button class="btn btn-primary" id="whatsnew-ok" style="width:auto" data-i18n="wn_ok">Anladım</button>
   </div>
@@ -5815,29 +5830,29 @@ const I18N_EXTRA = {"en":{"hotwords_label":"Meeting terms","hotwords_hint":"Bran
    giant I18N_EXTRA lines: same merge, far easier to review. scripts/check_i18n.py
    extracts this block too, so a missing language still fails the parity gate. */
 const I18N_VOICE_TERMS = {
-  tr:{tab_translation:"Çeviri",voice_section:"Ses",voice_in_label:"Çeviri sesi",voice_out_label:"Benim sesim",voice_in_hint:"Videoda ve toplantıda karşı tarafı bu sesle duyarsınız.",voice_out_hint:"Toplantıda karşı taraf sizi bu sesle duyar.",vg_auto:"Otomatik",vg_female:"Kadın",vg_male:"Erkek",no_voice_choice:"Bu dilde ses seçimi henüz yok.",terms_section:"Terimler",terms_label:"Terimler ve özel adlar",terms_hint:"Marka, kişi ve ürün adlarını buraya yaz — çeviri motoru onları doğru yazsın. Video ve toplantı modunda geçerlidir. Her satıra bir terim; farklı yazılsın istiyorsan terim=karşılığı biçimini kullan.",terms_builtin:"Hazır terim listesi ({n} ad)",terms_show:"Göster",terms_hide:"Gizle",terms_count:"{total} / {max} terim · {user} sizin, {builtin} hazır",wn_title:"Yenilikler",wn_ver:"Sürüm {v}",wn_ok:"Anladım"},
-  en:{tab_translation:"Translation",voice_section:"Voice",voice_in_label:"Translation voice",voice_out_label:"My voice",voice_in_hint:"The voice you hear the video or the other person in.",voice_out_hint:"The voice the other person hears you in, in Meeting mode.",vg_auto:"Automatic",vg_female:"Female",vg_male:"Male",no_voice_choice:"Voice choice isn't available in this language yet.",terms_section:"Terms",terms_label:"Terms and proper names",terms_hint:"Brand, person and product names go here so the engine spells them right. Applies in Video and Meeting mode. One per line; use term=replacement if it should come out differently.",terms_builtin:"Ready-made term list ({n} names)",terms_show:"Show",terms_hide:"Hide",terms_count:"{total} / {max} terms · {user} yours, {builtin} ready-made",wn_title:"What's new",wn_ver:"Version {v}",wn_ok:"Got it"},
-  de:{tab_translation:"Übersetzung",voice_section:"Stimme",voice_in_label:"Übersetzungsstimme",voice_out_label:"Meine Stimme",voice_in_hint:"Die Stimme, in der du das Video oder die andere Person hörst.",voice_out_hint:"Die Stimme, in der die andere Person dich im Meeting-Modus hört.",vg_auto:"Automatisch",vg_female:"Weiblich",vg_male:"Männlich",no_voice_choice:"Stimmauswahl ist in dieser Sprache noch nicht verfügbar.",terms_section:"Begriffe",terms_label:"Begriffe und Eigennamen",terms_hint:"Marken-, Personen- und Produktnamen hier eintragen, damit die Engine sie richtig schreibt. Gilt im Video- und Meeting-Modus. Einer pro Zeile; Begriff=Ersetzung, wenn er anders erscheinen soll.",terms_builtin:"Fertige Begriffsliste ({n} Namen)",terms_show:"Anzeigen",terms_hide:"Ausblenden",terms_count:"{total} / {max} Begriffe · {user} von dir, {builtin} vorgegeben",wn_title:"Neu in dieser Version",wn_ver:"Version {v}",wn_ok:"Verstanden"},
-  cs:{tab_translation:"Překlad",voice_section:"Hlas",voice_in_label:"Hlas překladu",voice_out_label:"Můj hlas",voice_in_hint:"Hlas, ve kterém slyšíš video nebo druhou osobu.",voice_out_hint:"Hlas, ve kterém tě druhá osoba slyší v režimu schůzky.",vg_auto:"Automaticky",vg_female:"Ženský",vg_male:"Mužský",no_voice_choice:"Volba hlasu v tomto jazyce ještě není dostupná.",terms_section:"Pojmy",terms_label:"Pojmy a vlastní jména",terms_hint:"Sem napiš názvy firem, osob a produktů, aby je engine psal správně. Platí v režimu videa i schůzky. Jeden na řádek; pokud má vyjít jinak, použij pojem=náhrada.",terms_builtin:"Připravený seznam pojmů ({n} názvů)",terms_show:"Zobrazit",terms_hide:"Skrýt",terms_count:"{total} / {max} pojmů · {user} tvých, {builtin} připravených",wn_title:"Co je nového",wn_ver:"Verze {v}",wn_ok:"Rozumím"},
-  fr:{tab_translation:"Traduction",voice_section:"Voix",voice_in_label:"Voix de traduction",voice_out_label:"Ma voix",voice_in_hint:"La voix dans laquelle vous entendez la vidéo ou votre interlocuteur.",voice_out_hint:"La voix dans laquelle votre interlocuteur vous entend en mode Réunion.",vg_auto:"Automatique",vg_female:"Féminine",vg_male:"Masculine",no_voice_choice:"Le choix de la voix n'est pas encore disponible dans cette langue.",terms_section:"Termes",terms_label:"Termes et noms propres",terms_hint:"Saisissez ici les noms de marques, de personnes et de produits pour que le moteur les écrive correctement. Valable en mode Vidéo et Réunion. Un par ligne ; utilisez terme=remplacement s'il doit sortir différemment.",terms_builtin:"Liste de termes prête à l'emploi ({n} noms)",terms_show:"Afficher",terms_hide:"Masquer",terms_count:"{total} / {max} termes · {user} à vous, {builtin} fournis",wn_title:"Nouveautés",wn_ver:"Version {v}",wn_ok:"J'ai compris"},
-  es:{tab_translation:"Traducción",voice_section:"Voz",voice_in_label:"Voz de la traducción",voice_out_label:"Mi voz",voice_in_hint:"La voz con la que oyes el vídeo o a la otra persona.",voice_out_hint:"La voz con la que la otra persona te oye en el modo Reunión.",vg_auto:"Automática",vg_female:"Femenina",vg_male:"Masculina",no_voice_choice:"La elección de voz aún no está disponible en este idioma.",terms_section:"Términos",terms_label:"Términos y nombres propios",terms_hint:"Escribe aquí nombres de marcas, personas y productos para que el motor los escriba bien. Se aplica en modo Vídeo y Reunión. Uno por línea; usa término=reemplazo si debe salir de otra forma.",terms_builtin:"Lista de términos lista para usar ({n} nombres)",terms_show:"Mostrar",terms_hide:"Ocultar",terms_count:"{total} / {max} términos · {user} tuyos, {builtin} incluidos",wn_title:"Novedades",wn_ver:"Versión {v}",wn_ok:"Entendido"},
-  pt:{tab_translation:"Tradução",voice_section:"Voz",voice_in_label:"Voz da tradução",voice_out_label:"A minha voz",voice_in_hint:"A voz com que ouves o vídeo ou a outra pessoa.",voice_out_hint:"A voz com que a outra pessoa te ouve no modo Reunião.",vg_auto:"Automática",vg_female:"Feminina",vg_male:"Masculina",no_voice_choice:"A escolha de voz ainda não está disponível neste idioma.",terms_section:"Termos",terms_label:"Termos e nomes próprios",terms_hint:"Escreve aqui nomes de marcas, pessoas e produtos para o motor os escrever corretamente. Aplica-se nos modos Vídeo e Reunião. Um por linha; usa termo=substituição se deve sair diferente.",terms_builtin:"Lista de termos pronta ({n} nomes)",terms_show:"Mostrar",terms_hide:"Ocultar",terms_count:"{total} / {max} termos · {user} teus, {builtin} incluídos",wn_title:"Novidades",wn_ver:"Versão {v}",wn_ok:"Entendi"},
-  ja:{tab_translation:"翻訳",voice_section:"音声",voice_in_label:"翻訳の声",voice_out_label:"自分の声",voice_in_hint:"動画や相手の声をこの声で聞きます。",voice_out_hint:"会議モードで相手があなたを聞くときの声です。",vg_auto:"自動",vg_female:"女性",vg_male:"男性",no_voice_choice:"この言語では声の選択はまだ使えません。",terms_section:"用語",terms_label:"用語・固有名詞",terms_hint:"ブランド名・人名・製品名をここに入れると、エンジンが正しく表記します。動画モードと会議モードの両方に適用されます。1 行に 1 つ。別の表記にしたい場合は 用語=置き換え の形式で。",terms_builtin:"用語リスト（{n} 件）",terms_show:"表示",terms_hide:"非表示",terms_count:"{total} / {max} 件 · あなた {user}、既定 {builtin}",wn_title:"新機能",wn_ver:"バージョン {v}",wn_ok:"了解"},
-  ko:{tab_translation:"번역",voice_section:"음성",voice_in_label:"번역 음성",voice_out_label:"내 목소리",voice_in_hint:"영상이나 상대방을 이 음성으로 듣습니다.",voice_out_hint:"회의 모드에서 상대방이 나를 듣는 음성입니다.",vg_auto:"자동",vg_female:"여성",vg_male:"남성",no_voice_choice:"이 언어에서는 아직 음성을 선택할 수 없습니다.",terms_section:"용어",terms_label:"용어 및 고유명사",terms_hint:"브랜드·사람·제품 이름을 여기에 적으면 엔진이 정확하게 표기합니다. 영상 모드와 회의 모드에 모두 적용됩니다. 한 줄에 하나씩, 다르게 표기하려면 용어=대체 형식을 쓰세요.",terms_builtin:"기본 용어 목록 ({n}개)",terms_show:"보기",terms_hide:"숨기기",terms_count:"{total} / {max}개 · 내 것 {user}, 기본 {builtin}",wn_title:"새로운 기능",wn_ver:"버전 {v}",wn_ok:"확인"},
-  ru:{tab_translation:"Перевод",voice_section:"Голос",voice_in_label:"Голос перевода",voice_out_label:"Мой голос",voice_in_hint:"Голос, которым вы слышите видео или собеседника.",voice_out_hint:"Голос, которым собеседник слышит вас в режиме встречи.",vg_auto:"Автоматически",vg_female:"Женский",vg_male:"Мужской",no_voice_choice:"Выбор голоса пока недоступен для этого языка.",terms_section:"Термины",terms_label:"Термины и имена собственные",terms_hint:"Впишите здесь названия брендов, имена людей и продуктов, чтобы движок писал их правильно. Действует в режимах «Видео» и «Встреча». По одному в строке; используйте термин=замена, если он должен выглядеть иначе.",terms_builtin:"Готовый список терминов ({n} назв.)",terms_show:"Показать",terms_hide:"Скрыть",terms_count:"{total} / {max} терминов · ваших {user}, готовых {builtin}",wn_title:"Что нового",wn_ver:"Версия {v}",wn_ok:"Понятно"},
-  zh:{tab_translation:"翻译",voice_section:"语音",voice_in_label:"翻译语音",voice_out_label:"我的声音",voice_in_hint:"你听到视频或对方时使用的声音。",voice_out_hint:"会议模式中对方听到你时的声音。",vg_auto:"自动",vg_female:"女声",vg_male:"男声",no_voice_choice:"该语言暂不支持选择声音。",terms_section:"术语",terms_label:"术语与专有名词",terms_hint:"把品牌、人名和产品名写在这里，引擎就会正确书写。视频模式和会议模式均生效。每行一个；若希望输出不同，请使用 术语=替换 的格式。",terms_builtin:"内置术语表（{n} 个）",terms_show:"显示",terms_hide:"隐藏",terms_count:"{total} / {max} 个 · 你的 {user}，内置 {builtin}",wn_title:"新增功能",wn_ver:"版本 {v}",wn_ok:"知道了"},
-  "zh-Hant":{tab_translation:"翻譯",voice_section:"語音",voice_in_label:"翻譯語音",voice_out_label:"我的聲音",voice_in_hint:"你聽到影片或對方時使用的聲音。",voice_out_hint:"會議模式中對方聽到你時的聲音。",vg_auto:"自動",vg_female:"女聲",vg_male:"男聲",no_voice_choice:"這個語言暫時無法選擇聲音。",terms_section:"術語",terms_label:"術語與專有名詞",terms_hint:"把品牌、人名和產品名寫在這裡，引擎就會正確書寫。影片模式與會議模式都適用。每行一個；若希望輸出不同，請使用 術語=替換 的格式。",terms_builtin:"內建術語表（{n} 個）",terms_show:"顯示",terms_hide:"隱藏",terms_count:"{total} / {max} 個 · 你的 {user}，內建 {builtin}",wn_title:"新增功能",wn_ver:"版本 {v}",wn_ok:"知道了"},
-  pl:{tab_translation:"Tłumaczenie",voice_section:"Głos",voice_in_label:"Głos tłumaczenia",voice_out_label:"Mój głos",voice_in_hint:"Głos, którym słyszysz film lub drugą osobę.",voice_out_hint:"Głos, którym druga osoba słyszy Ciebie w trybie spotkania.",vg_auto:"Automatycznie",vg_female:"Kobiecy",vg_male:"Męski",no_voice_choice:"Wybór głosu nie jest jeszcze dostępny w tym języku.",terms_section:"Terminy",terms_label:"Terminy i nazwy własne",terms_hint:"Wpisz tu nazwy marek, osób i produktów, aby silnik pisał je poprawnie. Działa w trybie wideo i spotkania. Jeden na wiersz; użyj termin=zamiennik, jeśli ma wyglądać inaczej.",terms_builtin:"Gotowa lista terminów ({n} nazw)",terms_show:"Pokaż",terms_hide:"Ukryj",terms_count:"{total} / {max} terminów · {user} Twoich, {builtin} gotowych",wn_title:"Co nowego",wn_ver:"Wersja {v}",wn_ok:"Rozumiem"},
-  it:{tab_translation:"Traduzione",voice_section:"Voce",voice_in_label:"Voce della traduzione",voice_out_label:"La mia voce",voice_in_hint:"La voce con cui senti il video o l'altra persona.",voice_out_hint:"La voce con cui l'altra persona ti sente in modalità Riunione.",vg_auto:"Automatica",vg_female:"Femminile",vg_male:"Maschile",no_voice_choice:"La scelta della voce non è ancora disponibile in questa lingua.",terms_section:"Termini",terms_label:"Termini e nomi propri",terms_hint:"Scrivi qui nomi di marchi, persone e prodotti così il motore li scrive correttamente. Vale in modalità Video e Riunione. Uno per riga; usa termine=sostituzione se deve uscire diverso.",terms_builtin:"Elenco di termini pronto ({n} nomi)",terms_show:"Mostra",terms_hide:"Nascondi",terms_count:"{total} / {max} termini · {user} tuoi, {builtin} inclusi",wn_title:"Novità",wn_ver:"Versione {v}",wn_ok:"Ho capito"},
-  id:{tab_translation:"Terjemahan",voice_section:"Suara",voice_in_label:"Suara terjemahan",voice_out_label:"Suara saya",voice_in_hint:"Suara yang kamu dengar untuk video atau orang lain.",voice_out_hint:"Suara yang didengar orang lain sebagai kamu di mode Rapat.",vg_auto:"Otomatis",vg_female:"Perempuan",vg_male:"Laki-laki",no_voice_choice:"Pilihan suara belum tersedia untuk bahasa ini.",terms_section:"Istilah",terms_label:"Istilah dan nama diri",terms_hint:"Tulis nama merek, orang, dan produk di sini agar mesin menuliskannya dengan benar. Berlaku di mode Video dan Rapat. Satu per baris; pakai istilah=pengganti jika harus muncul berbeda.",terms_builtin:"Daftar istilah siap pakai ({n} nama)",terms_show:"Tampilkan",terms_hide:"Sembunyikan",terms_count:"{total} / {max} istilah · {user} milikmu, {builtin} bawaan",wn_title:"Yang baru",wn_ver:"Versi {v}",wn_ok:"Mengerti"},
-  nl:{tab_translation:"Vertaling",voice_section:"Stem",voice_in_label:"Vertaalstem",voice_out_label:"Mijn stem",voice_in_hint:"De stem waarin je de video of de ander hoort.",voice_out_hint:"De stem waarin de ander jou hoort in de vergadermodus.",vg_auto:"Automatisch",vg_female:"Vrouwelijk",vg_male:"Mannelijk",no_voice_choice:"Stemkeuze is nog niet beschikbaar in deze taal.",terms_section:"Termen",terms_label:"Termen en eigennamen",terms_hint:"Zet merk-, persoons- en productnamen hier zodat de engine ze goed spelt. Geldt in Video- en vergadermodus. Eén per regel; gebruik term=vervanging als het anders moet verschijnen.",terms_builtin:"Kant-en-klare termenlijst ({n} namen)",terms_show:"Weergeven",terms_hide:"Verbergen",terms_count:"{total} / {max} termen · {user} van jou, {builtin} standaard",wn_title:"Wat is er nieuw",wn_ver:"Versie {v}",wn_ok:"Duidelijk"},
-  vi:{tab_translation:"Dịch",voice_section:"Giọng nói",voice_in_label:"Giọng bản dịch",voice_out_label:"Giọng của tôi",voice_in_hint:"Giọng bạn nghe thấy video hoặc người kia.",voice_out_hint:"Giọng mà người kia nghe thấy bạn trong chế độ Họp.",vg_auto:"Tự động",vg_female:"Nữ",vg_male:"Nam",no_voice_choice:"Ngôn ngữ này chưa cho chọn giọng.",terms_section:"Thuật ngữ",terms_label:"Thuật ngữ và tên riêng",terms_hint:"Ghi tên thương hiệu, người và sản phẩm vào đây để công cụ viết đúng. Áp dụng ở chế độ Video và Họp. Mỗi dòng một thuật ngữ; dùng thuật ngữ=thay thế nếu muốn kết quả khác.",terms_builtin:"Danh sách thuật ngữ có sẵn ({n} tên)",terms_show:"Hiện",terms_hide:"Ẩn",terms_count:"{total} / {max} thuật ngữ · {user} của bạn, {builtin} có sẵn",wn_title:"Có gì mới",wn_ver:"Phiên bản {v}",wn_ok:"Đã hiểu"},
-  th:{tab_translation:"การแปล",voice_section:"เสียง",voice_in_label:"เสียงคำแปล",voice_out_label:"เสียงของฉัน",voice_in_hint:"เสียงที่คุณได้ยินวิดีโอหรืออีกฝ่าย",voice_out_hint:"เสียงที่อีกฝ่ายได้ยินเป็นคุณในโหมดประชุม",vg_auto:"อัตโนมัติ",vg_female:"ผู้หญิง",vg_male:"ผู้ชาย",no_voice_choice:"ภาษานี้ยังเลือกเสียงไม่ได้",terms_section:"คำศัพท์",terms_label:"คำศัพท์และชื่อเฉพาะ",terms_hint:"ใส่ชื่อแบรนด์ ชื่อคน และชื่อสินค้าไว้ที่นี่ เพื่อให้ระบบสะกดถูก ใช้ได้ทั้งโหมดวิดีโอและโหมดประชุม บรรทัดละหนึ่งคำ ถ้าต้องการให้ออกมาต่างไปให้ใช้รูปแบบ คำ=คำแทน",terms_builtin:"รายการคำศัพท์พร้อมใช้ ({n} ชื่อ)",terms_show:"แสดง",terms_hide:"ซ่อน",terms_count:"{total} / {max} คำ · ของคุณ {user} พร้อมใช้ {builtin}",wn_title:"มีอะไรใหม่",wn_ver:"เวอร์ชัน {v}",wn_ok:"รับทราบ"},
-  ro:{tab_translation:"Traducere",voice_section:"Voce",voice_in_label:"Vocea traducerii",voice_out_label:"Vocea mea",voice_in_hint:"Vocea în care auzi videoclipul sau cealaltă persoană.",voice_out_hint:"Vocea în care cealaltă persoană te aude în modul Întâlnire.",vg_auto:"Automat",vg_female:"Feminină",vg_male:"Masculină",no_voice_choice:"Alegerea vocii nu este încă disponibilă în această limbă.",terms_section:"Termeni",terms_label:"Termeni și nume proprii",terms_hint:"Scrie aici nume de mărci, persoane și produse ca motorul să le scrie corect. Se aplică în modul Video și Întâlnire. Unul pe linie; folosește termen=înlocuire dacă trebuie să apară altfel.",terms_builtin:"Listă de termeni gata făcută ({n} nume)",terms_show:"Arată",terms_hide:"Ascunde",terms_count:"{total} / {max} termeni · {user} ai tăi, {builtin} incluși",wn_title:"Ce e nou",wn_ver:"Versiunea {v}",wn_ok:"Am înțeles"},
-  hi:{tab_translation:"अनुवाद",voice_section:"आवाज़",voice_in_label:"अनुवाद की आवाज़",voice_out_label:"मेरी आवाज़",voice_in_hint:"वीडियो या सामने वाले को आप इस आवाज़ में सुनते हैं।",voice_out_hint:"मीटिंग मोड में सामने वाला आपको इस आवाज़ में सुनता है।",vg_auto:"स्वचालित",vg_female:"महिला",vg_male:"पुरुष",no_voice_choice:"इस भाषा में आवाज़ चुनने की सुविधा अभी नहीं है।",terms_section:"शब्द",terms_label:"शब्द और विशेष नाम",terms_hint:"ब्रांड, व्यक्ति और उत्पाद के नाम यहाँ लिखें ताकि इंजन उन्हें सही लिखे। वीडियो और मीटिंग दोनों मोड में लागू होता है। हर पंक्ति में एक; अलग लिखवाना हो तो शब्द=बदल रूप का प्रयोग करें।",terms_builtin:"तैयार शब्द-सूची ({n} नाम)",terms_show:"दिखाएँ",terms_hide:"छिपाएँ",terms_count:"{total} / {max} शब्द · {user} आपके, {builtin} पहले से",wn_title:"क्या नया है",wn_ver:"संस्करण {v}",wn_ok:"समझ गया"},
-  hu:{tab_translation:"Fordítás",voice_section:"Hang",voice_in_label:"Fordítás hangja",voice_out_label:"Az én hangom",voice_in_hint:"Ezen a hangon hallod a videót vagy a másik felet.",voice_out_hint:"Ezen a hangon hall téged a másik fél megbeszélés módban.",vg_auto:"Automatikus",vg_female:"Nő",vg_male:"Férfi",no_voice_choice:"Ezen a nyelven a hang kiválasztása még nem érhető el.",terms_section:"Kifejezések",terms_label:"Kifejezések és tulajdonnevek",terms_hint:"Írd ide a márka-, személy- és terméknevek, hogy a motor helyesen írja őket. Videó és megbeszélés módban is érvényes. Soronként egy; ha máshogy kell megjelennie, használd a kifejezés=csere formát.",terms_builtin:"Kész kifejezéslista ({n} név)",terms_show:"Megjelenítés",terms_hide:"Elrejtés",terms_count:"{total} / {max} kifejezés · {user} a tiéd, {builtin} beépített",wn_title:"Újdonságok",wn_ver:"{v} verzió",wn_ok:"Értem"},
-  sv:{tab_translation:"Översättning",voice_section:"Röst",voice_in_label:"Översättningsröst",voice_out_label:"Min röst",voice_in_hint:"Rösten du hör videon eller den andra personen i.",voice_out_hint:"Rösten den andra personen hör dig i, i mötesläget.",vg_auto:"Automatiskt",vg_female:"Kvinnlig",vg_male:"Manlig",no_voice_choice:"Röstval är inte tillgängligt på det här språket än.",terms_section:"Termer",terms_label:"Termer och egennamn",terms_hint:"Skriv varumärkes-, person- och produktnamn här så att motorn stavar dem rätt. Gäller i video- och mötesläget. En per rad; använd term=ersättning om den ska komma ut annorlunda.",terms_builtin:"Färdig termlista ({n} namn)",terms_show:"Visa",terms_hide:"Dölj",terms_count:"{total} / {max} termer · {user} dina, {builtin} färdiga",wn_title:"Nyheter",wn_ver:"Version {v}",wn_ok:"Uppfattat"},
-  sr:{tab_translation:"Prevod",voice_section:"Glas",voice_in_label:"Glas prevoda",voice_out_label:"Moj glas",voice_in_hint:"Glas u kom slušaš video ili drugu osobu.",voice_out_hint:"Glas u kom te druga osoba sluša u režimu sastanka.",vg_auto:"Automatski",vg_female:"Ženski",vg_male:"Muški",no_voice_choice:"Izbor glasa na ovom jeziku još nije dostupan.",terms_section:"Pojmovi",terms_label:"Pojmovi i vlastita imena",terms_hint:"Upiši imena brendova, osoba i proizvoda ovde da ih motor ispravno napiše. Važi u režimu videa i sastanka. Jedan po redu; koristi pojam=zamena ako treba da izađe drugačije.",terms_builtin:"Gotov spisak pojmova ({n} imena)",terms_show:"Prikaži",terms_hide:"Sakrij",terms_count:"{total} / {max} pojmova · {user} tvojih, {builtin} gotovih",wn_title:"Šta je novo",wn_ver:"Verzija {v}",wn_ok:"Razumem"}
+  tr:{tab_translation:"Çeviri",voice_section:"Ses",voice_in_label:"Çeviri sesi",voice_out_label:"Benim sesim",voice_in_hint:"Videoda ve toplantıda karşı tarafı bu sesle duyarsınız.",voice_out_hint:"Toplantıda karşı taraf sizi bu sesle duyar.",vg_auto:"Otomatik",vg_female:"Kadın",vg_male:"Erkek",no_voice_choice:"Bu dilde ses seçimi henüz yok.",terms_section:"Terimler",terms_label:"Terimler ve özel adlar",terms_hint:"Marka, kişi ve ürün adlarını buraya yaz — çeviri motoru onları doğru yazsın. Video ve toplantı modunda geçerlidir. Her satıra bir terim; farklı yazılsın istiyorsan terim=karşılığı biçimini kullan.",terms_builtin:"Hazır terim listesi ({n} ad)",terms_show:"Göster",terms_hide:"Gizle",terms_count:"{total} / {max} terim · {user} sizin, {builtin} hazır",wn_title:"Yenilikler",wn_ver:"Sürüm {v}",wn_all:"Tüm değişiklikler",wn_ok:"Anladım"},
+  en:{tab_translation:"Translation",voice_section:"Voice",voice_in_label:"Translation voice",voice_out_label:"My voice",voice_in_hint:"The voice you hear the video or the other person in.",voice_out_hint:"The voice the other person hears you in, in Meeting mode.",vg_auto:"Automatic",vg_female:"Female",vg_male:"Male",no_voice_choice:"Voice choice isn't available in this language yet.",terms_section:"Terms",terms_label:"Terms and proper names",terms_hint:"Brand, person and product names go here so the engine spells them right. Applies in Video and Meeting mode. One per line; use term=replacement if it should come out differently.",terms_builtin:"Ready-made term list ({n} names)",terms_show:"Show",terms_hide:"Hide",terms_count:"{total} / {max} terms · {user} yours, {builtin} ready-made",wn_title:"What's new",wn_ver:"Version {v}",wn_all:"All changes",wn_ok:"Got it"},
+  de:{tab_translation:"Übersetzung",voice_section:"Stimme",voice_in_label:"Übersetzungsstimme",voice_out_label:"Meine Stimme",voice_in_hint:"Die Stimme, in der du das Video oder die andere Person hörst.",voice_out_hint:"Die Stimme, in der die andere Person dich im Meeting-Modus hört.",vg_auto:"Automatisch",vg_female:"Weiblich",vg_male:"Männlich",no_voice_choice:"Stimmauswahl ist in dieser Sprache noch nicht verfügbar.",terms_section:"Begriffe",terms_label:"Begriffe und Eigennamen",terms_hint:"Marken-, Personen- und Produktnamen hier eintragen, damit die Engine sie richtig schreibt. Gilt im Video- und Meeting-Modus. Einer pro Zeile; Begriff=Ersetzung, wenn er anders erscheinen soll.",terms_builtin:"Fertige Begriffsliste ({n} Namen)",terms_show:"Anzeigen",terms_hide:"Ausblenden",terms_count:"{total} / {max} Begriffe · {user} von dir, {builtin} vorgegeben",wn_title:"Neu in dieser Version",wn_ver:"Version {v}",wn_all:"Alle Änderungen",wn_ok:"Verstanden"},
+  cs:{tab_translation:"Překlad",voice_section:"Hlas",voice_in_label:"Hlas překladu",voice_out_label:"Můj hlas",voice_in_hint:"Hlas, ve kterém slyšíš video nebo druhou osobu.",voice_out_hint:"Hlas, ve kterém tě druhá osoba slyší v režimu schůzky.",vg_auto:"Automaticky",vg_female:"Ženský",vg_male:"Mužský",no_voice_choice:"Volba hlasu v tomto jazyce ještě není dostupná.",terms_section:"Pojmy",terms_label:"Pojmy a vlastní jména",terms_hint:"Sem napiš názvy firem, osob a produktů, aby je engine psal správně. Platí v režimu videa i schůzky. Jeden na řádek; pokud má vyjít jinak, použij pojem=náhrada.",terms_builtin:"Připravený seznam pojmů ({n} názvů)",terms_show:"Zobrazit",terms_hide:"Skrýt",terms_count:"{total} / {max} pojmů · {user} tvých, {builtin} připravených",wn_title:"Co je nového",wn_ver:"Verze {v}",wn_all:"Všechny změny",wn_ok:"Rozumím"},
+  fr:{tab_translation:"Traduction",voice_section:"Voix",voice_in_label:"Voix de traduction",voice_out_label:"Ma voix",voice_in_hint:"La voix dans laquelle vous entendez la vidéo ou votre interlocuteur.",voice_out_hint:"La voix dans laquelle votre interlocuteur vous entend en mode Réunion.",vg_auto:"Automatique",vg_female:"Féminine",vg_male:"Masculine",no_voice_choice:"Le choix de la voix n'est pas encore disponible dans cette langue.",terms_section:"Termes",terms_label:"Termes et noms propres",terms_hint:"Saisissez ici les noms de marques, de personnes et de produits pour que le moteur les écrive correctement. Valable en mode Vidéo et Réunion. Un par ligne ; utilisez terme=remplacement s'il doit sortir différemment.",terms_builtin:"Liste de termes prête à l'emploi ({n} noms)",terms_show:"Afficher",terms_hide:"Masquer",terms_count:"{total} / {max} termes · {user} à vous, {builtin} fournis",wn_title:"Nouveautés",wn_ver:"Version {v}",wn_all:"Tous les changements",wn_ok:"J'ai compris"},
+  es:{tab_translation:"Traducción",voice_section:"Voz",voice_in_label:"Voz de la traducción",voice_out_label:"Mi voz",voice_in_hint:"La voz con la que oyes el vídeo o a la otra persona.",voice_out_hint:"La voz con la que la otra persona te oye en el modo Reunión.",vg_auto:"Automática",vg_female:"Femenina",vg_male:"Masculina",no_voice_choice:"La elección de voz aún no está disponible en este idioma.",terms_section:"Términos",terms_label:"Términos y nombres propios",terms_hint:"Escribe aquí nombres de marcas, personas y productos para que el motor los escriba bien. Se aplica en modo Vídeo y Reunión. Uno por línea; usa término=reemplazo si debe salir de otra forma.",terms_builtin:"Lista de términos lista para usar ({n} nombres)",terms_show:"Mostrar",terms_hide:"Ocultar",terms_count:"{total} / {max} términos · {user} tuyos, {builtin} incluidos",wn_title:"Novedades",wn_ver:"Versión {v}",wn_all:"Todos los cambios",wn_ok:"Entendido"},
+  pt:{tab_translation:"Tradução",voice_section:"Voz",voice_in_label:"Voz da tradução",voice_out_label:"A minha voz",voice_in_hint:"A voz com que ouves o vídeo ou a outra pessoa.",voice_out_hint:"A voz com que a outra pessoa te ouve no modo Reunião.",vg_auto:"Automática",vg_female:"Feminina",vg_male:"Masculina",no_voice_choice:"A escolha de voz ainda não está disponível neste idioma.",terms_section:"Termos",terms_label:"Termos e nomes próprios",terms_hint:"Escreve aqui nomes de marcas, pessoas e produtos para o motor os escrever corretamente. Aplica-se nos modos Vídeo e Reunião. Um por linha; usa termo=substituição se deve sair diferente.",terms_builtin:"Lista de termos pronta ({n} nomes)",terms_show:"Mostrar",terms_hide:"Ocultar",terms_count:"{total} / {max} termos · {user} teus, {builtin} incluídos",wn_title:"Novidades",wn_ver:"Versão {v}",wn_all:"Todas as mudanças",wn_ok:"Entendi"},
+  ja:{tab_translation:"翻訳",voice_section:"音声",voice_in_label:"翻訳の声",voice_out_label:"自分の声",voice_in_hint:"動画や相手の声をこの声で聞きます。",voice_out_hint:"会議モードで相手があなたを聞くときの声です。",vg_auto:"自動",vg_female:"女性",vg_male:"男性",no_voice_choice:"この言語では声の選択はまだ使えません。",terms_section:"用語",terms_label:"用語・固有名詞",terms_hint:"ブランド名・人名・製品名をここに入れると、エンジンが正しく表記します。動画モードと会議モードの両方に適用されます。1 行に 1 つ。別の表記にしたい場合は 用語=置き換え の形式で。",terms_builtin:"用語リスト（{n} 件）",terms_show:"表示",terms_hide:"非表示",terms_count:"{total} / {max} 件 · あなた {user}、既定 {builtin}",wn_title:"新機能",wn_ver:"バージョン {v}",wn_all:"すべての変更履歴",wn_ok:"了解"},
+  ko:{tab_translation:"번역",voice_section:"음성",voice_in_label:"번역 음성",voice_out_label:"내 목소리",voice_in_hint:"영상이나 상대방을 이 음성으로 듣습니다.",voice_out_hint:"회의 모드에서 상대방이 나를 듣는 음성입니다.",vg_auto:"자동",vg_female:"여성",vg_male:"남성",no_voice_choice:"이 언어에서는 아직 음성을 선택할 수 없습니다.",terms_section:"용어",terms_label:"용어 및 고유명사",terms_hint:"브랜드·사람·제품 이름을 여기에 적으면 엔진이 정확하게 표기합니다. 영상 모드와 회의 모드에 모두 적용됩니다. 한 줄에 하나씩, 다르게 표기하려면 용어=대체 형식을 쓰세요.",terms_builtin:"기본 용어 목록 ({n}개)",terms_show:"보기",terms_hide:"숨기기",terms_count:"{total} / {max}개 · 내 것 {user}, 기본 {builtin}",wn_title:"새로운 기능",wn_ver:"버전 {v}",wn_all:"전체 변경 내역",wn_ok:"확인"},
+  ru:{tab_translation:"Перевод",voice_section:"Голос",voice_in_label:"Голос перевода",voice_out_label:"Мой голос",voice_in_hint:"Голос, которым вы слышите видео или собеседника.",voice_out_hint:"Голос, которым собеседник слышит вас в режиме встречи.",vg_auto:"Автоматически",vg_female:"Женский",vg_male:"Мужской",no_voice_choice:"Выбор голоса пока недоступен для этого языка.",terms_section:"Термины",terms_label:"Термины и имена собственные",terms_hint:"Впишите здесь названия брендов, имена людей и продуктов, чтобы движок писал их правильно. Действует в режимах «Видео» и «Встреча». По одному в строке; используйте термин=замена, если он должен выглядеть иначе.",terms_builtin:"Готовый список терминов ({n} назв.)",terms_show:"Показать",terms_hide:"Скрыть",terms_count:"{total} / {max} терминов · ваших {user}, готовых {builtin}",wn_title:"Что нового",wn_ver:"Версия {v}",wn_all:"Все изменения",wn_ok:"Понятно"},
+  zh:{tab_translation:"翻译",voice_section:"语音",voice_in_label:"翻译语音",voice_out_label:"我的声音",voice_in_hint:"你听到视频或对方时使用的声音。",voice_out_hint:"会议模式中对方听到你时的声音。",vg_auto:"自动",vg_female:"女声",vg_male:"男声",no_voice_choice:"该语言暂不支持选择声音。",terms_section:"术语",terms_label:"术语与专有名词",terms_hint:"把品牌、人名和产品名写在这里，引擎就会正确书写。视频模式和会议模式均生效。每行一个；若希望输出不同，请使用 术语=替换 的格式。",terms_builtin:"内置术语表（{n} 个）",terms_show:"显示",terms_hide:"隐藏",terms_count:"{total} / {max} 个 · 你的 {user}，内置 {builtin}",wn_title:"新增功能",wn_ver:"版本 {v}",wn_all:"全部更新记录",wn_ok:"知道了"},
+  "zh-Hant":{tab_translation:"翻譯",voice_section:"語音",voice_in_label:"翻譯語音",voice_out_label:"我的聲音",voice_in_hint:"你聽到影片或對方時使用的聲音。",voice_out_hint:"會議模式中對方聽到你時的聲音。",vg_auto:"自動",vg_female:"女聲",vg_male:"男聲",no_voice_choice:"這個語言暫時無法選擇聲音。",terms_section:"術語",terms_label:"術語與專有名詞",terms_hint:"把品牌、人名和產品名寫在這裡，引擎就會正確書寫。影片模式與會議模式都適用。每行一個；若希望輸出不同，請使用 術語=替換 的格式。",terms_builtin:"內建術語表（{n} 個）",terms_show:"顯示",terms_hide:"隱藏",terms_count:"{total} / {max} 個 · 你的 {user}，內建 {builtin}",wn_title:"新增功能",wn_ver:"版本 {v}",wn_all:"全部更新紀錄",wn_ok:"知道了"},
+  pl:{tab_translation:"Tłumaczenie",voice_section:"Głos",voice_in_label:"Głos tłumaczenia",voice_out_label:"Mój głos",voice_in_hint:"Głos, którym słyszysz film lub drugą osobę.",voice_out_hint:"Głos, którym druga osoba słyszy Ciebie w trybie spotkania.",vg_auto:"Automatycznie",vg_female:"Kobiecy",vg_male:"Męski",no_voice_choice:"Wybór głosu nie jest jeszcze dostępny w tym języku.",terms_section:"Terminy",terms_label:"Terminy i nazwy własne",terms_hint:"Wpisz tu nazwy marek, osób i produktów, aby silnik pisał je poprawnie. Działa w trybie wideo i spotkania. Jeden na wiersz; użyj termin=zamiennik, jeśli ma wyglądać inaczej.",terms_builtin:"Gotowa lista terminów ({n} nazw)",terms_show:"Pokaż",terms_hide:"Ukryj",terms_count:"{total} / {max} terminów · {user} Twoich, {builtin} gotowych",wn_title:"Co nowego",wn_ver:"Wersja {v}",wn_all:"Wszystkie zmiany",wn_ok:"Rozumiem"},
+  it:{tab_translation:"Traduzione",voice_section:"Voce",voice_in_label:"Voce della traduzione",voice_out_label:"La mia voce",voice_in_hint:"La voce con cui senti il video o l'altra persona.",voice_out_hint:"La voce con cui l'altra persona ti sente in modalità Riunione.",vg_auto:"Automatica",vg_female:"Femminile",vg_male:"Maschile",no_voice_choice:"La scelta della voce non è ancora disponibile in questa lingua.",terms_section:"Termini",terms_label:"Termini e nomi propri",terms_hint:"Scrivi qui nomi di marchi, persone e prodotti così il motore li scrive correttamente. Vale in modalità Video e Riunione. Uno per riga; usa termine=sostituzione se deve uscire diverso.",terms_builtin:"Elenco di termini pronto ({n} nomi)",terms_show:"Mostra",terms_hide:"Nascondi",terms_count:"{total} / {max} termini · {user} tuoi, {builtin} inclusi",wn_title:"Novità",wn_ver:"Versione {v}",wn_all:"Tutte le modifiche",wn_ok:"Ho capito"},
+  id:{tab_translation:"Terjemahan",voice_section:"Suara",voice_in_label:"Suara terjemahan",voice_out_label:"Suara saya",voice_in_hint:"Suara yang kamu dengar untuk video atau orang lain.",voice_out_hint:"Suara yang didengar orang lain sebagai kamu di mode Rapat.",vg_auto:"Otomatis",vg_female:"Perempuan",vg_male:"Laki-laki",no_voice_choice:"Pilihan suara belum tersedia untuk bahasa ini.",terms_section:"Istilah",terms_label:"Istilah dan nama diri",terms_hint:"Tulis nama merek, orang, dan produk di sini agar mesin menuliskannya dengan benar. Berlaku di mode Video dan Rapat. Satu per baris; pakai istilah=pengganti jika harus muncul berbeda.",terms_builtin:"Daftar istilah siap pakai ({n} nama)",terms_show:"Tampilkan",terms_hide:"Sembunyikan",terms_count:"{total} / {max} istilah · {user} milikmu, {builtin} bawaan",wn_title:"Yang baru",wn_ver:"Versi {v}",wn_all:"Semua perubahan",wn_ok:"Mengerti"},
+  nl:{tab_translation:"Vertaling",voice_section:"Stem",voice_in_label:"Vertaalstem",voice_out_label:"Mijn stem",voice_in_hint:"De stem waarin je de video of de ander hoort.",voice_out_hint:"De stem waarin de ander jou hoort in de vergadermodus.",vg_auto:"Automatisch",vg_female:"Vrouwelijk",vg_male:"Mannelijk",no_voice_choice:"Stemkeuze is nog niet beschikbaar in deze taal.",terms_section:"Termen",terms_label:"Termen en eigennamen",terms_hint:"Zet merk-, persoons- en productnamen hier zodat de engine ze goed spelt. Geldt in Video- en vergadermodus. Eén per regel; gebruik term=vervanging als het anders moet verschijnen.",terms_builtin:"Kant-en-klare termenlijst ({n} namen)",terms_show:"Weergeven",terms_hide:"Verbergen",terms_count:"{total} / {max} termen · {user} van jou, {builtin} standaard",wn_title:"Wat is er nieuw",wn_ver:"Versie {v}",wn_all:"Alle wijzigingen",wn_ok:"Duidelijk"},
+  vi:{tab_translation:"Dịch",voice_section:"Giọng nói",voice_in_label:"Giọng bản dịch",voice_out_label:"Giọng của tôi",voice_in_hint:"Giọng bạn nghe thấy video hoặc người kia.",voice_out_hint:"Giọng mà người kia nghe thấy bạn trong chế độ Họp.",vg_auto:"Tự động",vg_female:"Nữ",vg_male:"Nam",no_voice_choice:"Ngôn ngữ này chưa cho chọn giọng.",terms_section:"Thuật ngữ",terms_label:"Thuật ngữ và tên riêng",terms_hint:"Ghi tên thương hiệu, người và sản phẩm vào đây để công cụ viết đúng. Áp dụng ở chế độ Video và Họp. Mỗi dòng một thuật ngữ; dùng thuật ngữ=thay thế nếu muốn kết quả khác.",terms_builtin:"Danh sách thuật ngữ có sẵn ({n} tên)",terms_show:"Hiện",terms_hide:"Ẩn",terms_count:"{total} / {max} thuật ngữ · {user} của bạn, {builtin} có sẵn",wn_title:"Có gì mới",wn_ver:"Phiên bản {v}",wn_all:"Tất cả thay đổi",wn_ok:"Đã hiểu"},
+  th:{tab_translation:"การแปล",voice_section:"เสียง",voice_in_label:"เสียงคำแปล",voice_out_label:"เสียงของฉัน",voice_in_hint:"เสียงที่คุณได้ยินวิดีโอหรืออีกฝ่าย",voice_out_hint:"เสียงที่อีกฝ่ายได้ยินเป็นคุณในโหมดประชุม",vg_auto:"อัตโนมัติ",vg_female:"ผู้หญิง",vg_male:"ผู้ชาย",no_voice_choice:"ภาษานี้ยังเลือกเสียงไม่ได้",terms_section:"คำศัพท์",terms_label:"คำศัพท์และชื่อเฉพาะ",terms_hint:"ใส่ชื่อแบรนด์ ชื่อคน และชื่อสินค้าไว้ที่นี่ เพื่อให้ระบบสะกดถูก ใช้ได้ทั้งโหมดวิดีโอและโหมดประชุม บรรทัดละหนึ่งคำ ถ้าต้องการให้ออกมาต่างไปให้ใช้รูปแบบ คำ=คำแทน",terms_builtin:"รายการคำศัพท์พร้อมใช้ ({n} ชื่อ)",terms_show:"แสดง",terms_hide:"ซ่อน",terms_count:"{total} / {max} คำ · ของคุณ {user} พร้อมใช้ {builtin}",wn_title:"มีอะไรใหม่",wn_ver:"เวอร์ชัน {v}",wn_all:"การเปลี่ยนแปลงทั้งหมด",wn_ok:"รับทราบ"},
+  ro:{tab_translation:"Traducere",voice_section:"Voce",voice_in_label:"Vocea traducerii",voice_out_label:"Vocea mea",voice_in_hint:"Vocea în care auzi videoclipul sau cealaltă persoană.",voice_out_hint:"Vocea în care cealaltă persoană te aude în modul Întâlnire.",vg_auto:"Automat",vg_female:"Feminină",vg_male:"Masculină",no_voice_choice:"Alegerea vocii nu este încă disponibilă în această limbă.",terms_section:"Termeni",terms_label:"Termeni și nume proprii",terms_hint:"Scrie aici nume de mărci, persoane și produse ca motorul să le scrie corect. Se aplică în modul Video și Întâlnire. Unul pe linie; folosește termen=înlocuire dacă trebuie să apară altfel.",terms_builtin:"Listă de termeni gata făcută ({n} nume)",terms_show:"Arată",terms_hide:"Ascunde",terms_count:"{total} / {max} termeni · {user} ai tăi, {builtin} incluși",wn_title:"Ce e nou",wn_ver:"Versiunea {v}",wn_all:"Toate modificările",wn_ok:"Am înțeles"},
+  hi:{tab_translation:"अनुवाद",voice_section:"आवाज़",voice_in_label:"अनुवाद की आवाज़",voice_out_label:"मेरी आवाज़",voice_in_hint:"वीडियो या सामने वाले को आप इस आवाज़ में सुनते हैं।",voice_out_hint:"मीटिंग मोड में सामने वाला आपको इस आवाज़ में सुनता है।",vg_auto:"स्वचालित",vg_female:"महिला",vg_male:"पुरुष",no_voice_choice:"इस भाषा में आवाज़ चुनने की सुविधा अभी नहीं है।",terms_section:"शब्द",terms_label:"शब्द और विशेष नाम",terms_hint:"ब्रांड, व्यक्ति और उत्पाद के नाम यहाँ लिखें ताकि इंजन उन्हें सही लिखे। वीडियो और मीटिंग दोनों मोड में लागू होता है। हर पंक्ति में एक; अलग लिखवाना हो तो शब्द=बदल रूप का प्रयोग करें।",terms_builtin:"तैयार शब्द-सूची ({n} नाम)",terms_show:"दिखाएँ",terms_hide:"छिपाएँ",terms_count:"{total} / {max} शब्द · {user} आपके, {builtin} पहले से",wn_title:"क्या नया है",wn_ver:"संस्करण {v}",wn_all:"सभी बदलाव",wn_ok:"समझ गया"},
+  hu:{tab_translation:"Fordítás",voice_section:"Hang",voice_in_label:"Fordítás hangja",voice_out_label:"Az én hangom",voice_in_hint:"Ezen a hangon hallod a videót vagy a másik felet.",voice_out_hint:"Ezen a hangon hall téged a másik fél megbeszélés módban.",vg_auto:"Automatikus",vg_female:"Nő",vg_male:"Férfi",no_voice_choice:"Ezen a nyelven a hang kiválasztása még nem érhető el.",terms_section:"Kifejezések",terms_label:"Kifejezések és tulajdonnevek",terms_hint:"Írd ide a márka-, személy- és terméknevek, hogy a motor helyesen írja őket. Videó és megbeszélés módban is érvényes. Soronként egy; ha máshogy kell megjelennie, használd a kifejezés=csere formát.",terms_builtin:"Kész kifejezéslista ({n} név)",terms_show:"Megjelenítés",terms_hide:"Elrejtés",terms_count:"{total} / {max} kifejezés · {user} a tiéd, {builtin} beépített",wn_title:"Újdonságok",wn_ver:"{v} verzió",wn_all:"Minden változás",wn_ok:"Értem"},
+  sv:{tab_translation:"Översättning",voice_section:"Röst",voice_in_label:"Översättningsröst",voice_out_label:"Min röst",voice_in_hint:"Rösten du hör videon eller den andra personen i.",voice_out_hint:"Rösten den andra personen hör dig i, i mötesläget.",vg_auto:"Automatiskt",vg_female:"Kvinnlig",vg_male:"Manlig",no_voice_choice:"Röstval är inte tillgängligt på det här språket än.",terms_section:"Termer",terms_label:"Termer och egennamn",terms_hint:"Skriv varumärkes-, person- och produktnamn här så att motorn stavar dem rätt. Gäller i video- och mötesläget. En per rad; använd term=ersättning om den ska komma ut annorlunda.",terms_builtin:"Färdig termlista ({n} namn)",terms_show:"Visa",terms_hide:"Dölj",terms_count:"{total} / {max} termer · {user} dina, {builtin} färdiga",wn_title:"Nyheter",wn_ver:"Version {v}",wn_all:"Alla ändringar",wn_ok:"Uppfattat"},
+  sr:{tab_translation:"Prevod",voice_section:"Glas",voice_in_label:"Glas prevoda",voice_out_label:"Moj glas",voice_in_hint:"Glas u kom slušaš video ili drugu osobu.",voice_out_hint:"Glas u kom te druga osoba sluša u režimu sastanka.",vg_auto:"Automatski",vg_female:"Ženski",vg_male:"Muški",no_voice_choice:"Izbor glasa na ovom jeziku još nije dostupan.",terms_section:"Pojmovi",terms_label:"Pojmovi i vlastita imena",terms_hint:"Upiši imena brendova, osoba i proizvoda ovde da ih motor ispravno napiše. Važi u režimu videa i sastanka. Jedan po redu; koristi pojam=zamena ako treba da izađe drugačije.",terms_builtin:"Gotov spisak pojmova ({n} imena)",terms_show:"Prikaži",terms_hide:"Sakrij",terms_count:"{total} / {max} pojmova · {user} tvojih, {builtin} gotovih",wn_title:"Šta je novo",wn_ver:"Verzija {v}",wn_all:"Sve promene",wn_ok:"Razumem"}
 };
 /* Settings/auth strings (1.0.18) merged into the 16 language blocks above so
    they need no per-block edits; T()/applyI18n resolve them (en fallback if any). */
@@ -5970,6 +5985,40 @@ const I18N_INPUT_METER = {
 };
 Object.keys(I18N_INPUT_METER).forEach(function(l){
   if(!I18N[l]) I18N[l]={}; Object.assign(I18N[l],I18N_INPUT_METER[l]);
+});
+/* The first 30 seconds of a session used to be an empty surface: the connect
+   handshake alone exceeds 10 s for 16% of sessions (p90 33 s), and the model's
+   interpreter lag puts the first spoken word seconds after that. 40% of all
+   sessions were abandoned inside 30 s and 71% of those were followed by another
+   attempt within 14 s — people were not bored, they had nothing telling them
+   anything was happening. These three lines fill exactly that window. */
+const I18N_WAIT_STATE = {
+  tr:{wait_connecting:"Çeviri motoruna bağlanılıyor…",wait_connecting_slow:"Bağlantı biraz uzadı — denemeye devam ediyoruz, bekleyin.",wait_listening:"Dinliyorum… konuşma başlayınca ilk çeviri birkaç saniye içinde belirir."},
+  en:{wait_connecting:"Connecting to the translation engine…",wait_connecting_slow:"This is taking a moment — still trying, hang on.",wait_listening:"Listening… once someone speaks, the first translation appears within a few seconds."},
+  cs:{wait_connecting:"Připojování k překladovému jádru…",wait_connecting_slow:"Trvá to trochu déle — stále to zkoušíme, vydržte.",wait_listening:"Poslouchám… jakmile někdo promluví, první překlad se objeví za několik sekund."},
+  de:{wait_connecting:"Verbindung zur Übersetzungs-Engine…",wait_connecting_slow:"Das dauert kurz — wir versuchen es weiter, einen Moment.",wait_listening:"Ich höre zu… sobald jemand spricht, erscheint die erste Übersetzung in wenigen Sekunden."},
+  fr:{wait_connecting:"Connexion au moteur de traduction…",wait_connecting_slow:"Cela prend un instant — on continue d’essayer, patientez.",wait_listening:"J’écoute… dès que quelqu’un parle, la première traduction arrive en quelques secondes."},
+  es:{wait_connecting:"Conectando con el motor de traducción…",wait_connecting_slow:"Está tardando un momento: seguimos intentándolo, espera.",wait_listening:"Escuchando… en cuanto alguien hable, la primera traducción aparece en unos segundos."},
+  pt:{wait_connecting:"Conectando ao motor de tradução…",wait_connecting_slow:"Está demorando um instante — continuamos tentando, aguarde.",wait_listening:"Ouvindo… quando alguém falar, a primeira tradução aparece em poucos segundos."},
+  ja:{wait_connecting:"翻訳エンジンに接続中…",wait_connecting_slow:"少し時間がかかっています。接続を続けていますので、そのままお待ちください。",wait_listening:"聞いています… 誰かが話し始めると、数秒で最初の翻訳が表示されます。"},
+  ko:{wait_connecting:"번역 엔진에 연결 중…",wait_connecting_slow:"조금 오래 걸리고 있습니다 — 계속 시도 중이니 잠시만 기다려 주세요.",wait_listening:"듣고 있습니다… 누군가 말하기 시작하면 몇 초 안에 첫 번역이 나타납니다."},
+  ru:{wait_connecting:"Подключение к движку перевода…",wait_connecting_slow:"Немного затянулось — продолжаем подключаться, подождите.",wait_listening:"Слушаю… как только кто-то заговорит, первый перевод появится через несколько секунд."},
+  zh:{wait_connecting:"正在连接翻译引擎…",wait_connecting_slow:"稍微久了一点——仍在连接，请稍等。",wait_listening:"正在聆听……有人说话后，几秒内就会出现第一句翻译。"},
+  pl:{wait_connecting:"Łączenie z silnikiem tłumaczenia…",wait_connecting_slow:"Trwa to chwilę — nadal próbujemy, poczekaj.",wait_listening:"Słucham… gdy ktoś się odezwie, pierwsze tłumaczenie pojawi się w ciągu kilku sekund."},
+  it:{wait_connecting:"Connessione al motore di traduzione…",wait_connecting_slow:"Ci sta mettendo un attimo: continuiamo a provare, aspetta.",wait_listening:"Sto ascoltando… appena qualcuno parla, la prima traduzione arriva in pochi secondi."},
+  id:{wait_connecting:"Menghubungkan ke mesin terjemahan…",wait_connecting_slow:"Agak lama — kami masih mencoba, mohon tunggu.",wait_listening:"Mendengarkan… begitu ada yang bicara, terjemahan pertama muncul dalam beberapa detik."},
+  nl:{wait_connecting:"Verbinden met de vertaalengine…",wait_connecting_slow:"Dit duurt even — we blijven het proberen, momentje.",wait_listening:"Ik luister… zodra iemand spreekt, verschijnt de eerste vertaling binnen een paar seconden."},
+  vi:{wait_connecting:"Đang kết nối tới bộ máy dịch…",wait_connecting_slow:"Hơi lâu một chút — vẫn đang thử, bạn đợi nhé.",wait_listening:"Đang lắng nghe… khi có người nói, bản dịch đầu tiên sẽ hiện ra trong vài giây."},
+  th:{wait_connecting:"กำลังเชื่อมต่อกับเครื่องมือแปล…",wait_connecting_slow:"ใช้เวลานานกว่าปกติเล็กน้อย — ยังพยายามเชื่อมต่ออยู่ กรุณารอสักครู่",wait_listening:"กำลังฟัง… เมื่อมีคนพูด คำแปลแรกจะปรากฏภายในไม่กี่วินาที"},
+  ro:{wait_connecting:"Se conectează la motorul de traducere…",wait_connecting_slow:"Durează un moment — încercăm în continuare, așteaptă puțin.",wait_listening:"Ascult… când începe cineva să vorbească, prima traducere apare în câteva secunde."},
+  hi:{wait_connecting:"अनुवाद इंजन से जुड़ रहे हैं…",wait_connecting_slow:"थोड़ा समय लग रहा है — कोशिश जारी है, रुकिए।",wait_listening:"सुन रहे हैं… कोई बोलेगा तो कुछ सेकंड में पहला अनुवाद दिखेगा।"},
+  hu:{wait_connecting:"Kapcsolódás a fordítómotorhoz…",wait_connecting_slow:"Ez eltart egy pillanatig — még próbálkozunk, várj.",wait_listening:"Hallgatom… amint valaki megszólal, az első fordítás pár másodperc alatt megjelenik."},
+  sv:{wait_connecting:"Ansluter till översättningsmotorn…",wait_connecting_slow:"Det tar en stund — vi försöker fortfarande, häng kvar.",wait_listening:"Lyssnar… så snart någon talar dyker den första översättningen upp inom några sekunder."},
+  sr:{wait_connecting:"Povezivanje sa prevodilačkim motorom…",wait_connecting_slow:"Traje malo duže — još pokušavamo, sačekaj.",wait_listening:"Slušam… kada neko počne da govori, prvi prevod se pojavljuje za nekoliko sekundi."},
+  "zh-Hant":{wait_connecting:"正在連線到翻譯引擎…",wait_connecting_slow:"稍微久了一點——仍在連線，請稍等。",wait_listening:"正在聆聽……有人說話後，幾秒內就會出現第一句翻譯。"}
+};
+Object.keys(I18N_WAIT_STATE).forEach(function(l){
+  if(!I18N[l]) I18N[l]={}; Object.assign(I18N[l],I18N_WAIT_STATE[l]);
 });
 /* Optional Meeting confidence monitor: outgoing translated speech keeps feeding
    the virtual microphone and is also mirrored to the selected headphones. */
@@ -6650,7 +6699,7 @@ document.querySelectorAll('.scenario').forEach(b=>{
       // consent acknowledgement the first time, unless the user opted out.
       if(!(STATE.cfg && STATE.cfg.meeting_consent_ack)){ openConsent(); return; }
     }
-    api().start(mode);
+    invokeStart(mode);
   };
 });
 $('#stopbtn').onclick = ()=>api().stop();
@@ -6908,18 +6957,47 @@ function showPaywallCard(){
 async function maybeWhatsNew(){
   let wn=null;
   try{ wn = await api().whatsnew(); }catch(_){ return; }
-  if(!wn || !Array.isArray(wn.bullets) || !wn.bullets.length) return;
-  const list=$('#whatsnew-list'); if(!list) return;
-  list.innerHTML='';
-  wn.bullets.forEach(b=>{ const li=document.createElement('li');
-                          li.style.marginBottom='8px'; li.textContent=b; list.appendChild(li); });
-  const ver=$('#whatsnew-ver'); if(ver) ver.textContent = T('wn_ver').replace('{v}', wn.version||'');
+  // entries = one block per version the user hasn't read, newest first. A Store
+  // update can skip several releases at once, and showing only the running
+  // version's notes made every release in between invisible.
+  const entries = (wn && Array.isArray(wn.entries) ? wn.entries : [])
+    .filter(e => e && Array.isArray(e.bullets) && e.bullets.length);
+  if(!entries.length) return;
+  const body=$('#whatsnew-body'); if(!body) return;
+  body.innerHTML='';
+  entries.forEach(e=>{
+    const g=document.createElement('div'); g.className='wn-group';
+    // The version label only earns its space when there is more than one block;
+    // for a single version the header chip already says which one it is.
+    if(entries.length>1){
+      const h=document.createElement('div'); h.className='wn-ver';
+      h.textContent=T('wn_ver').replace('{v}', e.version||''); g.appendChild(h);
+    }
+    const ul=document.createElement('ul'); ul.style.margin='0'; ul.style.paddingLeft='18px';
+    e.bullets.forEach(b=>{ const li=document.createElement('li');
+                           li.style.marginBottom='8px'; li.textContent=b; ul.appendChild(li); });
+    g.appendChild(ul); body.appendChild(g);
+  });
+  const ver=$('#whatsnew-ver');
+  if(ver) ver.textContent = T('wn_ver').replace('{v}', (wn && wn.version) || entries[0].version || '');
   $('#scrim').classList.add('open'); $('#whatsnew-modal').classList.add('open');
   openModal($('#whatsnew-modal'), closeWhatsNew, null);
   try{ api().mark_whatsnew_seen(); }catch(_){}
 }
 function closeWhatsNew(){ $('#whatsnew-modal').classList.remove('open'); if(!$('#drawer').classList.contains('open')) $('#scrim').classList.remove('open'); closeModal(); }
 { const ok=$('#whatsnew-ok'); if(ok) ok.onclick = closeWhatsNew; }
+/* The card only carries what THIS user missed; the site page is the full history,
+   for someone who skipped further back than the table goes. The site is published
+   in 7 languages (fewer than the app's 23) and Turkish uses localized slugs, so
+   anything else falls back to the English page rather than a 404. */
+const CHANGELOG_PATHS = {en:"/changelog", de:"/de/changelog", es:"/es/changelog",
+                         fr:"/fr/changelog", ko:"/ko/changelog", pt:"/pt/changelog",
+                         tr:"/tr/degisiklikler"};
+function changelogUrl(){
+  return "https://voxislive.com" + (CHANGELOG_PATHS[LANG] || CHANGELOG_PATHS.en);
+}
+{ const a=$('#whatsnew-all');
+  if(a) a.onclick = e => { e.preventDefault(); try{ api().open_url(changelogUrl()); }catch(_){} }; }
 function closeReviewModal(){ $('#review-modal').classList.remove('open'); if(!$('#drawer').classList.contains('open')) $('#scrim').classList.remove('open'); closeModal(); }
 function showReviewCard(){
   // Python decides WHEN (third clean session, Store build, asked once ever) and
@@ -7215,7 +7293,7 @@ $('#db-switch').onclick = async e => {
 $('#tw-continue').onclick = async e => {
   e.preventDefault();
   closeTasteWall();
-  try{ await api().start(tasteWallMode); }catch(_){}
+  try{ await invokeStart(tasteWallMode); }catch(_){}
 };
 // The same last sentence, in either voice — the session is stopped, so these
 // play through the standalone player (proven path).
@@ -7243,7 +7321,7 @@ $('#consent-accept').onclick = async()=>{
   closeConsent();
   // consented=true: this acceptance authorizes this start even when the user
   // declined "don't show again" (so meeting_consent_ack was not persisted).
-  api().start('meeting', true);
+  invokeStart('meeting', true);
 };
 // Each step points the spotlight at a real element (sel); sel:null = a centered
 // welcome/closing step (full dim, no ring). Kept to 3 steps so a new user reaches
@@ -7626,7 +7704,61 @@ function removeEmpty(){ const e=$('#empty'); if(e) e.remove(); }
 function resetTranscript(){
   if(pendingTurn){ clearTimeout(pendingTurn.timer); pendingTurn=null; }
   $('#scroll').innerHTML=emptyHtml(); curTurn=null; curBubble=null; curLeg=null;
-  latencyNoteShown=false; lastSpk=null;
+  latencyNoteShown=false; lastSpk=null; sawTranslation=false;
+}
+/* ── WAITING CUE ──────────────────────────────────────────────────────────────
+   Everything between pressing Start and the first translated word used to be a
+   blank stream. That window is where the product is lost: 40% of all sessions
+   end inside 30 s, and the connect handshake alone runs past 10 s for 16% of
+   them (p90 33 s) before the model's own interpreter lag even begins. The cue
+   says what is happening, escalates if the handshake drags, sets the latency
+   expectation BEFORE the wait instead of after it (latency_note only ever fires
+   on the first caption, i.e. too late for anyone who gave up), and deletes
+   itself the moment a translation lands. Pure UI — it is never part of the
+   saved transcript, which the Python side builds from its own turn list. */
+let startPendingAt = 0;      // when Start was clicked; 0 = not starting
+let sawTranslation = false;  // any translation this session (even with captions off)
+const WAIT_SLOW_SECONDS = 10;
+const WAIT_GIVEUP_SECONDS = 45;   // start refused/failed: stop claiming we connect
+function clearWaitCue(){ const el=$('#waitcue'); if(el) el.remove(); }
+function renderWaitState(p){
+  const live = !!(p && p.mode);
+  if(sawTranslation || document.querySelector('#scroll .turn') || (!live && !startPendingAt)){
+    if(!live) startPendingAt = 0;
+    clearWaitCue();
+    return;
+  }
+  let text;
+  if(live){
+    startPendingAt = 0;   // connected: the handshake half of the wait is over
+    text = T('wait_listening');
+  } else {
+    const secs = (Date.now() - startPendingAt) / 1000;
+    // A start that was refused (quota wall, missing cable, device error) leaves
+    // no session behind; its own error line is already on screen, so stop
+    // asserting that we are still connecting.
+    if(secs > WAIT_GIVEUP_SECONDS){ startPendingAt = 0; clearWaitCue(); return; }
+    text = T(secs >= WAIT_SLOW_SECONDS ? 'wait_connecting_slow' : 'wait_connecting');
+  }
+  let el = $('#waitcue');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'waitcue'; el.className = 'line sys waitcue';
+    $('#scroll').appendChild(el);
+  }
+  if(el.textContent !== text) el.textContent = text;
+  // It describes what is happening NOW, so it stays the last line even after a
+  // status line (e.g. "mode started") is appended behind it.
+  const sc = $('#scroll');
+  if(sc.lastElementChild !== el){ sc.appendChild(el); scrollEnd(); }
+}
+// Every Start path goes through here so the cue appears the instant the user
+// clicks, not one poll later.
+function invokeStart(mode, consented){
+  startPendingAt = Date.now();
+  sawTranslation = false;
+  try{ return consented===undefined ? api().start(mode) : api().start(mode, consented); }
+  catch(e){ startPendingAt = 0; throw e; }
 }
 /* Speaker tag on a turn bubble. The Python side sends a label only for a
    genuinely multi-speaker session (≥2 voices seen); here the tag renders only
@@ -7713,6 +7845,9 @@ function onTrans(text, newline, spk, backlogS, leg){
   // Counted before the subtitle gate: the inverse demo replays the last line
   // Voxis SPOKE, which happens whether or not captions are switched on.
   if(newline) contrastLines++;
+  // Marked before the subtitle gate: with captions switched off no bubble is
+  // ever created, and the waiting cue must still know that translation started.
+  sawTranslation = true;
   if(!$('#subs').checked) return;
   // Honest-latency: the caption renders the instant a token arrives, ahead of the
   // TTS audio. The first turn of a session also drops a one-time in-context note
@@ -7941,6 +8076,7 @@ async function poll(){
     // whenever there are turns to save — during and after a session.
     $('#savechip').classList.toggle('on', !!document.querySelector('#scroll .turn'));
     SESSION_LIVE = liveSession;
+    renderWaitState(p);
     pollFast = liveSession;
     targetLevel = Number(p.level) || 0;
     $('#vad').classList.toggle('live', liveSession);

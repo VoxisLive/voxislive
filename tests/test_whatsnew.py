@@ -1,9 +1,15 @@
-"""Release notes: shown once per update, never to a first-time user.
+"""Release notes: shown once per update, never to a first-time user, and covering
+every version the user skipped.
 
 The card exists because Store updates are silent — a returning user had no way to
 learn what changed. That makes two failure modes worth pinning: showing it twice
 (annoying, and it trains people to dismiss it unread) and showing it to someone
 who just installed the app, who has no "before" to compare against.
+
+A third was found in the field: Store updates land in the background and skip
+versions freely, and the card used to show ONLY the running version's notes, so
+1.0.50's notes reached nobody who jumped 1.0.49 -> 1.0.51 in one update. The gate
+now returns one entry per unread version, which is what the range tests below pin.
 """
 import pytest
 
@@ -39,7 +45,7 @@ def test_returning_user_sees_the_notes_once(monkeypatch, notes):
 
     first = b.whatsnew()
     assert first["version"] == "1.0.50"
-    assert first["bullets"] == ["English bullet"]
+    assert first["entries"] == [{"version": "1.0.50", "bullets": ["English bullet"]}]
 
     b.mark_whatsnew_seen()
     assert cfg["whatsnew_seen"] == "1.0.50"
@@ -59,24 +65,97 @@ def test_fresh_install_is_marked_silently(monkeypatch, notes):
 def test_notes_render_in_the_ui_language(monkeypatch, notes):
     b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.49"),
                 notes=notes, monkeypatch=monkeypatch, lang="tr")
-    assert b.whatsnew()["bullets"] == ["Türkçe madde"]
+    assert b.whatsnew()["entries"][0]["bullets"] == ["Türkçe madde"]
 
 
 def test_untranslated_language_falls_back_to_english(monkeypatch, notes):
     # "hu" is absent from this version's table on purpose.
     b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.49"),
                 notes=notes, monkeypatch=monkeypatch, lang="hu")
-    assert b.whatsnew()["bullets"] == ["English bullet"]
+    assert b.whatsnew()["entries"][0]["bullets"] == ["English bullet"]
 
 
-def test_version_without_notes_shows_nothing(monkeypatch, notes):
-    """A release that forgets to add notes degrades to the old silence rather
-    than opening an empty dialog."""
+# ---- skipped versions ----------------------------------------------------
+
+@pytest.fixture
+def three():
+    """Three consecutive releases, so a skip has something to lose."""
+    return {
+        "1.0.49": {"en": ["forty-nine"]},
+        "1.0.50": {"en": ["fifty"]},
+        "1.0.51": {"en": ["fifty-one"]},
+    }
+
+
+def test_a_skipped_version_is_not_lost(monkeypatch, three):
+    """1.0.49 -> 1.0.51 in one Store update: 1.0.50 must still be shown. This is
+    the exact case that reached nobody before — newest first."""
+    b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.49"),
+                version="1.0.51", notes=three, monkeypatch=monkeypatch)
+    got = b.whatsnew()
+    assert [e["version"] for e in got["entries"]] == ["1.0.51", "1.0.50"]
+    assert got["version"] == "1.0.51"          # header still names the running build
+
+
+def test_only_unread_versions_are_shown(monkeypatch, three):
+    b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.50"),
+                version="1.0.51", notes=three, monkeypatch=monkeypatch)
+    assert [e["version"] for e in b.whatsnew()["entries"]] == ["1.0.51"]
+
+
+def test_updating_from_before_the_feature_shows_the_whole_table(monkeypatch, three):
+    """Blank whatsnew_seen + finished onboarding = updated from a build that
+    predates the card, so nothing in the table has been read."""
+    b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen=""),
+                version="1.0.51", notes=three, monkeypatch=monkeypatch)
+    assert [e["version"] for e in b.whatsnew()["entries"]] == ["1.0.51", "1.0.50", "1.0.49"]
+
+
+def test_a_newer_table_entry_is_never_advertised(monkeypatch, three):
+    """Running an older build than the table describes (a downgrade, or a stale
+    bundle) must not promise features this build does not have."""
+    b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.49"),
+                version="1.0.50", notes=three, monkeypatch=monkeypatch)
+    assert [e["version"] for e in b.whatsnew()["entries"]] == ["1.0.50"]
+
+
+def test_patch_numbers_compare_numerically(monkeypatch):
+    """"1.0.9" sorts after "1.0.10" as text, and the patch number is past 10."""
+    notes = {"1.0.9": {"en": ["nine"]}, "1.0.10": {"en": ["ten"]}}
+    b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.9"),
+                version="1.0.10", notes=notes, monkeypatch=monkeypatch)
+    assert [e["version"] for e in b.whatsnew()["entries"]] == ["1.0.10"]
+
+
+def test_nothing_unread_leaves_the_seen_marker_alone(monkeypatch, three):
+    """A release with no notes shows nothing AND must not burn the marker, so the
+    next release that does have notes still opens the card."""
+    cfg = _Cfg(onboarding_done=True, whatsnew_seen="1.0.51")
+    b = _bridge(cfg, version="1.0.52", notes=three, monkeypatch=monkeypatch)
+    assert b.whatsnew() is None
+    assert cfg["whatsnew_seen"] == "1.0.51"
+
+
+def test_a_release_that_forgot_its_notes_still_delivers_earlier_ones(monkeypatch, notes):
+    """The running version has no entry (a release forgot to generate one). That
+    used to mean silence; now the user still gets the unread entries that DO
+    exist, because those changes are in this build too. The build-time gate
+    (test_the_version_being_shipped_has_notes) is what catches the forgotten
+    entry — the runtime should not punish the user for it."""
     b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.48"),
                 version="9.9.9", notes=notes, monkeypatch=monkeypatch)
-    assert b.whatsnew() is None
+    assert [e["version"] for e in b.whatsnew()["entries"]] == ["1.0.50"]
     assert whatsnew.entry("9.9.9", "en") == []
     assert whatsnew.has_notes("9.9.9") is False
+
+
+def test_empty_dialog_is_still_impossible(monkeypatch):
+    """The original guarantee holds where it matters: when nothing unread has any
+    bullets, the card does not open at all."""
+    b = _bridge(_Cfg(onboarding_done=True, whatsnew_seen="1.0.48"),
+                version="9.9.9", notes={"1.0.47": {"en": ["old"]}},
+                monkeypatch=monkeypatch)
+    assert b.whatsnew() is None
 
 
 # ---- the shipped table ---------------------------------------------------

@@ -12,9 +12,14 @@ Run it in the release chain right after the notes JSON is written:
 
 The version argument is the APP_VERSION the notes belong to; the JSON filename is
 derived from it the way the rest of the chain does (dots stripped: 1.0.50 ->
-notes_1050.json). Only that one version is kept in the table — the card only ever
-shows the running version, and old entries would just be dead weight in the
-bundle. Pass --keep to append instead of replacing.
+notes_1050.json).
+
+Pass --keep (what the release chain uses) to ADD this version to the table
+instead of replacing it. The card shows every version the user skipped, not just
+the running one — Store updates jump versions freely, and a one-version table is
+what made 1.0.50's notes reach nobody who went 1.0.49 -> 1.0.51 in a single
+background update. Only the newest KEEP_VERSIONS entries survive, so the table
+covers realistic skips without growing forever inside the bundle.
 """
 import argparse
 import io
@@ -37,6 +42,18 @@ LOCALE_MAP = {
     "ru-RU": "ru", "sr-Latn-RS": "sr", "sv-SE": "sv", "th-TH": "th",
     "tr-TR": "tr", "vi-VN": "vi", "zh-CN": "zh", "zh-TW": "zh-Hant",
 }
+
+
+# How many versions the in-app table carries. Five covers a user who ignored
+# updates for a while without turning the bundle into an archive; anyone further
+# behind gets the full history from the site's changelog page (linked in the card).
+KEEP_VERSIONS = 5
+
+
+def _ver_key(version: str) -> tuple:
+    """Numeric version key — string order puts "1.0.9" after "1.0.10"."""
+    return tuple(int("".join(c for c in part if c.isdigit()) or 0)
+                 for part in str(version).split("."))
 
 
 def bullets(block: str) -> list:
@@ -76,6 +93,15 @@ def build(version: str, keep: bool) -> str:
     if keep:
         from app import whatsnew  # noqa: PLC0415
         existing = {v: d for v, d in whatsnew.NOTES.items() if v != version}
+        # Keep the newest few and drop the rest: enough to cover a user who
+        # skipped several Store updates, bounded so the table cannot grow with
+        # every release. Sorted numerically — "1.0.9" beats "1.0.10" as a string.
+        table = dict(sorted({**existing, version: per_lang}.items(),
+                            key=lambda kv: _ver_key(kv[0]))[-KEEP_VERSIONS:])
+        dropped = sorted(set(existing) - set(table), key=_ver_key)
+        if dropped:
+            print(f"  trim  dropped older notes: {', '.join(dropped)}")
+        existing = {v: d for v, d in table.items() if v != version}
 
     out = io.StringIO()
     out.write("NOTES = {\n")

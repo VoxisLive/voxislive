@@ -809,8 +809,12 @@ def _post_event(event: str, session_id: Optional[str], meta: Optional[dict]) -> 
 
 def report_event(event: str, session_id: Optional[str] = None, meta: Optional[dict] = None) -> None:
     """Report a lightweight activation-funnel milestone (app_launched,
-    session_start / session_live / session_error, capture_lost) to auth-core.
-    Fire-and-forget; never raises.
+    session_start / session_live / session_error / session_end, capture_lost) to
+    auth-core. Fire-and-forget; never raises.
+
+    The server keeps its own allow-list (handlers/event.go), so a new milestone
+    name has to be added there too or it is rejected with a 400 — the client
+    ignores that, but the event is simply lost.
 
     Hard-gated off on the OSS/BYOK build (no network off-box), mirroring
     report_usage / send_report so the "zero telemetry" claim holds. Carries NO

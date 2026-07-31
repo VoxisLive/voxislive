@@ -6,6 +6,23 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 ## Unreleased
 
 ### Added
+- Voxis says something when it cannot hear anything. If no sound reaches it in
+  the first seconds of a Video session, it now tells you — and names the two
+  things that actually cause it: nothing is playing, or you are speaking into
+  your microphone, which Video mode does not translate. Until now the app stayed
+  completely silent in that state; measurement across every recorded session
+  showed 40% of them ended inside 30 seconds, with another attempt following a
+  median 14 seconds later, i.e. people were retrying, not losing interest.
+- The gap between pressing Start and the first translated word is no longer a
+  blank screen: the stream shows that it is connecting, escalates if the
+  handshake drags past ten seconds, and sets the expectation that the first
+  translation lands a few seconds after someone speaks. The line explaining that
+  delay used to appear only with the first caption — after the wait it was meant
+  to explain, and never at all for anyone who gave up first.
+- Release notes now cover every version you skipped, not just the running one.
+  Store updates land in the background and can jump several versions at once,
+  which is how 1.0.50's notes reached nobody who went from 1.0.49 to 1.0.51 in a
+  single update. The card also links to the full changelog on the website.
 - Translated-voice gender, chosen per direction: "Translation voice" (what you
   hear) and "My voice" (what the other person hears you as, in Meeting mode).
   Both live in Settings › Translation — it is set once for a meeting, not
