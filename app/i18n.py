@@ -5,7 +5,7 @@ Status strings render verbatim in the web transcript, so they carry no glyphs.""
 
 STRINGS = {
     "tr": {
-        "quality_callout": "Callout (oyun — en hızlı, kısa)",
+        "quality_callout": "Callout (oyun — en hızlı, kısa altyazı)",
         "webview2_missing_title": "WebView2 çalışma zamanı gerekli",
         "webview2_missing_body": "Voxis arayüzü Microsoft Edge WebView2 çalışma zamanını gerektirir; bu bileşen bu bilgisayarda bulunamadı, bu yüzden pencere boş görünebilir.\\n\\nÜcretsiz Microsoft yükleyicisini şimdi açmak ister misiniz? Kurduktan sonra Voxis'i yeniden başlatın.",
         "powered_by": "Powered by Voxis · voxislive.com",
@@ -19,7 +19,7 @@ STRINGS = {
         "privacy_step_playback": "Çevrilmiş ses",
         "privacy_byok_detail": "Açık kaynak (BYOK) derlemesinde çeviri kendi Gemini API anahtarınızla yapılır; Voxis sunucusuyla hiç konuşmaz ve hiçbir kayıt veya kullanım sinyali göndermez.",
         "privacy_saas_detail": "Voxis ses akışınızı yalnızca çeviri için Google Gemini'ye iletir. Voxis ayrıca sesi kaydetmez veya ayrı bir takip sinyali eklemez; yalnızca faturalama için kullanılan dakikalar bildirilir.",
-        "privacy_note": "Çeviri için ses Google Gemini'ye gönderildiğinden tamamen cihazınızda kalmaz. Görüşme tarafları için yerel rıza kurallarına uyun.",
+        "privacy_note": "Ses çeviri amacıyla Google Gemini'ye iletildiğinden, işleme tamamen cihazınızda gerçekleşmez. Lütfen görüşme katılımcıları için geçerli olan rıza kurallarına uyun.",
         "privacy_close": "Anladım",
         "app_title": "Voxis",
         "update_later": "Daha sonra",
@@ -74,57 +74,57 @@ STRINGS = {
         "st_stall_reconnect": "{name}: {s} sn'dir sunucudan yanıt yok — yeniden bağlanılıyor",
         "st_noout_reconnect": "{name}: {s} sn'dir çeviri gelmiyor — yeniden bağlanılıyor",
         "st_audio_saved": "ses kaydedildi: {files}",
-        "st_clone_hiccup": "{name}: ses klonlama takıldı ({msg})",
-        "st_no_output_warning": "Çeviri çıktısı algılanmadı — ses gelmiyorsa, hedef dili veya modeli değiştirmeyi deneyin.",
-        "st_no_voice_warning": "Çeviri sesi algılanmadı (altyazılar çalışıyor) — beta motoru açıksa kapatmayı deneyin ya da oturumu yeniden başlatın.",
+        "st_clone_hiccup": "{name}: ses klonlama gecikmesi ({msg})",
+        "st_no_output_warning": "Çeviri çıktı sesi algılanmadı — ses gelmiyorsa hedef dili veya modeli değiştirmeyi deneyin.",
+        "st_no_voice_warning": "Çevrilmiş ses çıktısı algılanmadı (altyazılar çalışıyor). Beta motoru açık ise kapatmayı veya oturumu yeniden başlatmayı deneyin.",
         "st_renewing": "{name}: oturum yenileniyor...",
         "st_conn_err": "{name}: bağlantı hatası, {s:.0f}s sonra yeniden: {e}",
-        "st_capture_lost": "Ses yakalama durdu (cihaz değişmiş olabilir). Oturumu yeniden başlat.",
+        "st_capture_lost": "Ses yakalama durdu (cihaz değişmiş olabilir). Oturumu yeniden başlatın.",
         "st_engine_failover": "Çeviri motoru yanıt vermedi — yedek motora geçildi.",
-        "st_taste_wall": "Pro dakikaların doldu — son cümle bitince oturum duraklatıldı.",
-        "st_daily_free_done": "Bugünün ücretsiz dakikaları doldu — ücretsiz ses yarın geri geliyor.",
-        "st_downgraded_free": "Pro dakikaların doldu — ücretsiz sese geçildi. Çeviri devam ediyor.",
-        "st_session_failed": "Çeviri bağlantısı koptu ve yeniden kurulamadı — oturum durduruldu. Tekrar başlatmayı dene.",
-        "st_classic_capture_warning": "Gelişmiş ses yakalama açılamadı ({e}); uyumluluk moduna geçildi. Sürekli konuşmalı içerikte çeviri ilk cümleden sonra durabilir. En iyi sonuç için Windows'u güncelleyip Voxis'i yeniden başlatın.",
-        "st_server_unreachable": "Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.",
+        "st_taste_wall": "Pro deneme süreniz doldu — oturum son cümlenin ardından duraklatıldı.",
+        "st_daily_free_done": "Bugünün ücretsiz dakikaları doldu — ücretsiz ses yarın yeniden tanımlanacaktır.",
+        "st_downgraded_free": "Pro deneme süreniz doldu — standart ses moduna geçildi. Çeviri devam ediyor.",
+        "st_session_failed": "Çeviri bağlantısı koptu ve yeniden kurulamadı — oturum durduruldu. Lütfen tekrar başlatmayı deneyin.",
+        "st_classic_capture_warning": "Gelişmiş ses yakalama başlatılamadı ({e}); uyumluluk moduna geçildi. Kesintisiz konuşmalarda çeviri ilk cümleden sonra duraklayabilir. En iyi performans için Windows'unuzu güncelleyip Voxis'i yeniden başlatın.",
+        "st_server_unreachable": "Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edin.",
         "st_mode_started": "Mod başladı: {mode}",
         "st_stopped": "Durduruldu.",
-        "st_quota_exceeded": "Kullanım kotan doldu — oturum durduruldu. Devam etmek için planını yükselt.",
+        "st_quota_exceeded": "Kullanım kotanız doldu — oturum durduruldu. Devam etmek için planınızı yükseltin.",
         "st_stop_err": "Durdurma hatası: {e}",
         "st_audio_retry": "Ses sistemi yenileniyor, tekrar deneniyor ({n}/2)...",
         "st_redirected": "Sistem sesi sanal kabloya yönlendirildi.",
         "st_restored": "Ses cihazları eski haline döndürüldü.",
         "st_restore_fail": "Cihazlar geri yüklenemedi: {e}",
         "st_autoswitch_fail": "Otomatik cihaz geçişi yapılamadı: {e}",
-        "st_no_key": "API anahtarı ayarlanmamış — sağ üstteki Ayarlar'dan ekle.",
+        "st_no_key": "API anahtarı ayarlanmamış — sağ üstteki Ayarlar menüsünden ekleyin.",
         "st_no_audio_backend": "Ses yakalama bu işletim sisteminde henüz desteklenmiyor.",
-        "st_not_signed_in": "Oturum açılmadı — Voxis'e tekrar giriş yap.",
-        "st_no_key_offline": "Sunucuya ulaşılamıyor — Ayarlar'dan kendi Gemini anahtarını girerek çevrimdışı kullan.",
-        "st_virtual_mic_missing": "Sanal mikrofon ({dev}) Windows'ta etkin değil — "
-                                  "toplantı uygulamasının mikrofonunu elle seçmen gerekir. "
+        "st_not_signed_in": "Oturum açılmadı — lütfen Voxis'e tekrar giriş yapın.",
+        "st_no_key_offline": "Sunucuya ulaşılamıyor — Ayarlar'dan kendi Gemini anahtarınızı girerek çevrimdışı kullanabilirsiniz.",
+        "st_virtual_mic_missing": "Sanal mikrofon ({dev}) Windows üzerinde etkinleştirilmemiş — "
+                                  "toplantı uygulamanızda mikrofonu manuel seçmeniz gerekir. "
                                   "Etkinleştirmek için: Denetim Masası → Ses → Kayıt → "
-                                  "sağ tık → 'Devre dışı aygıtları göster'.",
-        "st_meeting_listen_only": "Sanal ses kablosu yok — toplantı SADECE DİNLEME modunda: "
-                                  "karşı tarafı Türkçe duyarsın, senin sesin çevrilmeden "
-                                  "normal mikrofondan gider. (Çift yön için sanal mikrofon "
-                                  "sürücüsü gerekir.)",
+                                  "Sağ tık → 'Devre Dışı Bırakılmış Aygıtları Göster'.",
+        "st_meeting_listen_only": "Sanal ses sürücüsü (VB-CABLE) bulunamadı — Toplantı modu SADECE DİNLEME "
+                                  "modunda çalışıyor: Karşı tarafı çevrilmiş olarak duyarsınız, "
+                                  "ancak kendi sesiniz çevrilmeden iletilir. (Çift yönlü çeviri "
+                                  "için sanal mikrofon sürücüsü gereklidir.)",
         "name_in": "gelen",
         "name_out": "giden",
         # webui error states (rendered in the transcript; no glyphs)
         "err_save_failed": "Ayar kaydedilemedi — diske yazılamıyor.",
         "err_hotkey_duplicate": "Bu kısayol zaten başka bir işleme atanmış.",
-        "err_consent_required": "Toplantı modu için önce bilgilendirmeyi onaylaman gerekir.",
-        "err_quota_exhausted": "Çeviri kotan doldu — yeni oturum başlatılamıyor.",
-        "err_device_reused": "Bu cihazın ücretsiz hakkı başka bir hesapta kullanılmış — devam etmek için o hesapla giriş yap ya da bir plan satın al.",
-        "err_start_failed": "Oturum başlatılamadı. Lütfen tekrar dene.",
-        "auth_browser_timeout": "Tarayıcıda giriş tamamlanmadı. Lütfen tekrar dene.",
-        "err_device_config": "Ses cihazı ayarında bir sorun var (gerekli sanal kablo bulunamadı veya yanlış yapılandırılmış). Ayarlar → Ses cihazlarını kontrol edip Voxis'i yeniden başlatın.",
-        "err_cable_required": "Toplantı modu, çevrilmiş sesini görüşmeye iletmek için "
+        "err_consent_required": "Toplantı modu için önce bilgilendirmeyi onaylamanız gerekir.",
+        "err_quota_exhausted": "Çeviri kotanız doldu — yeni oturum başlatılamıyor.",
+        "err_device_reused": "Bu cihazın ücretsiz hakkı başka bir hesapta kullanılmış — devam etmek için o hesapla giriş yapın ya da bir plan satın alın.",
+        "err_start_failed": "Oturum başlatılamadı. Lütfen tekrar deneyin.",
+        "auth_browser_timeout": "Tarayıcıda giriş tamamlanmadı. Lütfen tekrar deneyin.",
+        "err_device_config": "Ses cihazı yapılandırmasında sorun saptandı: Gerekli sanal ses kablosu bulunamadı veya hatalı yapılandırılmış. Lütfen Ayarlar → Ses Cihazları bölümünü kontrol edip Voxis'i yeniden başlatın.",
+        "err_cable_required": "Toplantı modu, çevrilmiş sesinizi görüşmeye iletmek için "
                               "VB-CABLE sanal mikrofonunu gerektirir; lütfen kullanmak için "
-                              "VB-CABLE'ı kur.",
+                              "VB-CABLE'ı kurun.",
     },
     "en": {
-        "quality_callout": "Callout (gaming — fastest, terse)",
+        "quality_callout": "Callout (gaming — fastest, short captions)",
         "webview2_missing_title": "WebView2 runtime required",
         "webview2_missing_body": "The Voxis interface needs the Microsoft Edge WebView2 runtime, which was not found on this PC, so the window may appear blank.\\n\\nOpen the free Microsoft installer now? After installing, restart Voxis.",
         "powered_by": "Powered by Voxis · voxislive.com",
@@ -136,9 +136,9 @@ STRINGS = {
         "privacy_step_capture": "System audio",
         "privacy_step_gemini": "Google Gemini translates",
         "privacy_step_playback": "Translated audio",
-        "privacy_byok_detail": "On the open-source (BYOK) build, translation runs on your own Gemini API key. Voxis never talks to its servers and adds no recording or telemetry beacon.",
-        "privacy_saas_detail": "Voxis streams your audio only to Google Gemini for translation. Voxis itself does not record your audio or add a separate tracking beacon - only the minutes used are reported for billing.",
-        "privacy_note": "Because audio is sent to Google Gemini for translation, it does not stay entirely on your device. Follow local consent rules for everyone on the call.",
+        "privacy_byok_detail": "On the open-source (BYOK) build, translation runs on your own Gemini API key. Voxis never connects to outside servers, records audio, or collects telemetry.",
+        "privacy_saas_detail": "Voxis streams your audio solely to Google Gemini for real-time translation. Voxis itself does not record your audio or track your activity — only used minutes are reported for billing.",
+        "privacy_note": "Since audio is sent to Google Gemini for translation, processing does not happen entirely offline. Follow local consent rules for everyone on the call.",
         "privacy_close": "Got it",
         "app_title": "Voxis",
         "update_later": "Later",
@@ -192,18 +192,18 @@ STRINGS = {
         "st_stall_reconnect": "{name}: no server response for {s}s — reconnecting",
         "st_noout_reconnect": "{name}: no translation for {s}s — reconnecting",
         "st_audio_saved": "audio saved: {files}",
-        "st_clone_hiccup": "{name}: voice clone hiccup ({msg})",
+        "st_clone_hiccup": "{name}: voice cloning delay ({msg})",
         "st_no_output_warning": "No translation output detected — if silent, try changing your target language or model.",
-        "st_no_voice_warning": "Translated voice not detected (subtitles are working) — if the beta engine is on, switch it off, or restart the session.",
+        "st_no_voice_warning": "No translated voice output detected (subtitles active). If the beta engine is enabled, try turning it off or restarting the session.",
         "st_renewing": "{name}: renewing session...",
         "st_conn_err": "{name}: connection error, retrying in {s:.0f}s: {e}",
         "st_capture_lost": "Audio capture stopped (the device may have changed). Restart the session.",
         "st_engine_failover": "Translation engine unavailable — switched to the backup engine.",
-        "st_taste_wall": "Your Pro minutes are used up — the session paused after the last sentence.",
+        "st_taste_wall": "Your Pro trial minutes are used up — the session paused after the last sentence.",
         "st_daily_free_done": "Today's free minutes are used up — the free voice comes back tomorrow.",
-        "st_downgraded_free": "Your Pro minutes are used up — switched to the free voice. Translation continues.",
+        "st_downgraded_free": "Your Pro trial minutes are used up — switched to standard voice mode. Translation continues.",
         "st_session_failed": "The translation connection was lost and could not be restored — session stopped. Try starting again.",
-        "st_classic_capture_warning": "Advanced audio capture couldn't start ({e}); switched to compatibility mode. On continuous speech, translation may stop after the first sentence. For best results, update Windows and restart Voxis.",
+        "st_classic_capture_warning": "Advanced audio capture couldn't start ({e}); switched to compatibility mode. During continuous speech, translation may stop after the first sentence. For best results, update Windows and restart Voxis.",
         "st_server_unreachable": "Could not reach the server. Check your internet connection.",
         "st_mode_started": "Mode started: {mode}",
         "st_stopped": "Stopped.",
@@ -222,9 +222,9 @@ STRINGS = {
                                   "select your meeting app's microphone manually. To enable "
                                   "it: Control Panel → Sound → Recording → right-click → "
                                   "'Show Disabled Devices'.",
-        "st_meeting_listen_only": "No virtual audio cable — meeting runs in LISTEN-ONLY "
-                                  "mode: you hear them in your language, your voice goes "
-                                  "out untranslated. (Two-way needs a virtual mic driver.)",
+        "st_meeting_listen_only": "No virtual audio cable found — Meeting mode is running in LISTEN-ONLY "
+                                  "mode: you hear them in your language, but your voice is "
+                                  "sent untranslated. (Two-way translation requires a virtual microphone driver.)",
         "name_in": "incoming",
         "name_out": "outgoing",
         # webui error states (rendered in the transcript; no glyphs)
@@ -235,7 +235,7 @@ STRINGS = {
         "err_device_reused": "This device's free tier is already used by another account — sign in with that account, or buy a plan to keep going.",
         "err_start_failed": "Could not start the session. Please try again.",
         "auth_browser_timeout": "Sign-in wasn't completed in the browser. Please try again.",
-        "err_device_config": "There's a problem with your audio device setup (a required virtual cable is missing or misconfigured). Check Settings → Audio devices, then restart Voxis.",
+        "err_device_config": "Audio device setup issue: a required virtual cable is missing or misconfigured. Please check Settings → Audio devices and restart Voxis.",
         "err_cable_required": "Meeting mode requires the VB-CABLE virtual microphone to "
                               "send your translated voice into the call; please install "
                               "VB-CABLE to use it.",

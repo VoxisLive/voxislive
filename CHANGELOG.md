@@ -26,6 +26,12 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   is no longer called "Meeting terms": it has always applied to Video mode too.
 
 ### Fixed
+- A session no longer goes permanently silent when the translation service
+  starts rejecting the audio it is sent. Those rejections still count as
+  "the engine is hearing us", so both self-heal watchdogs stayed disarmed: the
+  session kept its connection, showed as active, produced nothing, and never
+  reconnected. One field meeting lost its last 13 minutes that way. Voxis now
+  treats a rejected utterance as input and reconnects itself.
 - The close button of the translation-history window sits at the top right,
   like every other window, instead of next to the title.
 - Meeting mode no longer translates its own outgoing voice back at you. On a PC
