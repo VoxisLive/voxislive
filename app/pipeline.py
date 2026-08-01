@@ -1626,7 +1626,7 @@ class ModeController:
         except Exception:
             pass
 
-    def start(self, mode: str, session_dir: str | None = None):
+    def start(self, mode: str, session_dir: str | None = None, paid: bool = False):
         # "restart", not a user stop: this stop() is the implicit teardown of a
         # session the user is replacing (a mode switch, or a settings change that
         # has to re-open the engine handshake). Labeling it keeps config churn
@@ -1666,6 +1666,11 @@ class ModeController:
                 pass
         elif mode == "meeting":
             self.cfg["capture_backend"] = "driverless"
+        # Read by engines.make_translator's Qwen branch: a paying customer's
+        # session gets a 1-strike reconnect budget instead of Qwen's normal 8,
+        # so any dropped connection hands off to Gemini immediately rather
+        # than riding out a flaky free engine (see engines.py for why).
+        self.cfg["_paid_customer"] = bool(paid)
         # Correlation id shared by this session's funnel milestones. Generated
         # before the retry loop so session_start/live/error all carry the same id.
         sid = uuid.uuid4().hex[:16]

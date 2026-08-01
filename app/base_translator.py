@@ -404,12 +404,15 @@ class BaseTranslator(threading.Thread):
                 rotating = await self._run_session()
                 started = self._session_started
                 # A planned rotation, or a session that stayed alive past the
-                # minimum lifetime, is a healthy end: clear the transient
-                # machinery and reconnect cleanly. A session the server accepted
-                # then closed almost immediately (no error, no rotation) is a
-                # covert failure — back off and bound it like any transient drop.
+                # minimum lifetime AND actually produced output, is a healthy end:
+                # clear the transient machinery and reconnect cleanly. A session the
+                # server accepted then closed almost immediately (no error, no
+                # rotation) — or held open but produced nothing — is a covert
+                # failure and must count toward MAX_TRANSIENT_FAILURES like any
+                # other transient drop; time-alive alone is not proof of health.
                 if rotating or (started is not None
-                                and time.monotonic() - started >= self.MIN_SESSION_SECONDS):
+                                and time.monotonic() - started >= self.MIN_SESSION_SECONDS
+                                and self._last_output_ts > 0.0):
                     transient_failures = 0
                     if not self._stopping.is_set():
                         _log.info("%s: session renewing (planned rotation)", self.name)
@@ -445,10 +448,17 @@ class BaseTranslator(threading.Thread):
                     _log.error("%s: terminal error, not retrying: %r", self.name, e)
                     self._give_up(e)
                     break
-                # A session that ran past the minimum lifetime proves the path
-                # works; a later drop starts a fresh failure streak.
+                # A session that ran past the minimum lifetime AND actually produced
+                # output proves the path works; a later drop starts a fresh failure
+                # streak. Time-alive alone is not enough — a server that accepts the
+                # connection, holds it open past MIN_SESSION_SECONDS, then drops it
+                # having produced nothing (DashScope's "thread pool exhausted", seen
+                # 2026-08-01) kept resetting this counter every retry, so it never
+                # reached MAX_TRANSIENT_FAILURES and _give_up()/on_fatal never fired
+                # — the engine never failed over even though it was fully dead.
                 started = self._session_started
-                if started is not None and time.monotonic() - started >= self.MIN_SESSION_SECONDS:
+                if (started is not None and time.monotonic() - started >= self.MIN_SESSION_SECONDS
+                        and self._last_output_ts > 0.0):
                     transient_failures = 0
                 transient_failures += 1
                 self._reset_reconnect_state()
