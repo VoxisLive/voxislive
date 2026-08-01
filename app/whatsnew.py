@@ -524,6 +524,100 @@ NOTES = {
             "版本說明現在會涵蓋你跳過的版本，背景一次跨過好幾個版本的更新，不會再讓中間的變更無聲無息。",
         ],
     },
+    "1.0.53": {
+        "en": [
+            "When the translation engine repeatedly fails to answer, Voxis now switches to a backup engine automatically instead of endlessly retrying a connection that was never coming back.",
+            "Paid plans switch to the backup engine at the very first sign of trouble, so a brief outage barely interrupts your session — free sessions still retry a few times first, since most hiccups clear up on their own.",
+        ],
+        "tr": [
+            "Çeviri motoru art arda yanıt vermeyi bıraktığında, Voxis artık asla düzelmeyecek bir bağlantıyı sonsuza dek denemek yerine otomatik olarak yedek motora geçiyor.",
+            "Ücretli planlar ilk sorun belirtisinde hemen yedek motora geçiyor, böylece kısa bir kesinti oturumu neredeyse hiç etkilemiyor — ücretsiz oturumlar ise çoğu aksaklığın kendiliğinden düzeldiğini göz önünde bulundurarak önce birkaç kez yeniden deniyor.",
+        ],
+        "de": [
+            "Wenn die Übersetzungs-Engine wiederholt nicht antwortet, wechselt Voxis jetzt automatisch zu einer Backup-Engine, anstatt endlos eine Verbindung erneut zu versuchen, die nie wiederkommt.",
+            "Bezahlpläne wechseln beim ersten Anzeichen eines Problems sofort zur Backup-Engine, sodass ein kurzer Ausfall die Sitzung kaum unterbricht – kostenlose Sitzungen versuchen es zunächst noch ein paar Mal erneut, da sich die meisten Aussetzer von selbst beheben.",
+        ],
+        "fr": [
+            "Lorsque le moteur de traduction ne répond plus de manière répétée, Voxis bascule désormais automatiquement vers un moteur de secours au lieu de retenter indéfiniment une connexion qui ne reviendra jamais.",
+            "Les forfaits payants basculent vers le moteur de secours dès le premier signe de problème, si bien qu'une brève panne interrompt à peine la session — les sessions gratuites retentent d'abord plusieurs fois, la plupart des incidents se résolvant d'eux-mêmes.",
+        ],
+        "es": [
+            "Cuando el motor de traducción deja de responder repetidamente, Voxis ahora cambia automáticamente a un motor de respaldo en lugar de reintentar sin fin una conexión que nunca iba a recuperarse.",
+            "Los planes de pago cambian al motor de respaldo ante la primera señal de problema, por lo que una interrupción breve apenas afecta la sesión; las sesiones gratuitas siguen reintentando varias veces primero, ya que la mayoría de los fallos se resuelven solos.",
+        ],
+        "pt": [
+            "Quando o mecanismo de tradução deixa de responder repetidamente, o Voxis agora muda automaticamente para um mecanismo de backup em vez de tentar sem parar uma conexão que nunca voltaria.",
+            "Os planos pagos mudam para o mecanismo de backup ao primeiro sinal de problema, então uma interrupção breve quase não afeta a sessão — as sessões gratuitas ainda tentam algumas vezes antes, já que a maioria das falhas se resolve sozinha.",
+        ],
+        "it": [
+            "Quando il motore di traduzione smette ripetutamente di rispondere, Voxis ora passa automaticamente a un motore di riserva invece di ritentare all'infinito una connessione che non sarebbe mai tornata attiva.",
+            "I piani a pagamento passano al motore di riserva al primo segno di problema, così un'interruzione breve interrompe a malapena la sessione — le sessioni gratuite riprovano ancora qualche volta prima, dato che la maggior parte dei problemi si risolve da sola.",
+        ],
+        "nl": [
+            "Als de vertaal-engine herhaaldelijk niet meer reageert, schakelt Voxis nu automatisch over naar een back-up-engine in plaats van eindeloos een verbinding te blijven proberen die toch niet meer terugkomt.",
+            "Betaalde abonnementen schakelen bij het eerste teken van problemen meteen over naar de back-up-engine, waardoor een korte storing de sessie nauwelijks onderbreekt — gratis sessies proberen het eerst nog een paar keer opnieuw, omdat de meeste haperingen vanzelf overgaan.",
+        ],
+        "pl": [
+            "Gdy silnik tłumaczenia wielokrotnie przestaje odpowiadać, Voxis automatycznie przełącza się teraz na silnik zapasowy, zamiast w nieskończoność ponawiać połączenie, które i tak nie wróci.",
+            "Plany płatne przełączają się na silnik zapasowy przy pierwszej oznace problemu, dzięki czemu krótka awaria niemal nie zakłóca sesji — sesje bezpłatne najpierw ponawiają próbę kilka razy, ponieważ większość zakłóceń ustępuje samoistnie.",
+        ],
+        "cs": [
+            "Když překladový engine opakovaně přestane odpovídat, Voxis nyní automaticky přepne na záložní engine, místo aby donekonečna zkoušel spojení, které se stejně neobnoví.",
+            "Placené plány přepnou na záložní engine hned při prvním náznaku problému, takže krátký výpadek relaci téměř nenaruší — bezplatné relace to nejprve ještě několikrát zkusí znovu, protože většina výpadků se vyřeší sama.",
+        ],
+        "hu": [
+            "Ha a fordítómotor ismételten nem válaszol, a Voxis mostantól automatikusan átvált egy tartalék motorra ahelyett, hogy vég nélkül próbálkozna egy olyan kapcsolattal, amely úgysem tér vissza.",
+            "A fizetős csomagok a probléma első jelére azonnal átváltanak a tartalék motorra, így egy rövid kimaradás alig szakítja meg a munkamenetet – az ingyenes munkamenetek előbb még néhányszor újrapróbálkoznak, mivel a legtöbb akadozás magától megoldódik.",
+        ],
+        "ro": [
+            "Când motorul de traducere nu mai răspunde în mod repetat, Voxis comută acum automat pe un motor de rezervă, în loc să reîncerce la nesfârșit o conexiune care oricum nu avea să revină.",
+            "Planurile plătite comută pe motorul de rezervă la primul semn de problemă, astfel încât o întrerupere scurtă abia dacă afectează sesiunea — sesiunile gratuite mai reîncearcă întâi de câteva ori, deoarece majoritatea problemelor se rezolvă de la sine.",
+        ],
+        "sv": [
+            "När översättningsmotorn upprepade gånger slutar svara växlar Voxis nu automatiskt till en reservmotor i stället för att i det oändliga försöka igen med en anslutning som ändå inte kommer tillbaka.",
+            "Betalplaner växlar till reservmotorn vid första tecknet på problem, så ett kort avbrott stör sessionen knappt alls — gratissessioner försöker fortfarande några gånger till först, eftersom de flesta störningar löser sig av sig själva.",
+        ],
+        "sr": [
+            "Kada mehanizam za prevođenje ponovljeno prestane da odgovara, Voxis sada automatski prebacuje na rezervni mehanizam umesto da beskonačno pokušava vezu koja se ionako neće vratiti.",
+            "Plaćeni planovi prebacuju na rezervni mehanizam već pri prvom znaku problema, tako da kratak prekid jedva remeti sesiju — besplatne sesije prvo probaju nekoliko puta ponovo, jer se većina smetnji sama reši.",
+        ],
+        "ru": [
+            "Когда движок перевода неоднократно перестаёт отвечать, Voxis теперь автоматически переключается на резервный движок вместо бесконечных попыток восстановить связь, которая всё равно не вернётся.",
+            "Платные тарифы переключаются на резервный движок при первом же признаке проблемы, поэтому короткий сбой почти не прерывает сеанс — бесплатные сеансы сначала ещё несколько раз пробуют повторно, так как большинство сбоев устраняется само собой.",
+        ],
+        "ja": [
+            "翻訳エンジンが応答しない状態が繰り返し発生すると、Voxisは復旧しない接続を延々と再試行する代わりに、自動的にバックアップエンジンに切り替えるようになりました。",
+            "有料プランは問題の兆候が最初に現れた時点で即座にバックアップエンジンに切り替わるため、短い障害でもセッションはほとんど中断されません — 無料セッションはまず数回再試行します。ほとんどの不具合は自然に解消するためです。",
+        ],
+        "ko": [
+            "번역 엔진이 반복적으로 응답하지 않으면 이제 Voxis가 다시는 복구되지 않을 연결을 끝없이 재시도하는 대신 자동으로 백업 엔진으로 전환합니다.",
+            "유료 플랜은 문제의 첫 징후가 나타나는 즉시 백업 엔진으로 전환되어 짧은 장애가 세션을 거의 방해하지 않습니다 — 무료 세션은 대부분의 문제가 저절로 해결되므로 먼저 몇 차례 더 재시도합니다.",
+        ],
+        "zh": [
+            "当翻译引擎多次无法响应时，Voxis 现在会自动切换到备用引擎，而不再无休止地重试一个已经无法恢复的连接。",
+            "付费计划会在出现问题的第一个迹象时立即切换到备用引擎，因此短暂的中断几乎不会影响会话——免费会话仍会先重试几次，因为大多数小故障会自行恢复。",
+        ],
+        "zh-Hant": [
+            "當翻譯引擎多次無法回應時，Voxis 現在會自動切換到備用引擎，而不再無止盡地重試一個已經無法恢復的連線。",
+            "付費方案會在出現問題的第一個跡象時立即切換到備用引擎，因此短暫的中斷幾乎不會影響工作階段——免費工作階段仍會先重試幾次，因為大多數小故障會自行恢復。",
+        ],
+        "hi": [
+            "जब अनुवाद इंजन बार-बार जवाब देना बंद कर देता है, तो Voxis अब उस कनेक्शन को अनंत बार दोबारा आज़माने के बजाय स्वचालित रूप से बैकअप इंजन पर स्विच हो जाता है जो वैसे भी वापस नहीं आने वाला था।",
+            "भुगतान वाली योजनाएँ समस्या के पहले संकेत पर ही तुरंत बैकअप इंजन पर स्विच हो जाती हैं, जिससे एक संक्षिप्त रुकावट सत्र को लगभग बाधित नहीं करती — मुफ़्त सत्र पहले कुछ बार फिर से कोशिश करते हैं, क्योंकि अधिकतर गड़बड़ियाँ अपने आप ठीक हो जाती हैं।",
+        ],
+        "id": [
+            "Ketika mesin terjemahan berulang kali gagal merespons, Voxis kini otomatis beralih ke mesin cadangan alih-alih terus-menerus mencoba koneksi yang memang tidak akan pulih.",
+            "Paket berbayar langsung beralih ke mesin cadangan pada tanda pertama masalah, sehingga gangguan singkat hampir tidak mengganggu sesi — sesi gratis masih mencoba beberapa kali lebih dulu, karena sebagian besar gangguan pulih dengan sendirinya.",
+        ],
+        "vi": [
+            "Khi công cụ dịch nhiều lần không phản hồi, Voxis giờ đây tự động chuyển sang công cụ dự phòng thay vì thử lại vô tận một kết nối vốn sẽ không bao giờ khôi phục.",
+            "Các gói trả phí chuyển sang công cụ dự phòng ngay khi có dấu hiệu sự cố đầu tiên, nhờ đó một gián đoạn ngắn hầu như không ảnh hưởng đến phiên làm việc — các phiên miễn phí vẫn thử lại vài lần trước, vì hầu hết trục trặc tự khắc phục.",
+        ],
+        "th": [
+            "เมื่อเอนจินแปลภาษาไม่ตอบสนองซ้ำๆ ตอนนี้ Voxis จะสลับไปใช้เอนจินสำรองโดยอัตโนมัติ แทนที่จะพยายามเชื่อมต่อใหม่ไม่สิ้นสุดกับการเชื่อมต่อที่จะไม่กลับมาอยู่ดี",
+            "แพ็กเกจแบบชำระเงินจะสลับไปใช้เอนจินสำรองทันทีที่มีสัญญาณปัญหาแรก ทำให้การหยุดชะงักสั้นๆ แทบไม่รบกวนเซสชัน ส่วนเซสชันฟรียังคงลองใหม่อีกสองสามครั้งก่อน เนื่องจากปัญหาส่วนใหญ่จะหายไปเอง",
+        ],
+    },
 }
 
 

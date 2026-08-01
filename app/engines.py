@@ -88,6 +88,16 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             workspace=cfg.get("qwen_workspace") or QWEN_WORKSPACE)
         tr.engine = engine
         tr.on_fatal = on_fatal
+        if cfg.get("_paid_customer"):
+            # A paying customer must never sit through Qwen's normal 8-retry
+            # reconnect budget while the primary/backup DashScope pool is
+            # flaky (measured 2026-08-01: repeated "thread pool exhausted"
+            # outages) — a single dropped connection is reason enough to hand
+            # the session to Gemini immediately rather than gamble on a free
+            # engine's stability. Free/BYOK sessions keep the full budget
+            # (self-heals silently; a slower fallback is an acceptable
+            # tradeoff against burning paid Gemini cost on every hiccup).
+            tr.MAX_TRANSIENT_FAILURES = 1
         return tr
 
     from .translator import LiveTranslator  # lazy: keep google.genai off cold start

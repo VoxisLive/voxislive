@@ -43,6 +43,14 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   is no longer called "Meeting terms": it has always applied to Video mode too.
 
 ### Fixed
+- A translator session that connected but never produced any output no longer
+  looped retrying the same dead connection forever: the retry counter was
+  reset by time-alive alone, so a connection that stayed open past 5 seconds
+  before dying with zero output kept "proving the path works" and never
+  reached the threshold that hands the session to a backup engine. It now
+  also requires that the session actually produced output before resetting.
+  Paid plans additionally fail over to the backup engine on the very first
+  dropped connection instead of riding out several retries.
 - A session no longer goes permanently silent when the translation service
   starts rejecting the audio it is sent. Those rejections still count as
   "the engine is hearing us", so both self-heal watchdogs stayed disarmed: the

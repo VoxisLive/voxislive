@@ -2509,7 +2509,8 @@ class Bridge:
                 with self._text_lock:
                     self._session_start = t0
                 try:
-                    started = self.controller.start(mode, session_dir=self._session_dir)
+                    started = self.controller.start(mode, session_dir=self._session_dir,
+                                                    paid=self._is_paid())
                 except BaseException:
                     with self._text_lock:
                         self._session_start = 0.0
