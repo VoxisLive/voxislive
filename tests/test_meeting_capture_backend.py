@@ -27,7 +27,7 @@ def _mc(monkeypatch, mode_fails=True):
                         lambda *a, **k: None)
     cfg = {"capture_backend": "driverless", "devices": {}}
     mc = pipeline.ModeController(cfg, None, lambda *a: None, lambda *a: None)
-    mc.resolve = lambda target, **kw: ("gemini", "key", "model")
+    mc.resolve = lambda target, **kw: ("gemini", "key", "model", None)
     # Stop right after the backend has been resolved: the real _build opens audio
     # devices and a Live session, neither of which exists in a test.
     if mode_fails:

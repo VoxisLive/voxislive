@@ -91,7 +91,7 @@ def pipe(monkeypatch):
 
     def resolve(target, force_gemini=False):
         assert force_gemini, "failover must ask for Gemini explicitly"
-        return ENGINE_GEMINI, "gem-key", "gemini-model"
+        return ENGINE_GEMINI, "gem-key", "gemini-model", None
 
     p._resolve = resolve
     return p

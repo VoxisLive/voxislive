@@ -74,7 +74,7 @@ def _session_key_env(monkeypatch, body):
 def test_session_key_returns_key_type_ephemeral(monkeypatch):
     seen = _session_key_env(monkeypatch, {
         "key": "auth_tokens/t1", "engine": "gemini", "key_type": "ephemeral"})
-    key, engine, *_mid, key_type, err = vc.get_session_key(
+    key, engine, *_mid, key_type, _fallback, err = vc.get_session_key(
         target="el", caps=vc.SESSION_KEY_CAPS)
     assert (key, engine, key_type, err) == ("auth_tokens/t1", "gemini", "ephemeral", None)
     # The caps list grows as the client learns new tricks (cascade landed in
@@ -91,7 +91,7 @@ def test_session_key_returns_key_type_ephemeral(monkeypatch):
 def test_session_key_defaults_key_type_raw(monkeypatch):
     # Legacy/no-flag responses carry no key_type field → raw.
     _session_key_env(monkeypatch, {"key": "k", "engine": "gemini"})
-    key, _engine, *_mid, key_type, err = vc.get_session_key()
+    key, _engine, *_mid, key_type, _fallback, err = vc.get_session_key()
     assert (key, key_type, err) == ("k", "raw", None)
 
 
@@ -267,12 +267,12 @@ def _prefetch_with(monkeypatch, response):
 def test_prefetch_skips_ephemeral_tokens(monkeypatch):
     b = _prefetch_with(monkeypatch, (
         "auth_tokens/t", "gemini", "m", "balanced", {"remaining": 5.0}, None,
-        "ephemeral", None))
+        "ephemeral", None, None))
     assert b._key_cache == {}                       # a single-use token must not sit
     assert b._last_quota == {"remaining": 5.0}      # quota snapshot still adopted
 
 
 def test_prefetch_still_caches_raw_keys(monkeypatch):
     b = _prefetch_with(monkeypatch, (
-        "k", "gemini", "m", "balanced", None, None, "raw", None))
-    assert b._pop_prefetched_key("el") == ("gemini", "k", "m", "balanced", None)
+        "k", "gemini", "m", "balanced", None, None, "raw", None, None))
+    assert b._pop_prefetched_key("el") == ("gemini", "k", "m", "balanced", None, None)

@@ -115,7 +115,7 @@ def test_incoming_translator_failure_closes_player_and_stager(monkeypatch):
         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("translator failed")))
     with pytest.raises(RuntimeError, match="translator failed"):
         pipeline.IncomingPipeline(
-            _incoming_cfg(), lambda target: (ENGINE_GEMINI, "key", "model"),
+            _incoming_cfg(), lambda target: (ENGINE_GEMINI, "key", "model", None),
             "video", lambda *a: None, lambda *a: None)
     assert player.stopped
     assert stagers and stagers[0].stopped

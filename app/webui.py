@@ -2237,7 +2237,7 @@ class Bridge:
         def work():
             try:
                 from . import voxis_client  # noqa: PLC0415
-                key, engine, model, quality, quota, workspace, key_type, _err = voxis_client.get_session_key(
+                key, engine, model, quality, quota, workspace, key_type, fallback, _err = voxis_client.get_session_key(
                     target=target, caps=voxis_client.SESSION_KEY_CAPS)
                 # Never cache an ephemeral token: its new-session window (2 min)
                 # is shorter than KEY_PREFETCH_TTL, and a dead single-use token
@@ -2252,7 +2252,8 @@ class Bridge:
                         # engine for a spent free account.
                         if self._key_epoch == epoch:
                             self._key_cache[target] = (time.time(), engine, key,
-                                                       model, quality, workspace)
+                                                       model, quality, workspace,
+                                                       fallback)
                 if isinstance(quota, dict):
                     self._last_quota = quota
             except Exception:
@@ -2263,8 +2264,8 @@ class Bridge:
 
     def _pop_prefetched_key(self, target):
         """Single-use cache take — ephemeral tokens are not reused across
-        sessions. Returns (engine, key, model, quality, workspace) or None
-        (stale/miss).
+        sessions. Returns (engine, key, model, quality, workspace, fallback) or
+        None (stale/miss).
 
         A grant is only as good as the quota it was issued under. The epoch guard
         in the prefetch stops the common race, but a grant can also simply go stale
@@ -2311,7 +2312,12 @@ class Bridge:
             self.cfg["qwen_workspace"] = str(workspace)
 
     def _build_engine_resolver(self):
-        """Returns resolve(target) -> (engine, key, model), called once per pipeline.
+        """Returns resolve(target) -> (engine, key, model, fallback), called once
+        per pipeline. `fallback` is a {key, model, workspace} dict for a sibling
+        Qwen pool (see voxis_client.get_session_key) or None for every other
+        engine/path — fed to engines.make_translator so a pool-specific terminal
+        error gets one fast retry on a different pool before an on_fatal swap to
+        Gemini (base_translator.py).
 
         SaaS asks the server, which routes by TARGET language and can fail over to
         Gemini (the engine selector is server-controlled). Dev/BYOK routes locally
@@ -2341,11 +2347,14 @@ class Bridge:
                     if gem and (force_gemini or not qwen_can_voice(self.cfg, target)):
                         if not force_gemini:
                             _log.info("Qwen beta has no voice for target %r; using Gemini", target)
-                        return ENGINE_GEMINI, gem, resolve_model(self.cfg, ENGINE_GEMINI)
+                        return ENGINE_GEMINI, gem, resolve_model(self.cfg, ENGINE_GEMINI), None
                     if force_gemini:
                         raise RuntimeError(t("st_no_key_offline"))
+                    # BYOK/dev has no server-side pool concept — fallback is
+                    # always None; a dead key here is a local config problem,
+                    # not a pool-capacity blip worth retrying on a sibling pool.
                     return (ENGINE_QWEN, self.cfg.get("qwen_key"),
-                            resolve_model(self.cfg, ENGINE_QWEN))
+                            resolve_model(self.cfg, ENGINE_QWEN), None)
                 # Genuine beta session → let Qwen honor cfg["beta"]["clone"].
                 resolve.beta_active = True
                 return resolve
@@ -2353,7 +2362,7 @@ class Bridge:
                 raise RuntimeError(t("st_no_key_offline"))
 
             def resolve(target, force_gemini=False):
-                return ENGINE_GEMINI, keys.get("gemini"), resolve_model(self.cfg, ENGINE_GEMINI)
+                return ENGINE_GEMINI, keys.get("gemini"), resolve_model(self.cfg, ENGINE_GEMINI), None
             return resolve
 
         from . import voxis_client
@@ -2365,14 +2374,15 @@ class Bridge:
         # plain Gemini key (session_key.go defaults engine to "gemini" when the
         # client is not routing-aware), so no server change is needed.
         def gemini_key():
-            key, _engine, model, quality, quota, _ws, _kt, err = voxis_client.get_session_key()
+            key, _engine, model, quality, quota, _ws, _kt, _fb, err = voxis_client.get_session_key()
             if not key:
                 raise RuntimeError(err or t("st_no_key"))
             if isinstance(quota, dict):
                 self._last_quota = quota
             if quality:
                 self.cfg["quality_preset"] = quality
-            return ENGINE_GEMINI, key, (model or resolve_model(self.cfg, ENGINE_GEMINI))
+            # Gemini has no sibling-pool concept — fallback is always None here.
+            return ENGINE_GEMINI, key, (model or resolve_model(self.cfg, ENGINE_GEMINI)), None
 
         # Gemini key fountain for LiveTranslator: called on the translator's
         # thread before every reconnect once its single-use ephemeral token has
@@ -2382,7 +2392,7 @@ class Bridge:
         # gates on every 13-min rotation — the point of Tier A5. Raising here
         # just fails that reconnect attempt; the translator retries with backoff.
         def gemini_key_provider():
-            key, _engine, _model, _quality, quota, _ws, _kt, err = \
+            key, _engine, _model, _quality, quota, _ws, _kt, _fb, err = \
                 voxis_client.get_session_key(caps=voxis_client.SESSION_KEY_CAPS)
             if not key:
                 raise RuntimeError(err or t("st_no_key"))
@@ -2401,16 +2411,16 @@ class Bridge:
                 # Skip Qwen entirely for a target it can't voice (text-only tier):
                 # the standard engine gives translated speech, not just subtitles.
                 if qwen_can_voice(self.cfg, target):
-                    key, engine, model, quality, quota, workspace, _kt, err = voxis_client.get_session_key(
+                    key, engine, model, quality, quota, workspace, _kt, fallback, err = voxis_client.get_session_key(
                         target=target, caps=voxis_client.SESSION_KEY_CAPS, engine="qwen")
                     if key and engine == "qwen":
                         if isinstance(quota, dict):
                             self._last_quota = quota
                         self._apply_qwen_workspace(engine, workspace)
-                        return engine, key, (model or resolve_model(self.cfg, engine))
+                        return engine, key, (model or resolve_model(self.cfg, engine)), fallback
                 else:
                     _log.info("Qwen beta has no voice for target %r; using standard routing", target)
-                key, engine, model, quality, quota, workspace, _kt, err2 = voxis_client.get_session_key(
+                key, engine, model, quality, quota, workspace, _kt, fallback, err2 = voxis_client.get_session_key(
                     target=target, caps=voxis_client.SESSION_KEY_CAPS,
                     mode=getattr(self, "_starting_mode", None))
                 if key:
@@ -2419,7 +2429,7 @@ class Bridge:
                     if quality:
                         self.cfg["quality_preset"] = quality
                     self._apply_qwen_workspace(engine, workspace)
-                    return engine, key, (model or resolve_model(self.cfg, engine))
+                    return engine, key, (model or resolve_model(self.cfg, engine)), fallback
                 raise RuntimeError(err or err2 or t("st_no_key"))
             resolve.gemini_key_provider = gemini_key_provider
             # Genuine beta session → let Qwen honor cfg["beta"]["clone"].
@@ -2438,12 +2448,12 @@ class Bridge:
                 return gemini_key()
             pre = self._pop_prefetched_key(target)
             if pre:
-                engine, key, model, quality, workspace = pre
+                engine, key, model, quality, workspace, fallback = pre
                 if quality:
                     self.cfg["quality_preset"] = quality
                 self._apply_qwen_workspace(engine, workspace)
-                return engine, key, (model or resolve_model(self.cfg, engine))
-            key, engine, model, quality, quota, workspace, _kt, err = voxis_client.get_session_key(
+                return engine, key, (model or resolve_model(self.cfg, engine)), fallback
+            key, engine, model, quality, quota, workspace, _kt, fallback, err = voxis_client.get_session_key(
                 target=target, caps=voxis_client.SESSION_KEY_CAPS,
                 mode=getattr(self, "_starting_mode", None))
             if key:
@@ -2452,13 +2462,13 @@ class Bridge:
                 if quality:
                     self.cfg["quality_preset"] = quality  # server-controlled default
                 self._apply_qwen_workspace(engine, workspace)
-                return engine, key, (model or resolve_model(self.cfg, engine))
+                return engine, key, (model or resolve_model(self.cfg, engine)), fallback
             # Routed engine unavailable (503) → fall back to Gemini via the legacy path.
-            key, engine, model, quality, quota, workspace, _kt, err2 = voxis_client.get_session_key()
+            key, engine, model, quality, quota, workspace, _kt, _fb, err2 = voxis_client.get_session_key()
             if key:
                 if quality:
                     self.cfg["quality_preset"] = quality
-                return "gemini", key, (model or resolve_model(self.cfg, "gemini"))
+                return "gemini", key, (model or resolve_model(self.cfg, "gemini")), None
             raise RuntimeError(err or err2 or t("st_no_key"))
         resolve.gemini_key_provider = gemini_key_provider
         return resolve

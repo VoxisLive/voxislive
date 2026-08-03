@@ -610,7 +610,7 @@ class DeviceBlockedError(RuntimeError):
         self.remaining_minutes = remaining_minutes
 
 
-def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[dict], Optional[str], Optional[str], Optional[str]]:
+def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[dict], Optional[str], Optional[str], Optional[dict], Optional[str]]:
     """SaaS execution path: retrieves a server-issued translation key. With
     caps='engine-routing' the server picks the engine by TARGET language and also
     returns {engine, model, quality, quota} — plus {workspace} on Qwen (DashScope
@@ -623,21 +623,27 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Opt
     key_type ("ephemeral" | "raw"). A response without the field (legacy path,
     Qwen engine) is always a raw key.
 
-    Returns (key, engine, model, quality, quota, workspace, key_type, error);
-    `quota` is the license snapshot dict when the server provided one
-    (routing-aware responses only). 401/402 are mapped to localized messages by
-    STATUS CODE (never by sniffing the server's English error string) — except
-    a device-blocked 402 (free_reused=true), which RAISES DeviceBlockedError
-    instead of returning a tuple, since that case carries structured data (a
-    masked pointer to the account holding this machine's free tier) the 8-tuple
-    has no slot for. Every existing caller already treats a falsy key as fatal
-    and raises/propagates, so an uncaught DeviceBlockedError reaches the same
-    place a RuntimeError would. Never embedded in the client build."""
+    Returns (key, engine, model, quality, quota, workspace, key_type, fallback,
+    error); `quota` is the license snapshot dict when the server provided one
+    (routing-aware responses only). `fallback` is a {key, model, workspace}
+    dict for a SIBLING Qwen pool (session_key.go's qwenFallbackCredentials) —
+    present only when engine=="qwen" and a next pool is configured; None
+    otherwise, including for every non-Qwen engine. Fed to engines.make_translator
+    so a pool-specific terminal error gets one fast retry on a different pool
+    before falling back to Gemini (base_translator.py). 401/402 are mapped to
+    localized messages by STATUS CODE (never by sniffing the server's English
+    error string) — except a device-blocked 402 (free_reused=true), which
+    RAISES DeviceBlockedError instead of returning a tuple, since that case
+    carries structured data (a masked pointer to the account holding this
+    machine's free tier) the tuple has no slot for. Every existing caller
+    already treats a falsy key as fatal and raises/propagates, so an uncaught
+    DeviceBlockedError reaches the same place a RuntimeError would. Never
+    embedded in the client build."""
     if not IS_OFFICIAL_RELEASE:
-        return None, None, None, None, None, None, None, "SaaS keys are disabled in developer builds."
+        return None, None, None, None, None, None, None, None, "SaaS keys are disabled in developer builds."
     token = _valid_jwt()
     if not token:
-        return None, None, None, None, None, None, None, t("st_not_signed_in")
+        return None, None, None, None, None, None, None, None, t("st_not_signed_in")
     params = {}
     if caps:
         params["caps"] = caps
@@ -661,7 +667,7 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Opt
         )
     except requests.RequestException as exc:
         _log_detail("get_session_key", exc)
-        return None, None, None, None, None, None, None, _net_error()
+        return None, None, None, None, None, None, None, None, _net_error()
     if resp.status_code == 200:
         d = resp.json()
         quota = d.get("quota") if isinstance(d.get("quota"), dict) else None
@@ -669,12 +675,13 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Opt
             # Carried on the quota snapshot so the free-tier chip can name the
             # real allowance instead of hard-coding a number the server owns.
             quota["cascade_daily_minutes"] = d.get("cascade_daily_minutes")
+        fallback = d.get("fallback") if isinstance(d.get("fallback"), dict) else None
         return (d.get("key"), d.get("engine", "gemini"), d.get("model"),
                 d.get("quality"), quota, d.get("workspace"),
-                d.get("key_type") or "raw", None)
+                d.get("key_type") or "raw", fallback, None)
     if resp.status_code == 401:
         clear_jwt()
-        return None, None, None, None, None, None, None, t("st_not_signed_in")
+        return None, None, None, None, None, None, None, None, t("st_not_signed_in")
     if resp.status_code == 402:
         try:
             body = resp.json()
@@ -686,15 +693,15 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Opt
                 first_account=body.get("first_account"),
                 remaining_minutes=body.get("first_account_remaining_min"),
             )
-        return None, None, None, None, None, None, None, t("err_quota_exhausted")
+        return None, None, None, None, None, None, None, None, t("err_quota_exhausted")
     if resp.status_code == 503:
         # Distinguishable "engine unavailable" → caller falls back to Gemini.
         try:
             eng = resp.json().get("engine")
         except Exception:
             eng = None
-        return None, eng, None, None, None, None, None, "engine unavailable"
-    return None, None, None, None, None, None, None, _core_error(resp)
+        return None, eng, None, None, None, None, None, None, "engine unavailable"
+    return None, None, None, None, None, None, None, None, _core_error(resp)
 
 
 def _post_usage(session_id: str, delta_minutes: float, source: str, engine: str) -> str:

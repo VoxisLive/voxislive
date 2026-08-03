@@ -69,6 +69,20 @@ _TERMINAL_PHRASES = (
     "invalidapikey", "invalid_api_key", "invalid api key",
     "access denied", "accessdenied", "unauthorized", "forbidden",
     "arrearage", "quota", "billing",
+    # DashScope's account-wide request-rate ceiling for THIS model specifically
+    # (measured 2026-08-03: 10 req/60s vs 60/60s for the omni models — a support
+    # ticket to raise it is still pending). Unlike a bare 429 (deliberately kept
+    # transient, see base_translator.py's _DEFAULT_TERMINAL_CODES comment), this
+    # signature did NOT clear within seconds during the 2026-08-01/08-03
+    # incidents — it persisted for hours. Retrying it with the normal 1-6s
+    # backoff (up to MAX_TRANSIENT_FAILURES=8, ~27s) only adds more requests to
+    # an already-exhausted account-wide pool shared by every concurrent Voxis
+    # session, which can itself worsen/prolong the shortage. Terminal here means
+    # this one session gives up immediately and hot-swaps to Gemini via
+    # _give_up -> on_fatal (sub-second, instead of ~27s of dead air); it does
+    # NOT disable Qwen fleet-wide — WatchEngineHealth still separately
+    # rotates/kills the pool if engine_failover events cluster (opswatch.go).
+    "thread pool exhausted",
 )
 
 
@@ -90,14 +104,15 @@ class QwenTranslator(BaseTranslator):
                  name: str = "translator", model: str = QWEN_TRANSLATE_MODEL,
                  source_lang: str = "auto", clone: str = "off",
                  hotwords: dict | None = None, vad_silence_ms: int = 500,
-                 workspace: str = QWEN_WORKSPACE, voice: str | None = None):
+                 workspace: str = QWEN_WORKSPACE, voice: str | None = None,
+                 fallback: dict | None = None):
         # Qwen wants base ISO codes: Voxis's 79-language BCP-47 targets
         # (pt-BR, zh-Hans, …) are normalized via the shared routing helper, so
         # a regional variant can't bounce the session with InvalidParameter.
         from .config import _norm_lang  # noqa: PLC0415
         norm_target = _norm_lang(target_lang) or target_lang
         super().__init__(api_key, norm_target, on_audio, on_text, on_status,
-                         rotate_minutes=rotate_minutes, name=name)
+                         rotate_minutes=rotate_minutes, name=name, fallback=fallback)
         self.model = model
         self.engine = "qwen"
         self.source_lang = source_lang or "auto"
@@ -177,6 +192,15 @@ class QwenTranslator(BaseTranslator):
         if self.hotwords:
             session["translation"]["corpus"] = {"phrases": self.hotwords}
         return json.dumps({"type": "session.update", "session": session})
+
+    def _apply_fallback_credentials(self):
+        fb = self._fallback or {}
+        if fb.get("key"):
+            self.api_key = fb["key"]
+        if fb.get("model"):
+            self.model = fb["model"]
+        if fb.get("workspace"):
+            self.workspace = fb["workspace"]
 
     async def _connect(self):
         import websockets  # lazy: keep it off the cold path

@@ -17,7 +17,7 @@ from .config import ENGINE_CASCADE, ENGINE_QWEN, resolve_model
 def make_translator(cfg, target_lang, *, engine, key, model=None,
                     on_audio, on_text, on_status, name,
                     on_fatal=None, key_provider=None, beta_active=False,
-                    voice=None):
+                    voice=None, fallback=None):
     """Build the translator thread for an ALREADY-RESOLVED engine + key + model.
     The caller resolves per target (locally for BYOK, server-side for SaaS) so the
     capture send-rate can match. Returns an object honoring the translator
@@ -36,6 +36,13 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
     leg (config.resolve_voice), because the two legs of a meeting carry different
     genders and share this cfg. None = leave the engine on its default. Only the
     Qwen branch uses it; Gemini ignores the field (measured — see config.py).
+
+    fallback is a server-provided backup credential for a SIBLING pool of the
+    SAME engine (see session_key.go's qwenFallbackCredentials — currently
+    Qwen-only, None for the other engines), so a pool-specific terminal error
+    (DashScope capacity ceiling, spent balance) gets one fast retry on a
+    different pool before BaseTranslator gives up and on_fatal swaps to
+    Gemini. Only the Qwen branch threads it through.
 
     beta_active gates Qwen voice-cloning: cfg["beta"]["clone"] is honored ONLY
     when this is True (a genuine, server-authorized beta session — webui sets
@@ -85,18 +92,26 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             # DashScope intl keys are workspace-scoped (the WS host carries the
             # workspace id) — a key from a different Model Studio account needs
             # its own workspace here, or the handshake 401s.
-            workspace=cfg.get("qwen_workspace") or QWEN_WORKSPACE)
+            workspace=cfg.get("qwen_workspace") or QWEN_WORKSPACE,
+            fallback=fallback)
         tr.engine = engine
         tr.on_fatal = on_fatal
         if cfg.get("_paid_customer"):
             # A paying customer must never sit through Qwen's normal 8-retry
-            # reconnect budget while the primary/backup DashScope pool is
-            # flaky (measured 2026-08-01: repeated "thread pool exhausted"
-            # outages) — a single dropped connection is reason enough to hand
-            # the session to Gemini immediately rather than gamble on a free
-            # engine's stability. Free/BYOK sessions keep the full budget
+            # reconnect budget for an UNCLASSIFIED transient error (network
+            # blip, covert immediate-close) — one dropped connection is reason
+            # enough to hand the session to Gemini rather than gamble on a
+            # free engine's stability. Free/BYOK sessions keep the full budget
             # (self-heals silently; a slower fallback is an acceptable
             # tradeoff against burning paid Gemini cost on every hiccup).
+            # Does NOT govern the specific pool-capacity failure measured
+            # 2026-08-01 ("thread pool exhausted" repeated outages) any more —
+            # that phrase is now classified TERMINAL (base_translator.py
+            # TERMINAL_PHRASES), which skips this counter entirely and gets
+            # its own, faster path: one immediate retry on the server-provided
+            # `fallback` pool (this call's `fallback` kwarg), then give up.
+            # That path runs for EVERY session, paid or not — a paying
+            # customer benefits from it exactly like everyone else.
             tr.MAX_TRANSIENT_FAILURES = 1
         return tr
 

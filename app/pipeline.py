@@ -310,6 +310,9 @@ class IncomingPipeline:
                 "config.json to the real headphone device (list devices with: "
                 "python -m app.audio_io)."
             )
+        # Read by ModeController._start_volume_mirror to neutralize this exact
+        # device's own endpoint level in vbcable mode (see endpoint_volume.py).
+        self._out_device_name = out_name
 
         self.player = Player(
             out_dev, tts_in_rate=24000,
@@ -343,7 +346,7 @@ class IncomingPipeline:
         # Resolve engine + key + model for this target ONCE (locally for BYOK,
         # server-side for SaaS) so the capture send-rate matches the engine.
         try:
-            self._engine, _key, _model = resolve(cfg["target_language_incoming"])
+            self._engine, _key, _model, _fallback = resolve(cfg["target_language_incoming"])
         except Exception:
             self._teardown_resources()
             raise
@@ -430,6 +433,7 @@ class IncomingPipeline:
                 # genders and both legs share this cfg.
                 voice=resolve_voice(self._engine,
                                     cfg.get("voice_gender_incoming", "auto")),
+                fallback=_fallback,
             )
         except Exception:
             self._teardown_resources()
@@ -824,7 +828,7 @@ def _swap_to_gemini(pipe, target_key, name, exc):
 
     target = pipe.cfg[target_key]
     try:
-        engine, key, model = pipe._resolve(target, force_gemini=True)
+        engine, key, model, _fallback = pipe._resolve(target, force_gemini=True)
     except Exception:
         _log.exception("failover: could not obtain a Gemini key")
         return False
@@ -975,7 +979,7 @@ class OutgoingPipeline:
                 self.monitor_player = None
                 _log.exception("outgoing confidence monitor unavailable")
         try:
-            self._engine, _key, _model = resolve(cfg["target_language_outgoing"])
+            self._engine, _key, _model, _fallback = resolve(cfg["target_language_outgoing"])
         except Exception:
             self._teardown_resources()
             raise
@@ -998,6 +1002,7 @@ class OutgoingPipeline:
                 # independent of the incoming leg's.
                 voice=resolve_voice(self._engine,
                                     cfg.get("voice_gender_outgoing", "auto")),
+                fallback=_fallback,
             )
         except Exception:
             self._teardown_resources()
@@ -1189,7 +1194,7 @@ class ModeController:
                  on_session_failed=None, on_speaker=None):
         self.cfg = cfg
         self.api_key = api_key       # legacy field; key resolution now via self.resolve
-        self.resolve = None          # callable(target)->(engine, key, model); set by the bridge
+        self.resolve = None          # callable(target)->(engine, key, model, fallback); set by the bridge
         self.on_text = on_text
         self.on_status = on_status
         # Speaker-change events (incoming direction) from the local tracker;
@@ -1807,15 +1812,26 @@ class ModeController:
 
         Driverless never needs this: there the default endpoint IS our output
         device, so Windows already attenuates us — mirroring would attenuate twice.
-        Best-effort; a missing mirror is a nuisance, a crashed session is not."""
+        Best-effort; a missing mirror is a nuisance, a crashed session is not.
+
+        Also neutralizes the physical output device's OWN endpoint level (see
+        endpoint_volume.OutputLevelNeutralizer) so that mirrored CABLE level is
+        the only attenuator in the chain — otherwise a headphone device left
+        below 100% from before the switch silently caps the output under
+        whatever the mirror computes, with no way back to it via the keys."""
         self._vol_mirror = None
+        self._out_neutralizer = None
         if self.cfg.get("capture_backend", "driverless") != "vbcable":
             return
         inc = self.incoming()
         if inc is None:
             return
         try:
-            from .endpoint_volume import EndpointVolumeMirror  # noqa: PLC0415
+            from .endpoint_volume import EndpointVolumeMirror, OutputLevelNeutralizer  # noqa: PLC0415
+            out_name = getattr(inc, "_out_device_name", "")
+            if out_name:
+                self._out_neutralizer = OutputLevelNeutralizer(out_name)
+                self._out_neutralizer.apply()
             self._vol_mirror = EndpointVolumeMirror(inc.player)
             self._vol_mirror.start()
         except Exception:
@@ -1826,6 +1842,10 @@ class ModeController:
         if m is not None:
             m.stop()          # also hands the player's gain back at full scale
             self._vol_mirror = None
+        n = getattr(self, "_out_neutralizer", None)
+        if n is not None:
+            n.restore()
+            self._out_neutralizer = None
 
     def recent_pro_pcm(self) -> bytes:
         """The last seconds the paid voice spoke — during the session from the live
