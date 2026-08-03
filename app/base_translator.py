@@ -27,7 +27,9 @@ Subclass contract — a concrete engine supplies only its protocol:
     GoAway. Gemini-only resume-handle capture lives here too.
   * optional hooks: _reset_session_state (reset per-connection parse state),
     _reset_reconnect_state (drop state that must not survive a failed reconnect,
-    e.g. Gemini's stale resume handle).
+    e.g. Gemini's stale resume handle), _apply_fallback_credentials (swap this
+    engine's connection credentials onto a server-provided backup pool — see
+    the `fallback` constructor kwarg below; no-op by default).
 
 The behavior constants below are the pre-consolidation values; each engine keeps
 its own via class attrs. They are NOT tuning knobs to revisit here.
@@ -151,7 +153,7 @@ class BaseTranslator(threading.Thread):
     _USAGE_ADD = None
 
     def __init__(self, api_key, target_lang, on_audio, on_text, on_status, *,
-                 rotate_minutes, name="translator", on_fatal=None):
+                 rotate_minutes, name="translator", on_fatal=None, fallback=None):
         super().__init__(daemon=True, name=name)
         self.api_key = api_key
         self.target_lang = target_lang
@@ -165,6 +167,19 @@ class BaseTranslator(threading.Thread):
         # stops with a status. Fired at most once.
         self.on_fatal = on_fatal
         self._fatal_fired = False
+        # Server-provided backup credential for a sibling pool of the SAME
+        # engine (e.g. Qwen's other DashScope key/model tier) — see
+        # engines.py / session_key.go's qwenFallbackCredentials. A terminal
+        # error (this exact pool is dead: capacity ceiling, spent balance) is
+        # worth ONE fast retry against a DIFFERENT pool before abandoning the
+        # engine entirely for an on_fatal swap to Gemini — better UX (a session
+        # that only has ONE pool problem stays on the higher-quality engine)
+        # and less load on a possibly fleet-wide-shared rate limit than
+        # grinding the generic transient-retry backoff against the same dead
+        # pool. None (the default, and every non-Qwen engine) skips this and
+        # behaves exactly as before. Used at most once per translator lifetime.
+        self._fallback = fallback
+        self._used_fallback = False
         self.rotate_seconds = rotate_minutes * 60
         self._loop: asyncio.AbstractEventLoop | None = None
         self._queue: asyncio.Queue | None = None
@@ -328,6 +343,13 @@ class BaseTranslator(threading.Thread):
         on each new session. Base: nothing."""
         return None
 
+    def _apply_fallback_credentials(self):
+        """Swap this engine's connection credentials onto self._fallback (called
+        once, immediately before the next reconnect — see _main's terminal-error
+        branch). Base: nothing, since only engines with a multi-pool concept
+        (Qwen) accept a `fallback` in the first place."""
+        return None
+
     def _reset_reconnect_state(self):
         """Drop connection-scoped state that must not survive a FAILED reconnect
         (e.g. Gemini's stale resume handle). Base: nothing."""
@@ -444,7 +466,21 @@ class BaseTranslator(threading.Thread):
                     break
                 # Terminal (auth/permission/quota/4xx): retrying with the same key
                 # cannot succeed — give up and let a substitute engine step in.
+                # EXCEPT: an unused server-provided fallback pool (see __init__)
+                # is worth one fast, immediate retry first — it's a DIFFERENT
+                # credential, so "cannot succeed" doesn't apply to it, and a
+                # session that only lost ONE pool stays on the better engine
+                # instead of an on_fatal swap to Gemini.
                 if self._is_terminal(e):
+                    if self._fallback and not self._used_fallback:
+                        self._used_fallback = True
+                        self._apply_fallback_credentials()
+                        self._reset_reconnect_state()
+                        _log.warning("%s: terminal error on primary pool (%r) — "
+                                     "retrying once via the fallback pool before "
+                                     "giving up", self.name, e)
+                        self.on_status(t("st_renewing", name=self.name))
+                        continue
                     _log.error("%s: terminal error, not retrying: %r", self.name, e)
                     self._give_up(e)
                     break

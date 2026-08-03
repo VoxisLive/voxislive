@@ -35,8 +35,8 @@ def _bridge(quota=None):
 
 
 def _grant(engine, age=0.0):
-    """(stamped_at, engine, key, model, quality, workspace)"""
-    return (time.time() - age, engine, "KEY", "model", "balanced", None)
+    """(stamped_at, engine, key, model, quality, workspace, fallback)"""
+    return (time.time() - age, engine, "KEY", "model", "balanced", None, None)
 
 
 IN_QUOTA = {"allowed_minutes": 15, "used_minutes": 3, "remaining": 12}

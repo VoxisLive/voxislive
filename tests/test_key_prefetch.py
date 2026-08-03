@@ -20,14 +20,14 @@ def _bare_bridge():
 
 
 def _put(b, target, ts, engine="gemini", key="k", model="m", quality="balanced",
-         workspace=None):
-    b._key_cache[target] = (ts, engine, key, model, quality, workspace)
+         workspace=None, fallback=None):
+    b._key_cache[target] = (ts, engine, key, model, quality, workspace, fallback)
 
 
 def test_fresh_hit_is_returned_and_consumed():
     b = _bare_bridge()
     _put(b, "tr", time.time())
-    assert b._pop_prefetched_key("tr") == ("gemini", "k", "m", "balanced", None)
+    assert b._pop_prefetched_key("tr") == ("gemini", "k", "m", "balanced", None, None)
     # Single-use: ephemeral tokens are never reused across sessions.
     assert b._pop_prefetched_key("tr") is None
 

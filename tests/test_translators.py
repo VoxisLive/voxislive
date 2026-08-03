@@ -75,6 +75,12 @@ def test_terminal_error_classification_qwen():
     assert qwen._is_terminal_error(RuntimeError("Arrearage: account in debt"))
     assert qwen._is_terminal_error(RuntimeError("AccessDenied"))
     assert not qwen._is_terminal_error(RuntimeError("InvalidParameter: bad lang"))
+    # DashScope's account-wide capacity ceiling for this model (2026-08-01/03
+    # incidents) — persists for hours, so it fails over immediately instead of
+    # grinding through the generic transient-retry budget. Real payload shape:
+    # {"code":"COMMON_ERROR","message":"thread pool exhausted max_workers 100"}
+    assert qwen._is_terminal_error(
+        RuntimeError('{"code":"COMMON_ERROR","message":"thread pool exhausted max_workers 100"}'))
 
 
 @pytest.mark.parametrize("cls", ALL_CLASSES)
@@ -301,6 +307,69 @@ def test_ws_main_terminal_error_breaks_without_retry(caplog):
     assert len(connects) == 1  # terminal → no reconnect spin
     # The classification that ended the session must be in the log, not just on screen.
     assert "terminal error, not retrying" in caplog.text
+
+
+def test_terminal_error_retries_once_via_fallback_pool_before_giving_up():
+    # DashScope's "thread pool exhausted" (this model's account-wide capacity
+    # ceiling — 2026-08-01/03 incidents) is terminal (see _TERMINAL_PHRASES),
+    # but a server-provided fallback credential for a SIBLING pool
+    # (session_key.go's qwenFallbackCredentials) is worth one immediate retry
+    # BEFORE an on_fatal swap to Gemini — a session that only lost ONE pool
+    # should stay on the higher-quality engine instead of downgrading.
+    connects = []
+    healthy = _FakeWS(['{"type":"session.updated"}'])
+
+    class _Driven(qwen.QwenTranslator):
+        async def _connect(self):
+            connects.append(self.api_key)
+            if len(connects) == 1:
+                return _FakeWS(['{"type":"error",'
+                               '"error":"thread pool exhausted max_workers 100"}'])
+            return healthy
+
+    fatal_calls = []
+    tr = _Driven("PRIMARY", "en", on_audio=_noop, on_text=_noop, on_status=_noop,
+                fallback={"key": "FALLBACK", "model": "m2", "workspace": "w2"})
+    tr.on_fatal = lambda exc: fatal_calls.append(exc) or True
+    tr.start()
+    try:
+        # READY_ON_CONNECT fires on the FIRST (doomed) connect too, so wait for
+        # the fallback reconnect itself rather than trusting wait_ready() timing.
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline and len(connects) < 2:
+            time.sleep(0.02)
+        assert connects == ["PRIMARY", "FALLBACK"], "must retry exactly once, on the new credential"
+        assert tr.wait_ready(5.0), "the fallback pool must serve the session"
+    finally:
+        tr.stop()
+        tr.join(timeout=5.0)
+    assert not tr.is_alive()
+    assert connects == ["PRIMARY", "FALLBACK"]  # no third attempt after healing
+    assert tr.model == "m2" and tr.workspace == "w2"
+    assert not fatal_calls  # never abandoned the engine — the fallback pool served it
+
+
+def test_terminal_error_on_fallback_pool_also_gives_up_no_third_attempt():
+    # The fallback is used AT MOST ONCE per translator lifetime: if it ALSO
+    # dies with the same terminal signature, the session must give up (→
+    # on_fatal → Gemini) rather than loop forever hunting for a healthy pool.
+    connects = []
+
+    class _Driven(qwen.QwenTranslator):
+        async def _connect(self):
+            connects.append(self.api_key)
+            return _FakeWS(['{"type":"error",'
+                           '"error":"thread pool exhausted max_workers 100"}'])
+
+    fatal_calls = []
+    tr = _Driven("PRIMARY", "en", on_audio=_noop, on_text=_noop, on_status=_noop,
+                fallback={"key": "FALLBACK", "model": "m2", "workspace": "w2"})
+    tr.on_fatal = lambda exc: fatal_calls.append(exc) or True
+    tr.start()
+    tr.join(timeout=6.0)
+    assert not tr.is_alive()
+    assert connects == ["PRIMARY", "FALLBACK"]  # exactly 2 attempts, no more
+    assert len(fatal_calls) == 1                 # gave up once both pools failed
 
 
 def test_asr_failures_alone_still_arm_the_no_output_watchdog():

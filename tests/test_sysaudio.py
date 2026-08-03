@@ -199,7 +199,7 @@ def test_mode_controller_declines_off_windows(monkeypatch):
     mc = pipeline.ModeController(
         cfg={}, api_key=None, on_text=lambda *a, **k: None,
         on_status=lambda *a, **k: statuses.append(a[0] if a else None))
-    mc.resolve = lambda target=None: ("gemini", "k", "m")  # passes the key check
+    mc.resolve = lambda target=None: ("gemini", "k", "m", None)  # passes the key check
     mc.start("video")
     assert mc.mode is None                       # no session built
     assert mc._pipelines == []

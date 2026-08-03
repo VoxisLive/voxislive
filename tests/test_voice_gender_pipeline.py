@@ -41,7 +41,7 @@ def built(monkeypatch):
 
     def _build(cfg):
         seen.clear()
-        P.OutgoingPipeline(cfg, lambda target: ("qwen", "key", "model"),
+        P.OutgoingPipeline(cfg, lambda target: ("qwen", "key", "model", None),
                            lambda *a: None, lambda *a: None)
         return seen
 
@@ -84,6 +84,6 @@ def test_gemini_routed_leg_gets_no_voice(built, monkeypatch):
 
     monkeypatch.setattr(P, "make_translator", _fake_make)
     P.OutgoingPipeline(_cfg(voice_gender_outgoing="male"),
-                       lambda target: ("gemini", "key", "model"),
+                       lambda target: ("gemini", "key", "model", None),
                        lambda *a: None, lambda *a: None)
     assert seen["voice"] is None
