@@ -20,6 +20,11 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   restores it on stop.
 
 ### Added
+- The top bar now shows which version you're running, and flags it when a
+  newer one is available — checked in the background against a small public
+  manifest (`voxislive.com/app.json`) that also carries language coverage for
+  the website. The check is unauthenticated and sends no user data, so it
+  runs on the OSS/BYOK build too, not just the official release.
 - Voxis says something when it cannot hear anything. If no sound reaches it in
   the first seconds of a Video session, it now tells you — and names the two
   things that actually cause it: nothing is playing, or you are speaking into
