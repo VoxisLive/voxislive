@@ -201,14 +201,18 @@ def restore_pending_ducking() -> None:
     MUST NOT import a platform-specific module before checking `sys.platform`.
 
     Windows: restores per-app session volumes a crash left ducked
-    (`session_duck.restore_pending`). Linux: removes an orphaned
-    VoxisCapture/loopback pair a crash left loaded
-    (`linux.routing.restore_pending_routing`) -- lower stakes than Windows
-    since Option-A never touches the default sink, but still worth cleaning up
-    so a stale virtual sink doesn't accumulate in the user's audio menu."""
+    (`session_duck.restore_pending`) and a physical output device a crash left
+    raised past its own level (`endpoint_volume.restore_pending`, vbcable-mode
+    volume mirror). Linux: removes an orphaned VoxisCapture/loopback pair a
+    crash left loaded (`linux.routing.restore_pending_routing`) -- lower
+    stakes than Windows since Option-A never touches the default sink, but
+    still worth cleaning up so a stale virtual sink doesn't accumulate in the
+    user's audio menu."""
     if sys.platform == "win32":
         from ..session_duck import restore_pending
         restore_pending()
+        from ..endpoint_volume import restore_pending as restore_output_level
+        restore_output_level()
     elif sys.platform.startswith("linux"):
         from .linux import routing  # noqa: PLC0415
         from .linux import virtual_mic  # noqa: PLC0415

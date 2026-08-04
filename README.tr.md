@@ -16,27 +16,27 @@
   <img src="docs/images/screenshot-meeting-mode.png" width="49%" alt="Voxis çift yönlü Toplantı modunda İngilizce-Japonca bir görüşmeyi anlık çeviriyor">
 </p>
 
-**📖 Kılavuz:** [Geliştirici / BYOK kurulumu](docs/INSTALL_BYOK.md) — son kullanıcı uygulaması **Microsoft Store** üzerinden dağıtılır; kurulum dökümanı [voxislive.com](https://voxislive.com)'da.
+**📖 Geliştirici Kılavuzu:** [BYOK kurulumu](docs/INSTALL_BYOK.md) — Son kullanıcı uygulaması **Microsoft Store** üzerinde yer alır; detaylı dokümantasyon [voxislive.com](https://voxislive.com) adresindedir.
 
 > [!WARNING]
-> **Sadece [voxislive.com](https://voxislive.com), Microsoft Store listesi veya bu repo (`github.com/VoxisLive/voxislive`) üzerinden indirin.** Bu reponun başka GitHub hesaplarında kopyaları tespit edildi; bazıları başka sitelerdeki yükleyicilere yönlendiriyor — bunlar **resmi değildir** ve zararlı olabilir. Bu proje hiçbir zaman üçüncü taraf bir siteden veya farklı bir GitHub hesabından yükleyici dağıtmaz. Şüpheli bir kopya görürseniz bildirin: [support@voxislive.com](mailto:support@voxislive.com).
+> **Yalnızca [voxislive.com](https://voxislive.com), Microsoft Store listesi veya bu resmi depo (`github.com/VoxisLive/voxislive`) üzerinden indirin.** Bu deponun başka GitHub hesaplarında kopyaları tespit edilmiştir; bazıları farklı sitelerdeki yükleyicilere yönlendirmektedir — bunlar **resmi değildir** ve zararlı yazılım içerebilir. Bu proje hiçbir zaman üçüncü taraf bir siteden veya farklı bir GitHub hesabından yükleyici dağıtmaz. Şüpheli bir kopya görürseniz lütfen bildirin: [support@voxislive.com](mailto:support@voxislive.com).
 
 ---
 
 ## Genel Bakış
 
-Tarayıcı-sekmesi dublajcıları yalnızca tek bir Chrome sekmesinde çalan sesi çevirebilir. Voxis **Windows sistem sesini doğrudan** okur — native oyunlar, masaüstü Zoom/Teams/Discord görüşmeleri, herhangi bir yerel video oynatıcı — yani yalnızca bir sekmede açık olanı değil, PC'nizin çaldığı her şeyi çevirir.
+Tarayıcı eklentileri yalnızca tek bir Chrome sekmesindeki sesi çevirebilir. Voxis ise **Windows sistem sesini doğrudan yakalar**; böylece masaüstü oyunları, Zoom/Teams/Discord görüşmeleri ve yerel video oynatıcılar dahil bilgisayarınızda çalan tüm sesleri canlı çevirir.
 
-Voxis, Windows sistem sesinizi (bir video, bir oyun, görüşmenin karşı tarafı) yakalar, bunu Google'ın **Gemini Live** çeviri modeline aktarır ve hedef dilinizdeki sesli çeviriyi — daha konuşma devam ederken — geri oynatır.
+Voxis, Windows sistem sesinizi (bir video, bir oyun veya görüşmenin karşı tarafı) yakalar, bunu Google'ın **Gemini Live** çeviri modeline aktarır ve hedef dilinizdeki sesli çeviriyi — daha konuşma devam ederken — gerçek zamanlı olarak oynatır.
 
-`gemini-3.5-live-translate-preview` modelini kullanır; bu **yerel, eşzamanlı (simültane) konuşmadan konuşmaya** çalışan bir modeldir: konuşmacı konuştukça sürekli çeviri yapar, kalite ile senkronizasyon arasında kendi kendini dengeler ve (tıpkı bir simültane çevirmenin yaptığı gibi) birkaç saniye geriden gelir. Ayrı bir konuşmadan metne → çeviri → metinden konuşmaya zinciri yoktur; ses girer, çevrilmiş ses çıkar.
+`gemini-3.5-live-translate-preview` modelini kullanır; bu **yerel, eşzamanlı (simültane) konuşmadan konuşmaya** çalışan bir modeldir: Konuşmacı konuştukça sürekli çeviri yapar, çeviri kalitesi ile senkronizasyon dengesini otomatik olarak sağlar ve (tıpkı bir simültane çevirmenin yaptığı gibi) birkaç saniye geriden gelir. Ayrı bir konuşmadan metne → çeviri → metinden konuşmaya zinciri yoktur; ses girer, çevrilmiş ses çıkar.
 
 İki çalışma modu:
 
-- **Video / Oyun** — tek yönlü gelen çeviri; çeviri konuşurken orijinal ses kısılır (ducking).
-- **Toplantı** — çift yönlü: karşı tarafın sesi sizin dilinize çevrilir (kulaklığınıza), sizin sesiniz de onların diline çevrilip sanal bir mikrofon olarak görüşmeye verilir.
+- **Video / Oyun** — tek yönlü gelen çeviri; çeviri seslendirilirken orijinal ses kısılır (ducking).
+- **Toplantı** — çift yönlü: Karşı tarafın sesi sizin dilinize çevrilir (kulaklığınıza), sizin sesiniz de onların diline çevrilip sanal bir mikrofon olarak görüşmeye verilir.
 
-Her oturum **TXT / SRT / VTT** (iki dilli altyazı) olarak kaydedilip dışa aktarılabilir ve geçmiş oturumlar uygulama içi Geçmiş panelinde aranabilir.
+Her oturum **TXT / SRT / VTT** (çift dilli altyazı) olarak kaydedilip dışa aktarılabilir ve geçmiş oturumlar uygulama içi Geçmiş panelinde aranabilir.
 
 ---
 
@@ -49,8 +49,8 @@ Windows audio ──► Capture ──► Silero VAD gate ──► Gemini Live 
 ```
 
 - **Yakalama (Capture)** — iki yol:
-  - *Sürücüsüz* (varsayılan, kurulum yok): WASAPI process-exclude loopback (Windows 10 2004+) sistem miksini okur ve Voxis'in kendi çıkışını hariç tutar; böylece kendi sesini asla yeniden çevirmez. Diğer uygulamalar, Windows oturum-ses seviyesi (session-volume) API'si üzerinden kaynağında kısılır.
-  - *VB-CABLE*: ses, hoparlörlere ulaşmadan önce yakalanır; böylece motor gerçek DSP uygulayabilir — M/S merkez bastırma (center-suppression) orijinal diyaloğu kısarken stereo müziği korur ve kesirli bir gecikme hattı (delay line) orijinali çeviriyle RTT'ye göre hizalar.
+  - *Sürücüsüz* (varsayılan, kurulum gerekmez): WASAPI process-exclude loopback (Windows 10 2004+) sistem miksini okur ve Voxis'in kendi çıkışını hariç tutar; böylece kendi sesini asla yeniden çevirmez. Diğer uygulamalar, Windows oturum-ses seviyesi (session-volume) API'si üzerinden kaynağında kısılır.
+  - *VB-CABLE*: Ses, hoparlörlere ulaşmadan önce yakalanır; böylece motor gerçek DSP uygulayabilir — M/S merkez bastırma (center-suppression) orijinal diyaloğu kısarken stereo müziği korur ve kesirli bir gecikme hattı (delay line) orijinali çeviriyle RTT'ye göre hizalar.
 - **VAD geçidi (gate)** — Silero VAD v5 (ONNX, CPU) müziği/gürültüyü eler; böylece buluta yalnızca konuşma ulaşır.
 - **Çeviri** — bir `LiveTranslator` iş parçacığı (thread), bir Gemini Live WebSocket oturumunu tutar ve içeri 16 kHz PCM, dışarı 24 kHz çevrilmiş ses akışı sağlar.
 - **Oynatma** — ileri-bakışlı (look-ahead) bir brick-wall limiter içeren stereo mikser; çeviri, sanal (phantom) merkeze yerleşir.
@@ -67,7 +67,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-> **Python 3.11–3.13 (64-bit).** Python 3.14 henüz desteklenmiyor: numpy / onnxruntime için sabitlenen sürümlerde kararlı cp314 wheel'i yok, bu yüzden `pip install` başarısız olur.
+> **Python 3.11–3.13 (64-bit).** Python 3.14 henüz desteklenmemektedir: numpy / onnxruntime için sabitlenen sürümlerde kararlı cp314 wheel'i bulunmamaktadır; bu nedenle `pip install` başarısız olur.
 
 Çalıştırın:
 
@@ -81,7 +81,7 @@ Açık kaynak derleme **BYOK**’tur (kendi anahtarınızı getirin). İlk açı
 `.env` yerine `profiles/byok` altında **şifreli** saklanır (Windows DPAPI ile,
 Windows hesabınıza bağlı). Ayrıntılar: [docs/INSTALL_BYOK.md](docs/INSTALL_BYOK.md).
 
-Ses cihazlarınızı istediğiniz zaman `python -m app.audio_io` ile listeleyin.
+Ses cihazlarınızı istediğiniz zaman `python -m app.audio_io` ile listeleyebilirsiniz.
 
 ---
 
@@ -105,7 +105,7 @@ Voxis iki türde gelir; bunlar derleme sırasında `IS_OFFICIAL_RELEASE` ile se�
 
 ## Toplantı modu kurulumu (çift yönlü çeviri)
 
-**Amaç:** siz Türkçe konuşursunuz → karşı taraf İngilizce duyar; karşı taraf İngilizce konuşur → siz Türkçe duyarsınız.
+**Amaç:** Siz Türkçe konuşursunuz → karşı taraf İngilizce duyar; karşı taraf İngilizce konuşur → siz Türkçe duyarsınız.
 
 İki yönün farklı gereksinimleri vardır:
 
@@ -114,7 +114,7 @@ Voxis iki türde gelir; bunlar derleme sırasında `IS_OFFICIAL_RELEASE` ile se�
 | **Gelen** (onları kendi dilinizde duyarsınız) | Sistem sesini dinler, çevirir, kulaklığınıza oynatır | **Ek kurulum yok** |
 | **Giden** (sesiniz çevrilerek dışarı gider) | Mikrofonunuzu çevirir, sanal bir mikrofonu besler | **Sanal bir mikrofon (VB-CABLE) gereklidir** |
 
-> Windows'ta, bir toplantı uygulamasının (Teams/Zoom/Meet) seçebileceği bir "mikrofon" sunmanın tek yolu sanal bir ses sürücüsüdür — bu yüzden giden yön VB-CABLE gerektirir. Böyle bir sürücü olmadan toplantılar otomatik olarak **yalnızca dinleme** modunda çalışır (onları anlarsınız; sesiniz çevrilmeden dışarı gider).
+> Windows platformunda toplantı uygulamalarının (Teams/Zoom/Meet) tanıyabileceği bir "mikrofon" oluşturmanın tek yolu sanal ses sürücüsüdür. Bu nedenle giden ses için VB-CABLE gereklidir. Sürücü bulunmadığında toplantılar otomatik olarak **yalnızca dinleme** modunda çalışır (karşı tarafın konuşmasını çevrilmiş olarak duyarsınız, ancak sizin sesiniz çevrilmeden iletilir).
 
 ### 1. VB-CABLE kurun (tek seferlik, ücretsiz)
 1. <https://vb-audio.com/Cable/> adresinden indirin.
@@ -124,7 +124,7 @@ Voxis iki türde gelir; bunlar derleme sırasında `IS_OFFICIAL_RELEASE` ile se�
 ### 2. Voxis'i yapılandırın
 - Panelde dilleri ayarlayın: **Duyduğum dil: Türkçe**, **Karşı tarafa: İngilizce**.
 - Ayarlar → **Çıkış cihazı**: gerçek kulaklığınız · **Mikrofon**: gerçek mikrofonunuz — konuştuğunuz mikrofon; Voxis burayı dinler.
-- **Sanal kablo otomatik algılanır.** Voxis, başlatıldığında kurulu bir kabloyu (VB-CABLE / VB-Audio / VoiceMeeter) bulur ve toplantı yönlendirmesini kendi yapar — `config.json` düzenlemeye gerek yok.
+- **Sanal ses kablosu otomatik algılanır.** Voxis başlatıldığında sistemdeki kurulu sanal kabloyu (VB-CABLE / VB-Audio / VoiceMeeter) otomatik tespit ederek toplantı ses yönlendirmesini kendisi yapılandırır — manuel `config.json` düzenlemesi gerekmez.
 
 ### 3. Toplantı uygulamasını yapılandırın (Teams / Zoom / Meet)
 - **Mikrofonu** **"CABLE Output (VB-Audio Virtual Cable)"** olarak ayarlayın — kablonun *kayıt* tarafı (`CABLE Output`, **`CABLE Input` değil**). Bu, Voxis'te seçtiğiniz gerçek mikrofon değil, toplantı uygulamasının mikrofonudur: Voxis çevrilmiş İngilizceyi kabloya yazar, toplantı uygulaması da buradan okur.

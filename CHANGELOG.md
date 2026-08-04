@@ -5,6 +5,20 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 
 ## Unreleased
 
+### Fixed
+- A Qwen capacity error ("thread pool exhausted") that used to be retried up
+  to 8 times with fast backoff is now recognized as terminal instead of
+  generic-transient — it was hammering an already-saturated shared rate limit
+  and prolonging the very outage it was reacting to. A terminal error now
+  gets one immediate retry on a server-provided sibling connection pool
+  before falling back to the alternate engine.
+- On VB-CABLE setups, the volume mirror assumed the physical playback device
+  sat at 0 dB. If it didn't — the common case — that device's own level
+  silently capped the output under whatever the mirror computed: the display
+  showed full volume with nothing left to raise while the actual level was
+  quieter. Voxis now raises the physical device to full for the session and
+  restores it on stop.
+
 ### Added
 - Voxis says something when it cannot hear anything. If no sound reaches it in
   the first seconds of a Video session, it now tells you — and names the two
