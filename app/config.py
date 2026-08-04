@@ -38,6 +38,23 @@ def _resolve_official_release() -> bool:
 
 IS_OFFICIAL_RELEASE: bool = _resolve_official_release()
 
+# Target languages offered in the picker — the full documented set for the
+# gemini-3.5-live-translate-preview model (ai.google.dev live-translate table),
+# passed verbatim as translation_config.target_language_code. Popular first, then
+# alphabetical by English name; endonym labels live in LANG_NAMES (web/index.html).
+# SSOT: also read by scripts/gen_app_manifest.py, so the published app.json's
+# language coverage can never drift from what the picker actually offers.
+LANGS = [
+    "tr", "en", "es", "fr", "de", "it", "pt", "pt-BR", "pt-PT", "ru", "ar",
+    "zh-Hans", "ja", "ko", "hi", "id", "vi", "th", "pl", "uk", "af", "ak",
+    "sq", "am", "hy", "az", "eu", "be", "bn", "bg", "my", "ca", "zh-Hant",
+    "hr", "cs", "da", "nl", "et", "fil", "fi", "gl", "ka", "el", "gu",
+    "ha", "he", "hu", "is", "jv", "kn", "kk", "km", "rw", "lo", "lv",
+    "lt", "mk", "ms", "ml", "mr", "mn", "ne", "nb", "fa", "pa", "ro",
+    "sr", "sd", "si", "sk", "sl", "su", "sw", "sv", "ta", "te", "ur",
+    "uz", "zu",
+]
+
 # The Gemini Live translate model. A preview model can be retired on a few months'
 # notice, so the name is a config key (not a hardcoded constant) and can be swapped
 # without a client release: edit config.json's "model", or set the VOXIS_MODEL env
