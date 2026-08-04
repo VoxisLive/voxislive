@@ -27,6 +27,7 @@ from .config import (
     ENGINE_CASCADE,
     GEMINI_VOICES,
     IS_OFFICIAL_RELEASE,
+    LANGS,
     QUALITY_PRESETS,
     apply_profile,
     parse_hotwords,
@@ -43,20 +44,19 @@ OBS_FILE = user_path("obs_subtitle.txt")
 # type guard). JSON is the canonical record; the rest are on-demand exports.
 _TRANSCRIPT_EXTS = (".json", ".txt", ".srt", ".vtt")
 
-# Target languages offered in the picker — the full documented set for the
-# gemini-3.5-live-translate-preview model (ai.google.dev live-translate table),
-# passed verbatim as translation_config.target_language_code. Popular first, then
-# alphabetical by English name; endonym labels live in LANG_NAMES (web/index.html).
-LANGS = [
-    "tr", "en", "es", "fr", "de", "it", "pt", "pt-BR", "pt-PT", "ru", "ar",
-    "zh-Hans", "ja", "ko", "hi", "id", "vi", "th", "pl", "uk", "af", "ak",
-    "sq", "am", "hy", "az", "eu", "be", "bn", "bg", "my", "ca", "zh-Hant",
-    "hr", "cs", "da", "nl", "et", "fil", "fi", "gl", "ka", "el", "gu",
-    "ha", "he", "hu", "is", "jv", "kn", "kk", "km", "rw", "lo", "lv",
-    "lt", "mk", "ms", "ml", "mr", "mn", "ne", "nb", "fa", "pa", "ro",
-    "sr", "sd", "si", "sk", "sl", "su", "sw", "sv", "ta", "te", "ur",
-    "uz", "zu",
-]
+# LANGS moved to config.py (SSOT, also read by scripts/gen_app_manifest.py);
+# imported above and re-exported here so existing `webui.LANGS` callers/tests
+# are unaffected.
+def _parse_semver(v):
+    """"1.0.54" -> (1, 0, 54); None on anything malformed. Never raises —
+    a version string from a remote manifest must not be able to crash the
+    update-available check."""
+    try:
+        return tuple(int(p) for p in (v or "").strip().split("."))
+    except (ValueError, AttributeError):
+        return None
+
+
 def _free_voiced_langs():
     """Targets the free tier can SPEAK (the rest fall back to captions-only).
 
@@ -321,6 +321,10 @@ class Bridge:
         # app_launched: this fires on the FIRST check_auth regardless of login,
         # so the funnel can see opens that never reach authentication.
         self._opened_reported: bool = False
+        # One-shot guard for the background app.json manifest check (get_init
+        # can in principle run more than once per process — a settings restart
+        # reloads the page — and this must fire at most once per launch).
+        self._manifest_check_started: bool = False
         # The free-voice preview loads a voice (and may download one) off the UI
         # thread; one at a time, so a double click can't race two downloads.
         self._preview_lock = threading.Lock()
@@ -1142,6 +1146,7 @@ class Bridge:
         byok_status = {e: (byok_store.has_byok(uid, e) if uid else False) for e in engines}
         byok_set = byok_status.get("gemini", False)  # back-compat: single bool
         from .paths import client_channel
+        self._maybe_check_app_manifest()
         return {
             "version": APP_VERSION,
             "channel": client_channel(),
@@ -1184,6 +1189,28 @@ class Bridge:
             "onboarding_done": bool(self.cfg.get("onboarding_done", False)),
             "cfg": self._cfg_view(outs, mics),
         }
+
+    def _maybe_check_app_manifest(self):
+        """Kick off the one-shot, once-per-launch background check against
+        voxislive.com/app.json (see voxis_client.fetch_app_manifest). Runs for
+        BOTH build flavors — it's an unauthenticated GET, not telemetry — but
+        stays entirely off the get_init return path: a slow/offline network
+        must never delay first paint."""
+        if self._manifest_check_started:
+            return
+        self._manifest_check_started = True
+        threading.Thread(target=self._check_app_manifest, daemon=True).start()
+
+    def _check_app_manifest(self):
+        from . import voxis_client
+        manifest = voxis_client.fetch_app_manifest()
+        if not manifest:
+            return
+        latest = ((manifest.get("app") or {}).get("version") or "").strip()
+        cur, new = _parse_semver(APP_VERSION), _parse_semver(latest)
+        if cur is None or new is None or new <= cur:
+            return
+        self._put_event(("update_available", {"version": latest}))
 
     def _beta_allowed(self) -> bool:
         """Beta (Qwen) eligibility. Dev builds: always. Official: the server's
