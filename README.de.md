@@ -114,7 +114,7 @@ Die beiden Richtungen haben unterschiedliche Anforderungen:
 | **Eingehend** (du hörst sie in deiner Sprache) | Hört das Systemaudio ab, übersetzt es und gibt es auf deinen Kopfhörern wieder | **Keine zusätzliche Installation** |
 | **Ausgehend** (deine Stimme geht übersetzt hinaus) | Übersetzt dein Mikrofon und speist ein virtuelles Mikrofon | **Ein virtuelles Mikrofon (VB-CABLE) ist erforderlich** |
 
-> Unter Windows ist die einzige Möglichkeit, ein „Mikrofon" bereitzustellen, das eine Meeting-App (Teams/Zoom/Meet) auswählen kann, ein virtueller Audiotreiber — deshalb benötigt die ausgehende Richtung VB-CABLE. Ohne einen solchen laufen Meetings automatisch im **Nur-Zuhören**-Modus (du verstehst sie; deine Stimme geht unübersetzt hinaus).
+> Unter Windows ist die einzige Möglichkeit, ein „Mikrofon" bereitzustellen, das eine Meeting-App (Teams/Zoom/Meet) auswählen kann, ein virtueller Audiotreiber — deshalb benötigt die ausgehende Richtung VB-CABLE. Ohne einen solchen Treiber laufen Meetings automatisch im **Nur-Zuhören**-Modus (Sie hören die Gegenseite übersetzt; Ihre eigene Stimme wird unübersetzt übertragen).
 
 ### 1. VB-CABLE installieren (einmalig, kostenlos)
 1. Lade es von <https://vb-audio.com/Cable/> herunter.
@@ -124,7 +124,7 @@ Die beiden Richtungen haben unterschiedliche Anforderungen:
 ### 2. Voxis konfigurieren
 - Stelle die Sprachen im Panel ein: **Ich höre: Türkisch**, **Für andere: Englisch**.
 - Einstellungen → **Ausgabegerät**: deine echten Kopfhörer · **Mikrofon**: dein echtes Mikrofon — das, in das du sprichst; Voxis hört hier zu.
-- **Das virtuelle Kabel wird automatisch erkannt.** Beim Start findet Voxis ein installiertes Kabel (VB-CABLE / VB-Audio / VoiceMeeter) und richtet das Meeting-Routing selbst ein — kein Bearbeiten von `config.json`.
+- **Das virtuelle Kabel wird automatisch erkannt.** Beim Start erkennt Voxis ein installiertes Kabel (VB-CABLE / VB-Audio / VoiceMeeter) automatisch und konfiguriert das Routing selbstständig — eine manuelle Anpassung der `config.json` ist nicht erforderlich.
 
 ### 3. Die Meeting-App konfigurieren (Teams / Zoom / Meet)
 - Stelle das **Mikrofon** auf **„CABLE Output (VB-Audio Virtual Cable)"** ein — die *Aufnahme*-Seite des Kabels (`CABLE Output`, **nicht** `CABLE Input`). Das ist das Mikrofon der Meeting-App, nicht das in Voxis gewählte echte Mikrofon: Voxis schreibt dein übersetztes Englisch in das Kabel, und die Meeting-App liest es hier zurück.

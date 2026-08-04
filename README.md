@@ -16,7 +16,7 @@
   <img src="docs/images/screenshot-meeting-mode.png" width="49%" alt="Voxis two-way Meeting mode translating an English-Japanese call live">
 </p>
 
-**📖 Guide:** [Developer / BYOK setup](docs/INSTALL_BYOK.md) — the end-user app ships via the **Microsoft Store**; setup docs live at [voxislive.com](https://voxislive.com).
+**📖 Developer Guide:** [BYOK setup](docs/INSTALL_BYOK.md) — the consumer app is available on the **Microsoft Store**; full setup docs live at [voxislive.com](https://voxislive.com).
 
 > [!WARNING]
 > **Only trust downloads from [voxislive.com](https://voxislive.com), the Microsoft Store listing, or this repository at `github.com/VoxisLive/voxislive`.** Copies of this repository have been found on other GitHub accounts, some redirecting to installers hosted elsewhere — those are **not official** and may be malicious. This project never distributes an installer from a third-party site or a different GitHub account. If you find a suspicious clone, please report it: [support@voxislive.com](mailto:support@voxislive.com).
@@ -27,9 +27,9 @@
 
 Browser-tab dubbers can only translate audio playing inside one Chrome tab. Voxis reads **Windows system audio directly**, so it works on anything your PC plays — native games, desktop Zoom/Teams/Discord calls, any local video player — not just what's open in a browser tab.
 
-Voxis captures your Windows system audio (a video, a game, the other side of a call), streams it to Google's **Gemini Live** translation model, and plays back a spoken translation in your target language — while it is still being spoken.
+Voxis captures Windows system audio (from videos, games, or calls), streams it to Google's **Gemini Live** translation model, and plays back spoken translation in real time while the speaker is talking.
 
-It uses `gemini-3.5-live-translate-preview`, a **native simultaneous speech-to-speech** model: it translates continuously as the speaker talks and self-balances quality versus sync, staying a few seconds behind (the way a human simultaneous interpreter does). There is no separate speech-to-text → translate → text-to-speech chain; audio goes in, translated audio comes out.
+It uses `gemini-3.5-live-translate-preview`, a **native simultaneous speech-to-speech** model: it translates continuously as the speaker talks and automatically balances translation accuracy with synchronization, staying a few seconds behind (the way a human simultaneous interpreter does). There is no separate speech-to-text → translate → text-to-speech chain; audio goes in, translated audio comes out.
 
 Two operating modes:
 
@@ -114,7 +114,7 @@ The two directions have different requirements:
 | **Incoming** (you hear them in your language) | Listens to system audio, translates, plays to your headphones | **No extra install** |
 | **Outgoing** (your voice goes out translated) | Translates your mic, feeds a virtual microphone | **A virtual microphone (VB-CABLE) is required** |
 
-> On Windows the only way to present a "microphone" that a meeting app (Teams/Zoom/Meet) can select is a virtual audio driver — so the outgoing direction needs VB-CABLE. Without one, meetings run in **listen-only** mode automatically (you understand them; your voice goes out untranslated).
+> On Windows the only way to present a "microphone" that a meeting app (Teams/Zoom/Meet) can select is a virtual audio driver — so the outgoing direction needs VB-CABLE. Without one, meetings run in **listen-only** mode automatically (you hear translated incoming audio, but your voice is sent untranslated).
 
 ### 1. Install VB-CABLE (one-time, free)
 1. Download from <https://vb-audio.com/Cable/>.
@@ -124,7 +124,7 @@ The two directions have different requirements:
 ### 2. Configure Voxis
 - Set the languages in the panel: **I hear: Turkish**, **To others: English**.
 - Settings → **Output device**: your real headphones · **Microphone**: your real mic — the one you speak into; Voxis listens here.
-- **The virtual cable is auto-detected.** On launch Voxis finds an installed cable (VB-CABLE / VB-Audio / VoiceMeeter) and wires the meeting routing itself — no `config.json` editing.
+- **The virtual cable is auto-detected.** On launch Voxis finds an installed cable (VB-CABLE / VB-Audio / VoiceMeeter) and automatically configures meeting audio routing — no `config.json` editing required.
 
 ### 3. Configure the meeting app (Teams / Zoom / Meet)
 - Set the **microphone** to **"CABLE Output (VB-Audio Virtual Cable)"** — the *recording* side of the cable (`CABLE Output`, **not** `CABLE Input`). This is the meeting app's mic, not the real mic you picked in Voxis: Voxis writes your translated English into the cable and the meeting app reads it back from here.
