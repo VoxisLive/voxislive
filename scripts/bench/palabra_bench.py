@@ -253,7 +253,7 @@ def main() -> int:
     if not key:
         raise SystemExit("No key: pass --key or set $PALABRA_API_KEY.")
 
-    clips = [json.loads(l) for l in open(args.manifest, encoding="utf-8") if l.strip()]
+    clips = [json.loads(line) for line in open(args.manifest, encoding="utf-8") if line.strip()]
     if args.limit:
         clips = clips[:args.limit]
     if not clips:
