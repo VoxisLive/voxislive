@@ -18,7 +18,7 @@ scipy==1.17.1
 python-dotenv==1.2.2
 # Migration of legacy Fernet-wrapped BYOK slots (migrate-on-read decoder in
 # byok_store). DPAPI is the at-rest wrapper now; this only decrypts old slots.
-cryptography==49.0.0
+cryptography==50.0.0
 pywebview==6.2.1
 pycaw==20251023
 # keyboard installs a low-level global hook (admin/AV-sensitive, unmaintained);
