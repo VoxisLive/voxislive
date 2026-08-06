@@ -13,10 +13,23 @@ import stat
 import subprocess
 from pathlib import Path
 
-HOOK = """#!/bin/sh
+PRE_PUSH_HOOK = """#!/bin/sh
 # Voxis pre-push leak gate — auto-installed by scripts/install_hooks.py
 exec python scripts/check_release_hygiene.py
 """
+
+COMMIT_MSG_HOOK = """#!/bin/sh
+# Strips any Claude/Anthropic Co-Authored-By trailer — auto-installed by
+# scripts/install_hooks.py. See .vault/no-claude-attribution-public-repo.md.
+exec python scripts/strip_claude_trailer.py "$1"
+"""
+
+
+def _install(hooks_path: Path, name: str, content: str) -> None:
+    target = hooks_path / name
+    target.write_text(content, encoding="utf-8", newline="\n")
+    target.chmod(target.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    print(f"Installed {name} hook -> {target}")
 
 
 def main() -> int:
@@ -27,10 +40,8 @@ def main() -> int:
     ).stdout.strip()
     hooks_path = (root / hooks_dir).resolve()
     hooks_path.mkdir(parents=True, exist_ok=True)
-    target = hooks_path / "pre-push"
-    target.write_text(HOOK, encoding="utf-8", newline="\n")
-    target.chmod(target.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
-    print(f"Installed pre-push hook -> {target}")
+    _install(hooks_path, "pre-push", PRE_PUSH_HOOK)
+    _install(hooks_path, "commit-msg", COMMIT_MSG_HOOK)
     return 0
 
 
