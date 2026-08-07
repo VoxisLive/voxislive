@@ -171,8 +171,9 @@ def test_index_entries_of_the_wrong_shape_are_skipped(tmp_path, _isolated_cache,
     d = str(tmp_path)
     path = _write(d, "1", [{"text": "gercek"}])
     _isolated_cache.parent.mkdir(parents=True, exist_ok=True)
+    escaped_path = os.path.abspath(path).replace("\\", "\\\\")
     _isolated_cache.write_text(
-        '{"%s": "not-a-list", "other": [1, 2]}' % os.path.abspath(path).replace("\\", "\\\\"),
+        f'{{"{escaped_path}": "not-a-list", "other": [1, 2]}}',
         encoding="utf-8")
     monkeypatch.setattr(transcript_store, "_SUMMARY_CACHE", {})
     monkeypatch.setattr(transcript_store, "_INDEX_LOADED", False)

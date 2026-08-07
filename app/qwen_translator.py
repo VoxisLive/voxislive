@@ -109,7 +109,7 @@ class QwenTranslator(BaseTranslator):
         # Qwen wants base ISO codes: Voxis's 79-language BCP-47 targets
         # (pt-BR, zh-Hans, …) are normalized via the shared routing helper, so
         # a regional variant can't bounce the session with InvalidParameter.
-        from .config import _norm_lang  # noqa: PLC0415
+        from .config import _norm_lang
         norm_target = _norm_lang(target_lang) or target_lang
         super().__init__(api_key, norm_target, on_audio, on_text, on_status,
                          rotate_minutes=rotate_minutes, name=name, fallback=fallback)
@@ -434,7 +434,7 @@ class QwenTranslator(BaseTranslator):
                         # truncates InvalidParameter exactly where the reason is.
                         _log.warning("qwen clone rejected (frequency=%s): %s",
                                      self.clone, msg)
-                        from .i18n import t  # noqa: PLC0415 — lazy, matches module style
+                        from .i18n import t
                         self.on_status(t("st_clone_hiccup", name=self.name, msg=msg[:80]))
                     continue
                 raise RuntimeError(msg)

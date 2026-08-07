@@ -1,7 +1,7 @@
 """The idle sound check diagnoses system audio and microphone independently."""
 
-from pathlib import Path
 import types
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -169,7 +169,12 @@ def test_output_tone_uses_selected_device(monkeypatch):
 
 
 def test_soundcheck_ui_separates_system_output_and_microphone():
-    html = (Path(webui.WEB_DIR) / "index.html").read_text(encoding="utf-8")
+    # index.html carries the markup (ids, data-i18n) referenced below;
+    # sound_check_sent lives in the sibling app.js/i18n.js pair.
+    html = "\n".join(
+        (Path(webui.WEB_DIR) / name).read_text(encoding="utf-8")
+        for name in ("index.html", "app.js", "i18n.js")
+    )
 
     system_pos = html.index('id="sc-fill"')
     output_pos = html.index('id="sc-output-fill"')

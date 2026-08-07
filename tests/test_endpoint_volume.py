@@ -22,23 +22,23 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app import endpoint_volume as ev  # noqa: E402
+from app import endpoint_volume as ev
 
 
 class _Vol:
     def __init__(self, db=0.0, mute=False):
         self._db, self._mute = db, mute
 
-    def GetMute(self):          # noqa: N802 - COM interface name
+    def GetMute(self):
         return self._mute
 
-    def SetMute(self, m, ctx):  # noqa: N802
+    def SetMute(self, m, ctx):
         self._mute = m
 
-    def GetMasterVolumeLevel(self):  # noqa: N802
+    def GetMasterVolumeLevel(self):
         return self._db
 
-    def SetMasterVolumeLevel(self, db, ctx):  # noqa: N802
+    def SetMasterVolumeLevel(self, db, ctx):
         self._db = db
 
 

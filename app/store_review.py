@@ -41,7 +41,7 @@ def open_review_page() -> bool:
     if not available():
         return False
     try:
-        os.startfile(REVIEW_URI)  # noqa: S606 - fixed ms-windows-store: URI
+        os.startfile(REVIEW_URI)
         return True
     except OSError as exc:
         log.info("store review: could not open the Store (%s)", exc)

@@ -43,6 +43,7 @@ STREAM_HOST = "wss://streaming.palabra.ai/streaming-api"
 
 def _load_pcm16(path: str, rate: int) -> bytes:
     import soundfile as sf
+
     from app.audio_io import _make_resampler
 
     x, sr = sf.read(path, dtype="float32", always_2d=True)
@@ -111,11 +112,11 @@ async def _run_clip(clip: dict, base_url: str, token: str, source: str,
     target = clip["target_lang"]
     heard: list[str] = []
     trans: list[str] = []
-    first_audio = {"t": None, "any": None}
-    first_text = {"t": None}
+    first_audio: dict[str, float | None] = {"t": None, "any": None}
+    first_text: dict[str, float | None] = {"t": None}
     audio = {"audible": 0, "total": 0}
     seen_types: dict[str, int] = {}
-    started = {"t": None}
+    started: dict[str, float | None] = {"t": None}
 
     url = f"{base_url.rstrip('/')}/{uuid.uuid4().hex}/v1/speech-to-speech/stream?token={token}"
 
@@ -150,7 +151,7 @@ async def _run_clip(clip: dict, base_url: str, token: str, source: str,
             while not stop.is_set():
                 try:
                     raw = await asyncio.wait_for(ws.recv(), timeout=1.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
                 except Exception:
                     return
@@ -192,7 +193,7 @@ async def _run_clip(clip: dict, base_url: str, token: str, source: str,
         # looks exactly like a vendor that silently produced nothing.
         try:
             await asyncio.wait_for(ready.wait(), timeout=15)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             print("    WARN: no current_task confirmation; feeding anyway")
         await asyncio.sleep(0.2)
 

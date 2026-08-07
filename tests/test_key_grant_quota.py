@@ -21,8 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.config import ENGINE_CASCADE  # noqa: E402
-from app.webui import Bridge  # noqa: E402
+from app.config import ENGINE_CASCADE
+from app.webui import Bridge
 
 
 def _bridge(quota=None):

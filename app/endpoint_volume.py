@@ -65,9 +65,11 @@ def _default_endpoint():
     pycaw's AudioDevice already hands back an activated IAudioEndpointVolume; the
     hand-rolled Activate() call the internet is full of only works on older pycaw
     (GetSpeakers used to return a raw IMMDevice)."""
-    from pycaw.pycaw import AudioUtilities  # noqa: PLC0415
+    from pycaw.pycaw import AudioUtilities
 
     dev = AudioUtilities.GetSpeakers()
+    if dev is None:
+        raise RuntimeError("No default output audio device found")
     return (getattr(dev, "FriendlyName", "?") or "?"), dev.EndpointVolume
 
 
@@ -92,17 +94,17 @@ def _find_render_endpoint(name_substr: str, devices=None):
     if not needle:
         return None
     if devices is None:
-        from pycaw.pycaw import AudioUtilities, EDataFlow  # noqa: PLC0415
+        from pycaw.pycaw import AudioUtilities, EDataFlow
         try:
             devices = AudioUtilities.GetAllDevices(data_flow=EDataFlow.eRender.value)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     for d in devices:
         try:
             fn = getattr(d, "FriendlyName", None) or ""
             if needle in fn.lower():
                 return d.EndpointVolume
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
     return None
 
@@ -139,14 +141,16 @@ def restore_pending() -> None:
     try:
         if not os.path.exists(_RESTORE_PATH):
             return
-        with open(_RESTORE_PATH, "r", encoding="utf-8") as f:
+        with open(_RESTORE_PATH, encoding="utf-8") as f:
             entry = json.load(f) or {}
     except (OSError, ValueError):
         _clear_snapshot()
         return
     device_name = entry.get("device") or ""
     try:
-        orig_db = float(entry.get("db"))
+        # entry is untrusted on-disk JSON; a missing/wrong-typed "db" key
+        # raises TypeError below, caught same as a malformed value.
+        orig_db = float(entry.get("db"))  # pyright: ignore[reportArgumentType]
     except (TypeError, ValueError):
         _clear_snapshot()
         return
@@ -155,9 +159,9 @@ def restore_pending() -> None:
         _clear_snapshot()
         return
     try:
-        import comtypes  # noqa: PLC0415
+        import comtypes
         comtypes.CoInitialize()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     try:
         vol = _find_render_endpoint(device_name)
@@ -166,14 +170,14 @@ def restore_pending() -> None:
                 if float(vol.GetMasterVolumeLevel()) >= -0.5:
                     vol.SetMasterVolumeLevel(orig_db, None)
                     vol.SetMute(orig_mute, None)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
     finally:
         _clear_snapshot()
         try:
-            import comtypes  # noqa: PLC0415
+            import comtypes
             comtypes.CoUninitialize()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
@@ -204,7 +208,7 @@ class OutputLevelNeutralizer:
                 # something — nothing to restore otherwise.
                 _write_snapshot(self._device_name, orig_db, orig_mute)
             self._vol, self._orig_db, self._orig_mute = vol, orig_db, orig_mute
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.info("output neutralizer: could not raise '%s'",
                       self._device_name, exc_info=True)
 
@@ -214,7 +218,7 @@ class OutputLevelNeutralizer:
         try:
             self._vol.SetMasterVolumeLevel(self._orig_db, None)
             self._vol.SetMute(self._orig_mute, None)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         finally:
             self._vol, self._orig_db, self._orig_mute = None, None, None
@@ -241,17 +245,17 @@ class EndpointVolumeMirror:
         # session (or the free-voice preview's own Player) never starts muted.
         try:
             self._player.master_gain = 1.0
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
     def _run(self):
-        import time  # noqa: PLC0415
+        import time
 
-        import comtypes  # noqa: PLC0415
+        import comtypes
 
         try:
             comtypes.CoInitialize()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         vol, resolved_at, watching = None, 0.0, None
         try:
@@ -267,18 +271,18 @@ class EndpointVolumeMirror:
                             # the mirror started before the default was flipped.
                             log.info("volume mirror: following '%s'", name)
                             watching = name
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         if vol is None:
                             log.info("endpoint volume mirror unavailable (%s) — "
                                      "volume keys will not reach the translation", exc)
                             return
                 try:
                     self._player.master_gain = _gain_from(vol)
-                except Exception:  # noqa: BLE001 - a transient COM fault must not
+                except Exception:
                     vol = None     # kill the mirror; re-resolve and carry on
                 self._stop.wait(POLL_SECONDS)
         finally:
             try:
                 comtypes.CoUninitialize()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass

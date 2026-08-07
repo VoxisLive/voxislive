@@ -6,7 +6,7 @@ needs a second, hand-edited update anywhere else.
 Reads, never redeclares:
   - app.APP_VERSION
   - app.config.LANGS               (the 79-target picker list, SSOT)
-  - app.web.index.html LANG_NAMES  (endonym labels, parsed via node — same
+  - app.web.app.js LANG_NAMES      (endonym labels, parsed via node — same
                                      brace-matching approach as check_i18n.py)
   - app.local_tts.VOICES           (which of LANGS the free tier can speak)
 
@@ -22,15 +22,17 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from app import APP_VERSION  # noqa: E402
+from app import (  # noqa: E402
+    APP_VERSION,
+    local_tts,
+)
 from app.config import LANGS  # noqa: E402
-from app import local_tts  # noqa: E402
 
 DEFAULT_OUTPUT = os.path.join(ROOT, ".local", "site-data", "app.json")
 
 # node: string-aware brace-match `const LANG_NAMES = {...}` and emit it as JSON.
 # Mirrors scripts/check_i18n.py's extract() so both scripts stay in lockstep if
-# index.html's object-literal style ever changes.
+# app.js's object-literal style ever changes.
 _NODE = r"""
 const fs = require('fs');
 const s = fs.readFileSync(process.argv[1], 'utf8');
@@ -55,15 +57,15 @@ throw new Error('unbalanced: ' + anchor);
 
 
 def _lang_names():
-    """{code: endonym} from index.html. Raises if node is unavailable or the
+    """{code: endonym} from app.js. Raises if node is unavailable or the
     object can't be parsed — an app.json with wrong/missing names is worse than
     a build that fails loudly, unlike check_i18n.py's soft-skip (that's a lint
     warning; this writes a file real consumers read)."""
     node = next((c for c in ("node", "node.exe") if _has(c)), None)
     if node is None:
-        raise RuntimeError("node is required to parse LANG_NAMES out of index.html")
-    html = os.path.join(ROOT, "app", "web", "index.html")
-    r = subprocess.run([node, "-e", _NODE, html], capture_output=True, text=True)
+        raise RuntimeError("node is required to parse LANG_NAMES out of app.js")
+    js_path = os.path.join(ROOT, "app", "web", "app.js")
+    r = subprocess.run([node, "-e", _NODE, js_path], capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"LANG_NAMES parse failed: {(r.stderr or '').strip()[:300]}")
     return json.loads(r.stdout)

@@ -6,8 +6,7 @@ curated list fixes that, but it borrows from a hard 50-pair server budget, so th
 one thing that must never happen is a shipped default pushing out something the
 user typed.
 """
-from app.config import (DEFAULT_TERMS, HOTWORDS_LIMIT, merge_hotwords,
-                        parse_hotwords)
+from app.config import DEFAULT_TERMS, HOTWORDS_LIMIT, merge_hotwords, parse_hotwords
 
 
 def test_defaults_ride_along_with_the_user_list():

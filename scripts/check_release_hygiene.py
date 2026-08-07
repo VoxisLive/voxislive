@@ -127,7 +127,7 @@ BINARY_EXT = {".ico", ".png", ".jpg", ".jpeg", ".gif", ".onnx", ".pyc", ".so",
               ".dll", ".exe", ".zip", ".gz", ".woff", ".woff2", ".ttf", ".otf"}
 
 
-def _load_private_patterns() -> list[tuple[str, "re.Pattern[str]"]]:
+def _load_private_patterns() -> list[tuple[str, re.Pattern[str]]]:
     """Forbidden literals supplied out-of-tree (env var + .git private file).
 
     Each literal is matched verbatim (regex-escaped). Keeping them here, rather
@@ -266,7 +266,7 @@ def scan_history(patterns) -> list[str]:
     """Scan the full diff history of public paths for the same signatures."""
     diff = _git("log", "--all", "-p", "--", *sorted(PUBLIC_TOPLEVEL))
     violations = []
-    for lineno, line in enumerate(diff.splitlines(), 1):
+    for line in diff.splitlines():
         if not line.startswith("+"):
             continue
         for label, pat in patterns:

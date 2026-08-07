@@ -10,7 +10,7 @@ from ctypes import POINTER, c_void_p
 from ctypes.wintypes import INT, LPCWSTR
 
 import comtypes
-from comtypes import CLSCTX_ALL, COMMETHOD, GUID, HRESULT, IUnknown, CoCreateInstance
+from comtypes import CLSCTX_ALL, COMMETHOD, GUID, HRESULT, CoCreateInstance, IUnknown
 
 _CLSID_PolicyConfigVistaClient = GUID("{294935CE-F637-4E7C-A41B-AB255460B862}")
 
@@ -19,7 +19,7 @@ class IPolicyConfigVista(IUnknown):
     _iid_ = GUID("{568b9108-44bf-40b4-9006-86afe5b5a620}")
     # Only SetDefaultEndpoint is invoked; the others are present to preserve
     # the vtable ordering.
-    _methods_ = (
+    _methods_ = [
         COMMETHOD([], HRESULT, "GetMixFormat",
                   (["in"], LPCWSTR), (["out"], POINTER(c_void_p))),
         COMMETHOD([], HRESULT, "GetDeviceFormat",
@@ -43,7 +43,7 @@ class IPolicyConfigVista(IUnknown):
                   (["in"], LPCWSTR, "wszDeviceId"), (["in"], INT, "eRole")),
         COMMETHOD([], HRESULT, "SetEndpointVisibility",
                   (["in"], LPCWSTR), (["in"], INT)),
-    )
+    ]
 
 
 # Roles passed to SetDefaultEndpoint: console / multimedia / communications.
@@ -122,7 +122,12 @@ def get_default(kind: str) -> tuple[str, str]:
     from pycaw.pycaw import AudioUtilities
 
     dev = AudioUtilities.GetSpeakers() if kind == "output" else AudioUtilities.GetMicrophone()
-    dev_id = dev.id if hasattr(dev, "id") else dev.GetId()
+    if dev is None:
+        # pycaw returns None when there's no default endpoint for this data
+        # flow (e.g. no output/input device present at all) — rare on real
+        # hardware, but a clear error beats a bare AttributeError below.
+        raise RuntimeError(f"No default {kind} audio device found")
+    dev_id = dev.id
     name = next((n for i, n in list_endpoints() if i == dev_id), "")
     return dev_id, name
 
@@ -163,13 +168,15 @@ def set_default(device_id: str):
     applied: list[int] = []
     for role in _ROLES:
         try:
-            pc.SetDefaultEndpoint(device_id, role)
+            # comtypes builds IPolicyConfigVista's methods at runtime from
+            # _methods_ (COMMETHOD); pyright has no stub for them.
+            pc.SetDefaultEndpoint(device_id, role)  # pyright: ignore[reportAttributeAccessIssue]
             applied.append(role)
         except Exception:
             if prior:
                 for done in applied:
                     try:
-                        pc.SetDefaultEndpoint(prior, done)
+                        pc.SetDefaultEndpoint(prior, done)  # pyright: ignore[reportAttributeAccessIssue]
                     except Exception:
                         pass
             raise

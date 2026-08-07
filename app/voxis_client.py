@@ -22,9 +22,9 @@ import os
 import sys
 import threading
 import time
-from typing import Optional
 
 import requests
+from requests.adapters import HTTPAdapter
 
 from . import APP_VERSION
 from .config import IS_OFFICIAL_RELEASE
@@ -50,7 +50,7 @@ _JWT_ENTROPY: bytes = b"voxis-jwt-v1"
 # requests.Session is thread-safe for our usage (no cookies; urllib3 pools are
 # locked internally) — heartbeat workers and UI threads may share it.
 _http = requests.Session()
-_http_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
+_http_adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10)
 _http.mount("https://", _http_adapter)
 _http.mount("http://", _http_adapter)
 
@@ -74,7 +74,7 @@ _last_quota_reauth_fail: float = 0.0
 
 _log = logging.getLogger("voxis.client")
 _lock: threading.Lock = threading.Lock()
-_jwt: Optional[str] = None
+_jwt: str | None = None
 
 
 def _logfile() -> str:
@@ -149,7 +149,7 @@ def _linux_jwt_entropy() -> bytes:
     return hashlib.sha256(install_secret() + _JWT_ENTROPY).digest()
 
 
-def _read_env_jwt() -> Optional[str]:
+def _read_env_jwt() -> str | None:
     try:
         with open(_ENV_PATH, encoding="utf-8") as f:
             for line in f:
@@ -233,7 +233,7 @@ def set_jwt(token: str):
     _store_jwt(token)
 
 
-def get_jwt() -> Optional[str]:
+def get_jwt() -> str | None:
     with _lock:
         return _jwt
 
@@ -266,7 +266,7 @@ def _write_env(key: str, value: str):
         pass
 
 
-def _jwt_claims(token: str) -> Optional[dict]:
+def _jwt_claims(token: str) -> dict | None:
     import base64
     import json
     try:
@@ -305,7 +305,9 @@ def _maybe_refresh_jwt(token: str) -> str:
     claims = _jwt_claims(token)
     exp = (claims or {}).get("exp")
     try:
-        exp = float(exp)
+        # exp is untrusted JWT-claim JSON; a missing/wrong-typed value raises
+        # TypeError below, caught same as an unparsable one.
+        exp = float(exp)  # pyright: ignore[reportArgumentType]
     except (TypeError, ValueError):
         return token  # no readable exp — nothing to anticipate
     now = time.time()
@@ -325,14 +327,14 @@ def _maybe_refresh_jwt(token: str) -> str:
                 _log.info("jwt refreshed (exp was %.0f h away)", (exp - now) / 3600)
                 return new_token
         else:
-            _log_detail("jwt_refresh http %d" % resp.status_code,
+            _log_detail(f"jwt_refresh http {resp.status_code}",
                         RuntimeError(resp.text[:200]))
     except (requests.RequestException, ValueError) as exc:
         _log_detail("jwt_refresh", exc)
     return token
 
 
-def _valid_jwt() -> Optional[str]:
+def _valid_jwt() -> str | None:
     """Return the stored JWT, proactively clearing it when locally expired.
     Near-expiry tokens are renewed in-line (throttled, best-effort)."""
     token = get_jwt()
@@ -348,7 +350,7 @@ def _auth_headers() -> dict:
     return {"Authorization": "Bearer " + (get_jwt() or ""), "Content-Type": "application/json"}
 
 
-def user_id_from_jwt() -> Optional[str]:
+def user_id_from_jwt() -> str | None:
     """Decodes the user id from the JWT payload locally.
 
     Used to index the BYOK store independently of license/quota state — the
@@ -389,7 +391,7 @@ def _core_error(resp: requests.Response) -> str:
         return f"HTTP {resp.status_code}"
 
 
-def auth_register(email: str, password: str, name: str = "") -> tuple[Optional[str], Optional[str]]:
+def auth_register(email: str, password: str, name: str = "") -> tuple[str | None, str | None]:
     """Registers via auth-core (creates PocketBase user, Stripe customer, free license).
 
     Returns (jwt_token, None) on success or (None, error_message)."""
@@ -423,7 +425,7 @@ def auth_register(email: str, password: str, name: str = "") -> tuple[Optional[s
     return None, _core_error(resp)
 
 
-def pb_login(email: str, password: str) -> tuple[Optional[str], Optional[str]]:
+def pb_login(email: str, password: str) -> tuple[str | None, str | None]:
     """Logs in via auth-core (PocketBase proxy). Returns (jwt_token, error)."""
     if not IS_OFFICIAL_RELEASE:
         return None, "Login is disabled in developer builds."
@@ -446,7 +448,7 @@ def pb_login(email: str, password: str) -> tuple[Optional[str], Optional[str]]:
     return None, _core_error(resp)
 
 
-def verify_session() -> tuple[Optional[dict], Optional[str]]:
+def verify_session() -> tuple[dict | None, str | None]:
     """Verifies the stored JWT against auth-core and returns (quota_dict, error).
 
     Returns (dict, None) on success. Returns (None, message) on every failure —
@@ -476,7 +478,7 @@ def verify_session() -> tuple[Optional[dict], Optional[str]]:
         return None, _net_error()
 
 
-def _get_quota_once() -> tuple[str, Optional[dict]]:
+def _get_quota_once() -> tuple[str, dict | None]:
     """One GET /auth/quota attempt. Returns ("ok", quota) | ("reauth", None) |
     ("fail", None).
 
@@ -501,7 +503,7 @@ def _get_quota_once() -> tuple[str, Optional[dict]]:
         return "fail", None
 
 
-def fetch_app_manifest() -> Optional[dict]:
+def fetch_app_manifest() -> dict | None:
     """Fetches the public app.json manifest (current version + language
     coverage) from voxislive.com/app.json, generated by
     scripts/gen_app_manifest.py.
@@ -524,7 +526,7 @@ def fetch_app_manifest() -> Optional[dict]:
         return None
 
 
-def get_quota() -> Optional[dict]:
+def get_quota() -> dict | None:
     """Fetches the current quota snapshot, repopulating the server's token cache
     when it has expired.
 
@@ -627,14 +629,14 @@ class DeviceBlockedError(RuntimeError):
     device's first-account lookup missed) in which case the caller should
     fall back to the generic quota message."""
 
-    def __init__(self, message: str, first_account: Optional[str] = None,
-                 remaining_minutes: Optional[float] = None):
+    def __init__(self, message: str, first_account: str | None = None,
+                 remaining_minutes: float | None = None):
         super().__init__(message)
         self.first_account = first_account
         self.remaining_minutes = remaining_minutes
 
 
-def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[dict], Optional[str], Optional[str], Optional[dict], Optional[str]]:
+def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[str | None, str | None, str | None, str | None, dict | None, str | None, str | None, dict | None, str | None]:
     """SaaS execution path: retrieves a server-issued translation key. With
     caps='engine-routing' the server picks the engine by TARGET language and also
     returns {engine, model, quality, quota} — plus {workspace} on Qwen (DashScope
@@ -817,7 +819,7 @@ def report_usage_async(session_id: str, delta_minutes: float, source: str,
     ).start()
 
 
-def _post_event(event: str, session_id: Optional[str], meta: Optional[dict]) -> bool:
+def _post_event(event: str, session_id: str | None, meta: dict | None) -> bool:
     """One POST /usage/event attempt. Best-effort; True on 2xx/204."""
     try:
         resp = _http.post(
@@ -838,7 +840,7 @@ def _post_event(event: str, session_id: Optional[str], meta: Optional[dict]) -> 
         return False
 
 
-def report_event(event: str, session_id: Optional[str] = None, meta: Optional[dict] = None) -> None:
+def report_event(event: str, session_id: str | None = None, meta: dict | None = None) -> None:
     """Report a lightweight activation-funnel milestone (app_launched,
     session_start / session_live / session_error / session_end, capture_lost) to
     auth-core. Fire-and-forget; never raises.
@@ -861,7 +863,7 @@ def report_event(event: str, session_id: Optional[str] = None, meta: Optional[di
     _post_event(event, session_id, meta)
 
 
-def report_event_async(event: str, session_id: Optional[str] = None, meta: Optional[dict] = None) -> None:
+def report_event_async(event: str, session_id: str | None = None, meta: dict | None = None) -> None:
     """Fire report_event on a daemon worker so the audio/UI thread never blocks on
     the network (report_event may refresh the JWT). Instant no-op on OSS."""
     if not IS_OFFICIAL_RELEASE:
@@ -943,7 +945,7 @@ def send_report(payload: dict) -> dict:
             data = {}
         return {"ok": True, "ticket": data.get("ticket", ""), "deduped": bool(data.get("deduped"))}
     if resp.status_code in (400, 413, 429):
-        return {"ok": False, "retryable": False, "error": "http_%d" % resp.status_code}
+        return {"ok": False, "retryable": False, "error": f"http_{resp.status_code}"}
     # 5xx or any other unexpected status: transient, let the caller queue + retry.
     return {"ok": False, "retryable": True}
 

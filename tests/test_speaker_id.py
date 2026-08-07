@@ -11,7 +11,6 @@ import numpy as np
 
 from app.speaker_id import SAMPLE_RATE, SpeakerTracker, fbank
 
-
 # ---- fbank ----
 
 def test_fbank_shape_and_finiteness():
@@ -146,7 +145,7 @@ class _FakeEmbedder:
     orthogonal direction."""
 
     def embed(self, wav):
-        level = int(round(float(np.mean(np.abs(wav))) * 10))
+        level = round(float(np.mean(np.abs(wav))) * 10)
         e = np.zeros(8, dtype=np.float32)
         e[min(level, 7)] = 1.0
         return e

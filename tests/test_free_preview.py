@@ -15,9 +15,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app import free_preview  # noqa: E402
-from app import local_tts  # noqa: E402
-from app.pipeline import IncomingPipeline  # noqa: E402
+from app import (
+    free_preview,
+    local_tts,
+)
+from app.pipeline import IncomingPipeline
 
 
 class _FakeVoice:

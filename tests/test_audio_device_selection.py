@@ -1,7 +1,7 @@
 """The device selectors must tell the truth about the system-default sentinel."""
 
 from app import webui
-from app.webui import Bridge, DEFAULT_DEVICE
+from app.webui import DEFAULT_DEVICE, Bridge
 
 
 def _bridge():

@@ -18,8 +18,8 @@ from ctypes.wintypes import BYTE, DWORD, LPCWSTR, WORD
 
 import comtypes
 import numpy as np
-from comtypes import COMMETHOD, COMObject, GUID, IUnknown
-from pycaw.api.audioclient import IAudioClient, WAVEFORMATEX
+from comtypes import COMMETHOD, GUID, COMObject, IUnknown
+from pycaw.api.audioclient import WAVEFORMATEX, IAudioClient
 
 UINT32 = ctypes.c_uint32
 HRESULT = ctypes.HRESULT
@@ -136,7 +136,9 @@ def _activate_exclude(pid: int) -> "IAudioClient":
         raise OSError(f"ActivateAudioInterfaceAsync failed: 0x{hr & 0xFFFFFFFF:08X}")
     if not handler.done.wait(5):
         raise OSError("Process loopback activation timed out")
-    res_hr, unk = op.GetActivateResult()
+    # comtypes builds these COM methods at runtime from _methods_ (COMMETHOD);
+    # pyright has no stub for them.
+    res_hr, unk = op.GetActivateResult()  # pyright: ignore[reportAttributeAccessIssue]
     if res_hr != 0:
         raise OSError(f"GetActivateResult failed: 0x{res_hr & 0xFFFFFFFF:08X}")
     return unk.QueryInterface(IAudioClient)
@@ -207,11 +209,13 @@ class ProcessExcludeLoopback:
             wfx.nBlockAlign = 2
             wfx.nAvgBytesPerSec = self.rate * 2
             wfx.cbSize = 0
-            client.Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK,
+            # comtypes builds IAudioClient's methods at runtime from _methods_
+            # (COMMETHOD); pyright has no stub for them.
+            client.Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK,  # pyright: ignore[reportAttributeAccessIssue]
                               2_000_000, 0, byref(wfx), None)
-            cap = client.GetService(IAudioCaptureClient._iid_).QueryInterface(
+            cap = client.GetService(IAudioCaptureClient._iid_).QueryInterface(  # pyright: ignore[reportAttributeAccessIssue]
                 IAudioCaptureClient)
-            client.Start()
+            client.Start()  # pyright: ignore[reportAttributeAccessIssue]
         except Exception as e:
             self._err = e
             self._ready.set()
@@ -256,7 +260,7 @@ class ProcessExcludeLoopback:
             # Release the audio client and COM apartment on the same thread that
             # created them so each start/stop cycle is leak-free.
             try:
-                client.Stop()
+                client.Stop()  # pyright: ignore[reportAttributeAccessIssue]
             except Exception:
                 pass
             self._has_data.set()  # wake the processor so it can exit

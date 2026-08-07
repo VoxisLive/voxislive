@@ -12,8 +12,8 @@ import time
 
 import pytest
 
-import app.translator as gem
 import app.qwen_translator as qwen
+import app.translator as gem
 
 ALL_MODULES = (gem, qwen)
 ALL_CLASSES = (gem.LiveTranslator, qwen.QwenTranslator)
@@ -256,7 +256,7 @@ class _FakeWS:
     async def __anext__(self):
         if self._incoming:
             return self._incoming.pop(0)
-        while True:
+        while True:  # noqa: ASYNC110 -- fake socket idles forever; the test thread is join(timeout=)'d, not signaled
             await asyncio.sleep(0.02)
 
 
@@ -281,7 +281,7 @@ def test_ws_main_sets_ready_only_after_session_event():
     async def _connect():
         return ws
 
-    tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
+    tr, _events = _run_ws_translator(qwen.QwenTranslator, _connect)
     try:
         assert tr.wait_ready(5.0)
     finally:
@@ -301,7 +301,7 @@ def test_ws_main_terminal_error_breaks_without_retry(caplog):
         return ws
 
     with caplog.at_level(logging.INFO, logger="voxis"):
-        tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
+        tr, _events = _run_ws_translator(qwen.QwenTranslator, _connect)
         tr.join(timeout=6.0)
     assert not tr.is_alive()
     assert len(connects) == 1  # terminal → no reconnect spin
@@ -461,7 +461,7 @@ def test_ws_main_transient_error_retries_then_succeeds(caplog):
         return ws
 
     with caplog.at_level(logging.INFO, logger="voxis"):
-        tr, events = _run_ws_translator(qwen.QwenTranslator, _connect)
+        tr, _events = _run_ws_translator(qwen.QwenTranslator, _connect)
         try:
             assert tr.wait_ready(8.0)   # succeeds on the 2nd attempt after backoff
             assert calls["n"] == 2
@@ -492,7 +492,7 @@ class _FakeSession:
     async def receive(self):
         for r in self._responses:
             yield r
-        while True:
+        while True:  # noqa: ASYNC110 -- fake socket idles forever; the test thread is join(timeout=)'d, not signaled
             await asyncio.sleep(0.02)
 
 

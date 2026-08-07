@@ -56,7 +56,7 @@ SWEEP_INTERVAL = 0.3  # seconds between checks for newly-started "other app" str
 
 
 def _restore_path() -> str:
-    from ... import paths  # noqa: PLC0415 -- deferred, only needed off the hot path
+    from ... import paths
     return paths.user_path("linux_routing_restore.json")
 
 
@@ -95,7 +95,7 @@ def restore_pending_routing() -> None:
     try:
         if not os.path.exists(path):
             return
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             info = json.load(f) or {}
     except (OSError, ValueError):
         _clear_snapshot()

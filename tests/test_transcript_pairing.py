@@ -11,7 +11,7 @@ cumulative ASR does not.
 import threading
 
 import app.webui as webui
-from app.webui import Bridge, LINE_GAP, SRC_LAG_S
+from app.webui import LINE_GAP, SRC_LAG_S, Bridge
 
 
 def _bare_bridge():

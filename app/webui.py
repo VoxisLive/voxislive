@@ -11,10 +11,11 @@ import queue
 import sys
 import threading
 import time
+from collections.abc import Callable
 
 import webview
 
-from . import APP_VERSION, i18n, sysaudio
+from . import APP_VERSION, i18n, store_review, sysaudio, transcript_store
 from .audio_io import (
     Capture,
     detect_virtual_cable,
@@ -34,9 +35,8 @@ from .config import (
     save_config,
 )
 from .i18n import t
-from .pipeline import ModeController
 from .paths import icon_path, legacy_transcripts_dir, transcripts_dir, user_path, web_dir
-from . import store_review, transcript_store
+from .pipeline import ModeController
 
 WEB_DIR = web_dir()
 OBS_FILE = user_path("obs_subtitle.txt")
@@ -64,7 +64,7 @@ def _free_voiced_langs():
     here and keeps one source of truth, so adding a voice to VOICES lights it
     up in the picker with no second list to update."""
     try:
-        from . import local_tts  # noqa: PLC0415 - cheap: registry dict only
+        from . import local_tts
         return [lang for lang in LANGS if local_tts.voice_available(lang)]
     except Exception:  # a broken registry must not take the whole UI down
         _log.exception("voiced-language list unavailable")
@@ -78,7 +78,7 @@ def _voice_choice_langs(cfg):
     of picker codes, empty on any failure — a broken list must dim a hint, never
     take the window down."""
     try:
-        from .config import qwen_can_voice  # noqa: PLC0415
+        from .config import qwen_can_voice
         return [lang for lang in LANGS if qwen_can_voice(cfg, lang)]
     except Exception:
         _log.exception("voice-choice language list unavailable")
@@ -246,8 +246,17 @@ class _LegState:
 
     Video/Game mode only ever uses the incoming leg."""
 
-    __slots__ = ("cur_line", "last_t", "turn_start", "src_buf", "src_done",
-                 "src_marks", "last_src_t", "src_spk", "pending_spk_break")
+    __slots__ = (
+        "cur_line",
+        "last_src_t",
+        "last_t",
+        "pending_spk_break",
+        "src_buf",
+        "src_done",
+        "src_marks",
+        "src_spk",
+        "turn_start",
+    )
 
     def __init__(self):
         self.reset()
@@ -453,7 +462,7 @@ class Bridge:
         self._badge = (t("badge_idle"), "#8593a6", "")
         # Assigned in run() once the main window exists; referenced by
         # win_* controls before then, so default to None.
-        self._main_window = None
+        self._main_window: webview.Window | None = None
         # Serializes the session lifecycle: start/stop/_maybe_restart all run on
         # background threads, so without this a rapid start→stop or a flurry of
         # set_cfg restarts could spawn racing _start threads against one
@@ -539,7 +548,7 @@ class Bridge:
         Everything here is therefore off the audio path. Ordering is preserved
         because this is a single FIFO consumer.
         """
-        import json  # noqa: PLC0415
+        import json
         while not self._dispatch_stop.is_set():
             try:
                 msg = self._push_q.get(timeout=0.1)
@@ -552,8 +561,7 @@ class Bridge:
                 if win is not None:
                     try:
                         win.evaluate_js(
-                            "if(window.onVoxisEvent) window.onVoxisEvent(%s);"
-                            % json.dumps(msg))
+                            f"if(window.onVoxisEvent) window.onVoxisEvent({json.dumps(msg)});")
                     except Exception:
                         pass
             self._flush_obs()
@@ -810,7 +818,7 @@ class Bridge:
         puts the samples exactly where they matter — while text is flowing."""
         if not self._session_start:
             return
-        fn = getattr(self.controller, "translated_audio_seconds", None)
+        fn: Callable[[], float] | None = getattr(self.controller, "translated_audio_seconds", None)
         if not callable(fn):
             return
         try:
@@ -1015,7 +1023,7 @@ class Bridge:
         q = self._last_quota
         try:
             on_cascade = self.controller.current_engine() == "cascade"
-        except Exception:  # noqa: BLE001
+        except Exception:
             # Never let an engine read cost us the quota snapshot: without it the
             # free tier would fall through to the PAID paywall.
             on_cascade = False
@@ -1037,7 +1045,7 @@ class Bridge:
                 # but never assume it). Fall back to the old flag.
                 free_open = q.get("cascade_ready") is True
             wall_free = (free_open is True and self.controller.mode != "meeting")
-        except Exception:  # noqa: BLE001
+        except Exception:
             wall_free = False
         if wall_free:
             mode = self.controller.mode
@@ -1070,7 +1078,7 @@ class Bridge:
             return
         try:
             inc.translator.stop()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         deadline = time.monotonic() + timeout
         try:
@@ -1081,7 +1089,7 @@ class Bridge:
                 if not player_active and staged <= 0.02:
                     break
                 time.sleep(0.2)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
     def _on_session_failed(self):
@@ -1150,8 +1158,8 @@ class Bridge:
         return {
             "version": APP_VERSION,
             "channel": client_channel(),
-            "outputs": [t("default_mic")] + outs,
-            "mics": [t("default_mic")] + mics,
+            "outputs": [t("default_mic"), *outs],
+            "mics": [t("default_mic"), *mics],
             "langs": LANGS,
             # Targets the FREE tier can actually speak. It translates all 79 but
             # only voices those with a registered Piper voice, so the picker can
@@ -1312,7 +1320,7 @@ class Bridge:
         Computed with the SAME merge the engine uses (config.merge_hotwords), so
         the number on screen cannot drift from what rides the session — including
         the case where the combined list is capped."""
-        from .config import HOTWORDS_LIMIT, merge_hotwords  # noqa: PLC0415
+        from .config import HOTWORDS_LIMIT, merge_hotwords
         text = str(text or "")
         builtin_on = bool(self.cfg.get("builtin_terms", True))
         user = len(parse_hotwords(text))
@@ -1328,7 +1336,7 @@ class Bridge:
         voice name would strand the engine (see qwen_translator's module
         docstring). Restarts a running session because the voice is chosen at
         connect time — same reason set_hotwords does."""
-        from .config import VOICE_GENDERS  # noqa: PLC0415
+        from .config import VOICE_GENDERS
         key = {"incoming": "voice_gender_incoming",
                "outgoing": "voice_gender_outgoing"}.get(str(leg))
         if key is None or str(gender) not in VOICE_GENDERS:
@@ -1354,7 +1362,7 @@ class Bridge:
         anything unread, or a first-ever run. The fresh-install case is marked
         seen silently — a brand-new user gets the onboarding tour, and a
         changelog for versions they never ran would be noise."""
-        from . import whatsnew as wn  # noqa: PLC0415
+        from . import whatsnew as wn
         seen = str(self.cfg.get("whatsnew_seen", ""))
         if seen == APP_VERSION:
             return None
@@ -1384,7 +1392,7 @@ class Bridge:
             value = True
         self.cfg[key] = value
         if key == "ui_language":
-            i18n.set_language(value)
+            i18n.set_language(str(value))
         if key == "duck_gain":
             self.controller.set_duck_gain(float(value))
             self._mark_custom()
@@ -1523,6 +1531,7 @@ class Bridge:
         """Fixed allowlist of non-identifying technical context. Never dumps
         config.json or env — only these keys, scrubbed again before send."""
         import platform
+
         from .paths import client_channel
         cfg = self.cfg
         # Engine + model of the LIVE session (not the config selector) — the field
@@ -1547,7 +1556,7 @@ class Bridge:
             "app_version": APP_VERSION,
             "channel": client_channel(),
             "official": IS_OFFICIAL_RELEASE,
-            "os": "%s %s" % (platform.system(), platform.release()),
+            "os": f"{platform.system()} {platform.release()}",
             "os_build": platform.version(),
             "arch": platform.machine(),
             "mode": getattr(self.controller, "mode", None) or "idle",
@@ -1591,7 +1600,7 @@ class Bridge:
         from . import report_scrub
         path = user_path("voxis.log")
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 data = f.read()
         except OSError:
             return ""
@@ -1602,9 +1611,10 @@ class Bridge:
     def _build_report_payload(self, form: dict) -> dict:
         """Assemble + scrub (scrub-v1) the report payload from the modal form.
         Secrets/PII are redacted here so they never leave the device."""
+        import uuid
+
         from . import report_scrub
         from .paths import client_channel
-        import uuid
         form = form or {}
         include_tx = bool(form.get("include_transcript"))
         message = (form.get("message") or "").strip()[:4000]
@@ -1675,7 +1685,7 @@ class Bridge:
         try:
             queued = []
             if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     queued = json.load(f) or []
             corr = payload.get("correlation")
             queued = [q for q in queued if q.get("correlation") != corr]
@@ -1697,7 +1707,7 @@ class Bridge:
         if not os.path.exists(path):
             return 0
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 queued = json.load(f) or []
         except Exception:
             return 0
@@ -1812,16 +1822,20 @@ class Bridge:
         win_resize. Runs on GTK's own main loop via GLib.idle_add -- pywebview
         dispatches js_api calls off that thread, and GTK/GDK calls are only
         safe from the main loop."""
-        if self._maximized:
+        if self._maximized or self._main_window is None:
             return False
         try:
-            from gi.repository import GLib as glib
+            # PyGObject is a system package (not pip-installable), so it has no
+            # stub available for static analysis; only reachable at runtime on
+            # Linux, where it is genuinely present.
+            from gi.repository import GLib as glib  # pyright: ignore[reportMissingImports]
             from webview.platforms.gtk import BrowserView
-            uid = self._main_window.uid
+            win = self._main_window
+            uid = win.uid
             log = logging.getLogger("voxis")
             log.warning("DIAG win_begin_drag called: button=%r x_root=%r y_root=%r "
                         "client_x=%r client_y=%r actual_win_pos=%r", button, x_root, y_root,
-                        client_x, client_y, (self._main_window.x, self._main_window.y))
+                        client_x, client_y, (win.x, win.y))
 
             def _begin():
                 inst = BrowserView.instances.get(uid)
@@ -2006,9 +2020,9 @@ class Bridge:
         if not IS_OFFICIAL_RELEASE:
             return {"ok": False, "quota": None, "error": "Login is disabled in developer builds."}
         import http.server
+        import json as _json
         import secrets
         import webbrowser
-        import json as _json
         from urllib.parse import quote
 
         nonce = secrets.token_urlsafe(24)
@@ -2038,7 +2052,7 @@ class Bridge:
                 # Redirect fallback: if the page's fetch(POST) is blocked (CORS /
                 # Private-Network-Access), app-login navigates here with the token
                 # in the query instead. Same nonce gate.
-                from urllib.parse import urlparse, parse_qs
+                from urllib.parse import parse_qs, urlparse
                 q = parse_qs(urlparse(self.path).query)
                 token = (q.get("token") or [""])[0]
                 ok = bool(token) and (q.get("nonce") or [""])[0] == nonce
@@ -2076,7 +2090,7 @@ class Bridge:
                 if ok:
                     done.set()
 
-            def log_message(self, *a):  # silence default stderr access log
+            def log_message(self, format, *args):  # silence default stderr access log
                 pass
 
         from . import voxis_client
@@ -2263,7 +2277,7 @@ class Bridge:
 
         def work():
             try:
-                from . import voxis_client  # noqa: PLC0415
+                from . import voxis_client
                 key, engine, model, quality, quota, workspace, key_type, fallback, _err = voxis_client.get_session_key(
                     target=target, caps=voxis_client.SESSION_KEY_CAPS)
                 # Never cache an ephemeral token: its new-session window (2 min)
@@ -2350,7 +2364,7 @@ class Bridge:
         Gemini (the engine selector is server-controlled). Dev/BYOK routes locally
         over the stored keys. Raises a localized error if no key is available.
         """
-        from .config import ENGINE_GEMINI, resolve_model, qwen_can_voice
+        from .config import ENGINE_GEMINI, qwen_can_voice, resolve_model
         # Beta engine opt-in (Qwen): only honored when the account is
         # beta-eligible (server flag; dev builds are always eligible) AND the
         # user switched it on. Never touches the normal server-side routing.
@@ -2366,7 +2380,7 @@ class Bridge:
             # the Qwen engine locally — sandbox-style, no server round-trip.
             if beta_qwen and self.cfg.get("qwen_key"):
                 gem = keys.get("gemini")
-                def resolve(target, force_gemini=False):
+                def _resolve_byok_beta(target, force_gemini=False):
                     # Qwen has no VOICE for some targets (text-only tier) — those
                     # would give subtitles with no audio, so prefer Gemini when a
                     # key is available. force_gemini is the mid-session failover
@@ -2383,14 +2397,18 @@ class Bridge:
                     return (ENGINE_QWEN, self.cfg.get("qwen_key"),
                             resolve_model(self.cfg, ENGINE_QWEN), None)
                 # Genuine beta session → let Qwen honor cfg["beta"]["clone"].
-                resolve.beta_active = True
-                return resolve
+                # Read via getattr(resolve, "beta_active", False) by the caller
+                # (pipeline.py) — an ad-hoc attribute on the closure, not a
+                # statically-typed callable shape; see the resolve builder's
+                # docstring for why (four differently-shaped resolvers here).
+                _resolve_byok_beta.beta_active = True  # pyright: ignore[reportFunctionMemberAccess]
+                return _resolve_byok_beta
             if not keys.get("gemini"):
                 raise RuntimeError(t("st_no_key_offline"))
 
-            def resolve(target, force_gemini=False):
+            def _resolve_byok(target, force_gemini=False):
                 return ENGINE_GEMINI, keys.get("gemini"), resolve_model(self.cfg, ENGINE_GEMINI), None
-            return resolve
+            return _resolve_byok
 
         from . import voxis_client
 
@@ -2431,7 +2449,7 @@ class Bridge:
             # SaaS beta: ask the server for the Qwen session key explicitly. The
             # server re-checks the account's beta flag (client is not trusted)
             # and refuses otherwise — then we fall through to normal routing.
-            def resolve(target, force_gemini=False):
+            def _resolve_saas_beta(target, force_gemini=False):
                 err = None
                 if force_gemini:
                     return gemini_key()
@@ -2458,10 +2476,11 @@ class Bridge:
                     self._apply_qwen_workspace(engine, workspace)
                     return engine, key, (model or resolve_model(self.cfg, engine)), fallback
                 raise RuntimeError(err or err2 or t("st_no_key"))
-            resolve.gemini_key_provider = gemini_key_provider
-            # Genuine beta session → let Qwen honor cfg["beta"]["clone"].
-            resolve.beta_active = True
-            return resolve
+            # Both read via getattr(resolve, "...", default) by the caller — see
+            # the docstring note on _resolve_byok_beta.beta_active above.
+            _resolve_saas_beta.gemini_key_provider = gemini_key_provider  # pyright: ignore[reportFunctionMemberAccess]
+            _resolve_saas_beta.beta_active = True  # pyright: ignore[reportFunctionMemberAccess]
+            return _resolve_saas_beta
 
         # Single-round-trip start: /auth/session-key now verifies the token
         # inline on a cold server cache and returns the quota snapshot alongside
@@ -2470,7 +2489,7 @@ class Bridge:
         # surface as localized errors from get_session_key itself.
         # Zero-round-trip start: a fresh prefetched key (warmed at login /
         # target change / previous stop) skips even that one call.
-        def resolve(target, force_gemini=False):
+        def _resolve_saas(target, force_gemini=False):
             if force_gemini:
                 return gemini_key()
             pre = self._pop_prefetched_key(target)
@@ -2497,8 +2516,10 @@ class Bridge:
                     self.cfg["quality_preset"] = quality
                 return "gemini", key, (model or resolve_model(self.cfg, "gemini")), None
             raise RuntimeError(err or err2 or t("st_no_key"))
-        resolve.gemini_key_provider = gemini_key_provider
-        return resolve
+        # Read via getattr(resolve, "gemini_key_provider", None) by the caller —
+        # see the docstring note on _resolve_byok_beta.beta_active above.
+        _resolve_saas.gemini_key_provider = gemini_key_provider  # pyright: ignore[reportFunctionMemberAccess]
+        return _resolve_saas
 
     def _start(self, mode, consented=False):
         # Single-flight: serialize the whole transition so a rapid start→stop or
@@ -2622,7 +2643,7 @@ class Bridge:
                 self.cfg["review_prompted"] = True
                 self._put_event(("review", None))
             save_config(self.cfg)
-        except Exception:  # noqa: BLE001 - never let this break stop()
+        except Exception:
             logging.getLogger("voxis").debug("review prompt bookkeeping failed",
                                              exc_info=True)
 
@@ -2649,7 +2670,7 @@ class Bridge:
 
     def _preview_thread(self):
         try:
-            from . import free_preview  # noqa: PLC0415 - lazy: pulls sherpa
+            from . import free_preview
             with self._text_lock:
                 line = self._last_line
             if not line.strip():
@@ -2666,7 +2687,7 @@ class Bridge:
             pcm = free_preview.synth_pcm16(lang, line)
             self._play_clip(pcm, "playing")
             self._preview_event("done", None)
-        except Exception as exc:  # noqa: BLE001 - a favour asked of the user must never crash it
+        except Exception as exc:
             logging.getLogger("voxis").info("free-voice preview failed: %s", exc)
             self._preview_event("error", "failed")
         finally:
@@ -2693,7 +2714,7 @@ class Bridge:
                 return
             self._play_clip(pcm, "playing_pro")
             self._preview_event("done", None)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logging.getLogger("voxis").info("pro-voice replay failed: %s", exc)
             self._preview_event("error", "failed")
         finally:
@@ -2705,7 +2726,7 @@ class Bridge:
         borrows the live Player (and the paid voice stands down for the clip's
         length); afterwards it opens its own — the A/B card lives after the
         session, because that is when the user is actually looking at Voxis."""
-        from . import free_preview  # noqa: PLC0415
+        from . import free_preview
 
         secs = free_preview.duration_seconds(pcm)
         self._preview_event(state, None, seconds=round(secs, 1))
@@ -2893,6 +2914,7 @@ class Bridge:
             if not silent:
                 self._emit_status(t("no_transcript"))
             return False
+        assert record is not None  # record is built iff has_turns, and that branch returned above
         primary = self._transcript_dir()
         # Save into this session's own folder (same one the recorder wrote its WAVs
         # into), so the whole session stays self-contained. subdir may be None for a
@@ -3029,7 +3051,7 @@ class Bridge:
         if not path:
             return {"ok": False, "error": "not_found"}
         try:
-            os.startfile(path)  # noqa: S606 — Windows shell open, path validated
+            os.startfile(path)
             return {"ok": True}
         except OSError as e:
             _log.exception("open_transcript failed")
@@ -3069,13 +3091,15 @@ class Bridge:
         if win is None:
             return {"ok": False, "error": "no_window"}
         try:
-            sel = win.create_file_dialog(webview.FOLDER_DIALOG)
+            sel = win.create_file_dialog(webview.FileDialog.FOLDER)
         except Exception:
             _log.exception("choose_transcript_dir dialog failed")
             return {"ok": False, "error": "dialog_failed"}
         if not sel:
             return {"ok": False, "cancelled": True}
-        folder = sel[0] if isinstance(sel, (list, tuple)) else sel
+        # create_file_dialog always returns a sequence of selected paths (never
+        # a bare str), even for a single-selection FileDialog.FOLDER dialog.
+        folder = sel[0]
         # Writability probe: create + remove a temp file so we never persist a
         # directory the app cannot actually write transcripts into.
         probe = os.path.join(folder, ".voxis_write_test")
@@ -3252,6 +3276,8 @@ class Bridge:
 
     # ---------- main-window controls (custom title bar) ----------
     def win_minimize(self):
+        if self._main_window is None:
+            return True
         try:
             self._main_window.minimize()
         except Exception:
@@ -3269,6 +3295,8 @@ class Bridge:
         # flag stuck True forever — which also permanently no-ops win_resize).
         # Capturing the pre-call state up front and negating that instead makes
         # the outcome independent of the event thread's timing.
+        if self._main_window is None:
+            return True
         try:
             was_max = self._maximized
             if was_max:
@@ -3281,6 +3309,8 @@ class Bridge:
         return True
 
     def win_close(self):
+        if self._main_window is None:
+            return True
         try:
             self._main_window.destroy()
         except Exception:
@@ -3500,7 +3530,7 @@ class Bridge:
             pass
         # Lazy: translator pulls google.genai; a module-top import would put the
         # heavy runtime back on the cold start this codebase deliberately avoids.
-        from .translator import get_usage  # noqa: PLC0415
+        from .translator import get_usage
         in_sec, _o, usd = get_usage()
         speaking = any(getattr(getattr(p, "_source", None), "speech_active", False)
                        for p in self.controller._pipelines)
@@ -3809,6 +3839,8 @@ def run(cfg):
         background_color="#0b0c10", frameless=True, easy_drag=False,
         resizable=True, **geo_kwargs,
     )
+    if window is None:
+        raise RuntimeError("webview.create_window() returned None — main window creation failed")
     bridge._main_window = window
     bridge._win_geom = {"w": win_w, "h": win_h, **{k: geo[k] for k in ("x", "y") if k in geo_kwargs}}
     # Persist size/position/maximized across launches.

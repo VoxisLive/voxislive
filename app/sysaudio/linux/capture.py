@@ -125,6 +125,7 @@ class PipeWireCapture:
             self._err = e
             self._has_data.set()
             return
+        assert self._proc.stdout is not None  # stdout=subprocess.PIPE was passed above
         try:
             while self._run:
                 buf = self._proc.stdout.read(block)

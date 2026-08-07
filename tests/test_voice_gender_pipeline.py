@@ -36,7 +36,7 @@ def built(monkeypatch):
     monkeypatch.setattr(P, "Capture", _Stub)
     monkeypatch.setattr(P, "find_device", lambda *a, **kw: None)
     monkeypatch.setattr(P.sysaudio, "make_virtual_mic", lambda: None)
-    monkeypatch.setattr(P.sysaudio, "snapshot_own_audio_streams", lambda: [])
+    monkeypatch.setattr(P.sysaudio, "snapshot_own_audio_streams", list)
     monkeypatch.setattr(P, "_GatedSource", _Stub)
 
     def _build(cfg):

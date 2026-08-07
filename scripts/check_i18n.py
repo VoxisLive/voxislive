@@ -1,6 +1,6 @@
 """i18n cross-language parity / drift checker (C5).
 
-The Python engine (app/i18n.py STRINGS) and the web UI (app/web/index.html
+The Python engine (app/i18n.py STRINGS) and the web UI (app/web/i18n.js
 I18N + I18N_EXTRA) each carry 16 per-language string tables. A key present in
 some languages but missing in others silently degrades to English / the raw key
 for those users — exactly the fragile Python<->JS split CLAUDE.md warns about,
@@ -74,8 +74,8 @@ def js_blocks():
                  if _runs([c, "--version"])), None)
     if node is None:
         return None
-    html = os.path.join(ROOT, "app", "web", "index.html")
-    r = subprocess.run([node, "-e", _NODE, html], capture_output=True, text=True)
+    js_path = os.path.join(ROOT, "app", "web", "i18n.js")
+    r = subprocess.run([node, "-e", _NODE, js_path], capture_output=True, text=True)
     if r.returncode != 0:
         print("  WARN  JS parse failed:", (r.stderr or "").strip()[:200])
         return None
@@ -109,7 +109,7 @@ def main():
     py = {lang: set(d.keys()) for lang, d in i18n.STRINGS.items()}
     rc = _report("Python  app/i18n.py STRINGS", py)
     print()
-    rc |= _report("JS  app/web/index.html  I18N + I18N_EXTRA + I18N_VOICE_TERMS",
+    rc |= _report("JS  app/web/i18n.js  I18N + I18N_EXTRA + I18N_VOICE_TERMS",
                   js_blocks())
     print("\n" + ("i18n drift detected (exit 1)." if rc else "No i18n drift."))
     return rc

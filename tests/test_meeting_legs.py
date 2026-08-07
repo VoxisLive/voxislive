@@ -13,9 +13,9 @@ direction prefix in any export.
 """
 import threading
 
-import app.webui as webui
-from app.webui import Bridge, LINE_GAP
 import app.transcript_store as ts
+import app.webui as webui
+from app.webui import LINE_GAP, Bridge
 
 
 def _bridge(mode="meeting"):

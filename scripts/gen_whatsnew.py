@@ -79,7 +79,7 @@ def build(version: str, keep: bool) -> str:
         if lang and bullets(block):
             per_lang[lang] = bullets(block)
 
-    from app import i18n  # noqa: PLC0415 - after ROOT is on sys.path
+    from app import i18n
     missing = sorted(set(i18n.STRINGS) - set(per_lang))
     if missing:
         # Not fatal: entry() falls back to English. But it IS drift, and the
@@ -91,7 +91,7 @@ def build(version: str, keep: bool) -> str:
     src = open(TARGET, encoding="utf-8").read()
     existing = {}
     if keep:
-        from app import whatsnew  # noqa: PLC0415
+        from app import whatsnew
         existing = {v: d for v, d in whatsnew.NOTES.items() if v != version}
         # Keep the newest few and drop the rest: enough to cover a user who
         # skipped several Store updates, bounded so the table cannot grow with
@@ -105,7 +105,7 @@ def build(version: str, keep: bool) -> str:
 
     out = io.StringIO()
     out.write("NOTES = {\n")
-    for ver, langs in list(existing.items()) + [(version, per_lang)]:
+    for ver, langs in [*existing.items(), (version, per_lang)]:
         out.write(f'    "{ver}": {{\n')
         for lang, items in langs.items():
             out.write(f'        "{lang}": [\n')

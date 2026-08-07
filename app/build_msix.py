@@ -20,10 +20,10 @@ the Store) — not secrets. The Publisher CN must match exactly or the upload is
 rejected.
 """
 
+import pathlib
 import re
 import shutil
 import subprocess
-import pathlib
 from xml.sax.saxutils import escape
 
 from PIL import Image
@@ -144,7 +144,7 @@ def generate_assets():
         fill = 0.84 if w == h else 0.60          # leave padding around the glyph
         box = int(min(w, h) * fill)
         icon = src.copy()
-        icon.thumbnail((box, box), Image.LANCZOS)
+        icon.thumbnail((box, box), Image.Resampling.LANCZOS)
         canvas.paste(icon, ((w - icon.width) // 2, (h - icon.height) // 2), icon)
         canvas.save(ASSETS_DIR / name, "PNG")
     print(f"[+] Generated {len(ASSET_SIZES)} logo assets -> {ASSETS_DIR}")
@@ -155,7 +155,7 @@ def write_manifest(version: str):
     # produce a malformed manifest and certification dies on an error that says
     # nothing about the name. Escape here, keep APP_DISPLAY the literal reserved
     # string (it has to match Partner Center character for character).
-    APP_DISPLAY_XML = escape(APP_DISPLAY)  # noqa: N806 - mirrors the template name
+    APP_DISPLAY_XML = escape(APP_DISPLAY)
     manifest = f"""<?xml version="1.0" encoding="utf-8"?>
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"

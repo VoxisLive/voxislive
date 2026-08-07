@@ -2,9 +2,15 @@
 
 from pathlib import Path
 
+WEB_DIR = Path(__file__).parents[1] / "app" / "web"
 
-HTML = (Path(__file__).parents[1] / "app" / "web" / "index.html").read_text(
-    encoding="utf-8")
+# index.html now only carries markup; CSS/JS/i18n data live in sibling files
+# (app.css / app.js / i18n.js). Concatenate them so string-search assertions
+# below don't care which physical file a given snippet lives in.
+HTML = "\n".join(
+    (WEB_DIR / name).read_text(encoding="utf-8")
+    for name in ("index.html", "app.css", "i18n.js", "app.js")
+)
 
 
 def test_translation_targets_have_truthful_labels_and_working_swap_button():

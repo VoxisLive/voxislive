@@ -77,7 +77,7 @@ def make_ducker(routing_handle=None):
     if sys.platform == "win32":
         from ..session_duck import SessionDucker
         return SessionDucker()
-    from .linux.ducking import LinuxSessionDucker  # noqa: PLC0415
+    from .linux.ducking import LinuxSessionDucker
     return LinuxSessionDucker(routing_handle)
 
 
@@ -93,7 +93,7 @@ def make_process_loopback(on_chunk, *, rate: int = 16000, routing_handle=None):
     if sys.platform == "win32":
         from ..process_loopback import ProcessExcludeLoopback
         return ProcessExcludeLoopback(on_chunk, rate=rate)
-    from .linux.capture import PipeWireCapture  # noqa: PLC0415
+    from .linux.capture import PipeWireCapture
     return PipeWireCapture(on_chunk, routing_handle.capture_monitor, rate=rate)
 
 
@@ -122,10 +122,10 @@ def make_capture_routing(real_sink: str | None = None):
     _require()
     if sys.platform == "win32":
         return None
-    from .linux import routing  # noqa: PLC0415
+    from .linux import routing
     if real_sink is None:
-        import os  # noqa: PLC0415
-        import subprocess  # noqa: PLC0415
+        import os
+        import subprocess
         real_sink = subprocess.run(
             ["pactl", "get-default-sink"], capture_output=True, text=True,
             timeout=5, check=True, env={**os.environ, "LC_ALL": "C"}).stdout.strip()
@@ -137,7 +137,7 @@ def teardown_capture_routing(handle) -> None:
     Linux setup that never completed)."""
     if handle is None:
         return
-    from .linux import routing  # noqa: PLC0415
+    from .linux import routing
     routing.teardown_capture_routing(handle)
 
 
@@ -149,7 +149,7 @@ def make_virtual_mic():
     _require()
     if sys.platform == "win32":
         return None
-    from .linux import virtual_mic  # noqa: PLC0415
+    from .linux import virtual_mic
     return virtual_mic.create_virtual_mic()
 
 
@@ -157,7 +157,7 @@ def snapshot_own_audio_streams():
     """Linux-only baseline for `pin_newest_own_stream_to_mic`, taken BEFORE
     constructing the outgoing Player. Windows: returns None (unused there)."""
     if sys.platform != "win32" and is_supported():
-        from .linux import virtual_mic  # noqa: PLC0415
+        from .linux import virtual_mic
         return virtual_mic.snapshot_own_streams()
     return None
 
@@ -169,7 +169,7 @@ def pin_newest_own_stream_to_mic(before, handle) -> str | None:
     handle (no-op there -- Player already targets the real VB-CABLE device)."""
     if sys.platform == "win32" or handle is None:
         return None
-    from .linux import virtual_mic  # noqa: PLC0415
+    from .linux import virtual_mic
     return virtual_mic.pin_newest_own_stream(before or set(), handle.sink_name)
 
 
@@ -177,7 +177,7 @@ def teardown_virtual_mic(handle) -> None:
     """Unwinds a `make_virtual_mic` result. No-op for None."""
     if handle is None:
         return
-    from .linux import virtual_mic  # noqa: PLC0415
+    from .linux import virtual_mic
     virtual_mic.teardown_virtual_mic(handle)
 
 
@@ -214,8 +214,10 @@ def restore_pending_ducking() -> None:
         from ..endpoint_volume import restore_pending as restore_output_level
         restore_output_level()
     elif sys.platform.startswith("linux"):
-        from .linux import routing  # noqa: PLC0415
-        from .linux import virtual_mic  # noqa: PLC0415
+        from .linux import (
+            routing,
+            virtual_mic,
+        )
         routing.restore_pending_routing()
         virtual_mic.restore_pending_virtual_mic()
 

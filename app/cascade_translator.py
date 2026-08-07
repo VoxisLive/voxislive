@@ -133,7 +133,7 @@ class CascadeTranslator(threading.Thread):
         self.on_status = on_status
         self.on_fatal = on_fatal  # read by the inner leg via the property below
         self._stopping = threading.Event()
-        self._sentq: "queue.Queue[tuple[str, float]]" = queue.Queue(maxsize=32)
+        self._sentq: queue.Queue[tuple[str, float]] = queue.Queue(maxsize=32)
         self._src_quiet_since = 0.0    # 0 = source currently loud
         self._last_pcm_ts = 0.0        # last frame of ANY kind (gated stream)
         self._play_deadline = 0.0      # when already-emitted audio finishes
@@ -249,6 +249,7 @@ class CascadeTranslator(threading.Thread):
                 pass
 
     def _synth_loop(self):
+        assert self._tts is not None  # start() only launches this thread when set
         while not self._stopping.is_set():
             if self._play_deadline - time.monotonic() > LOOKAHEAD_S:
                 time.sleep(0.05)   # player has audio — let merges accumulate

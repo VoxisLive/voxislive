@@ -66,7 +66,7 @@ def restore_pending() -> None:
     try:
         if not os.path.exists(_RESTORE_PATH):
             return
-        with open(_RESTORE_PATH, "r", encoding="utf-8") as f:
+        with open(_RESTORE_PATH, encoding="utf-8") as f:
             entries = (json.load(f) or {}).get("pids") or {}
     except (OSError, ValueError):
         _clear_snapshot()

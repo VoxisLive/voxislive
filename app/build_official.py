@@ -6,16 +6,16 @@ Automates production compiling, source hardening, configuration provisioning,
 and packaging into a distributable installer or ZIP bundle.
 """
 
-import os
-import sys
 import importlib.util
 import json
+import os
+import pathlib
+import re
 import shutil
 import subprocess
-import re
-import zipfile
-import pathlib
+import sys
 import urllib.request
+import zipfile
 
 # Define Paths
 APP_DIR = pathlib.Path(__file__).resolve().parent
@@ -161,7 +161,7 @@ def build_seed_config() -> dict:
     """Load the developer's root config.json and reduce it to a clean production
     seed via app.config.sanitize_seed_config (whitelist-only; see P0 #8)."""
     import app.config as appconfig  # local: avoid importing the app at module load
-    with open(CONFIG_JSON, "r", encoding="utf-8") as f:
+    with open(CONFIG_JSON, encoding="utf-8") as f:
         raw = json.load(f)
     if not isinstance(raw, dict):
         raise ValueError(f"{CONFIG_JSON} is not a JSON object")
@@ -237,7 +237,8 @@ def main():
             pyinstaller_cmd = ["pyinstaller"]
 
         # Formulate precise PyInstaller arguments as requested
-        cmd = pyinstaller_cmd + [
+        cmd = [
+            *pyinstaller_cmd,
             "--noconfirm",
             "--onedir",
             "--windowed",

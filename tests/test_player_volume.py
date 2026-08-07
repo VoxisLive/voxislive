@@ -10,7 +10,7 @@ import threading
 
 import numpy as np
 
-from app.audio_io import Player, _Ring, _mix_to_stereo
+from app.audio_io import Player, _mix_to_stereo, _Ring
 
 
 def _bare_player(gain: float) -> Player:

@@ -41,8 +41,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.local_tts import (_ASSET_URL, _find_onnx,  # noqa: E402  single source
-                          build_tts)
+from app.local_tts import _ASSET_URL, _find_onnx, build_tts
 
 # Voices whose real licence is NOT in their Piper model card and forbids us.
 # The card only names the dataset; the grant lives upstream, so the keyword
@@ -309,6 +308,7 @@ def _probe_worker(voice_dir: str, text: str) -> int:
     pinned dir still phonemizes later languages correctly -- measured, 1.3%
     duration drift vs a fresh process. Do not "fix" that as a bug.)"""
     import json
+
     import numpy as np
     samples, rate, elapsed = speak(voice_dir, text)
     dur = len(samples) / float(rate) if rate else 0.0

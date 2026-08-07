@@ -73,7 +73,7 @@ def play_standalone(cfg: dict, pcm: bytes) -> float:
     Opens a short-lived Player on the user's configured output device (the same
     class the session uses, so gain and limiter are identical) and blocks for the
     length of the clip. Callers must be off the UI thread."""
-    from . import audio_io  # noqa: PLC0415 - heavy (PortAudio); session path only
+    from . import audio_io
 
     dev = audio_io.find_device(cfg["devices"]["headphones_output"], "output",
                                fallback_default=True)

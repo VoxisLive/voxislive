@@ -22,11 +22,11 @@ Install:
 import os
 import sys
 
-from Tea.exceptions import TeaException, UnretryableException
 from alibabacloud_bssopenapi20171214 import models as bss_models
 from alibabacloud_bssopenapi20171214.client import Client as BssOpenApiClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
+from Tea.exceptions import TeaException, UnretryableException
 
 ENDPOINT = "business.aliyuncs.com"
 PAGE_SIZE = 100
@@ -55,11 +55,19 @@ class AliyunBillingChecker:
         runtime = util_models.RuntimeOptions()
         while True:
             request = bss_models.QueryResourcePackageInstancesRequest(
-                product_code=product_code or None,
+                # The SDK's own codegen'd signature is `product_code: str = None`
+                # (an invalid-but-common implicit-Optional pattern) — None is
+                # the documented way to omit the filter.
+                product_code=product_code or None,  # pyright: ignore[reportArgumentType]
                 page_num=page_num,
                 page_size=PAGE_SIZE,
             )
-            response = self.client.query_resource_package_instances_with_options(request, runtime)
+            # The SDK's generated client method is typed against
+            # darabonba.runtime.RuntimeOptions, a structurally-identical
+            # sibling class from a different Alibaba Cloud SDK package than
+            # the one its own docs/examples import (alibabacloud_tea_util).
+            response = self.client.query_resource_package_instances_with_options(
+                request, runtime)  # pyright: ignore[reportArgumentType]
             data = response.body.data
             batch = (data.instances.instance if data and data.instances else None) or []
             instances.extend(batch)
@@ -119,11 +127,11 @@ class AliyunBillingChecker:
         sep = "-+-".join("-" * w for w in widths)
 
         def fmt_row(cells):
-            return " | ".join(c.ljust(w) for c, w in zip(cells, widths))
+            return " | ".join(c.ljust(w) for c, w in zip(cells, widths, strict=True))
 
         print(fmt_row(headers))
         print(sep)
-        for inst, row in zip(instances, rows):
+        for inst, row in zip(instances, rows, strict=True):
             print(fmt_row(row))
             remaining = _to_float(inst.remaining_amount)
             total = _to_float(inst.total_amount)

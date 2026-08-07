@@ -10,9 +10,14 @@ import time
 import numpy as np
 import pytest
 
-from app.cascade_translator import (CLAUSE_FLUSH_CHARS, MAX_BUF,
-                                    CascadeTranslator, SentenceAssembler,
-                                    _resample_to_out, pick_speed)
+from app.cascade_translator import (
+    CLAUSE_FLUSH_CHARS,
+    MAX_BUF,
+    CascadeTranslator,
+    SentenceAssembler,
+    _resample_to_out,
+    pick_speed,
+)
 from app.i18n import t
 
 

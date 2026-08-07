@@ -13,7 +13,6 @@ import pytest
 
 from app import byok_store, device_id, paths, secret_crypto, voxis_client
 
-
 # --- secret_crypto (platform-agnostic Fernet) -------------------------------
 
 def test_fernet_round_trip():
@@ -24,8 +23,10 @@ def test_fernet_round_trip():
 
 
 def test_fernet_wrong_entropy_fails():
+    from cryptography.fernet import InvalidToken
+
     blob = secret_crypto.fernet_encrypt(b"x", b"\x11" * 32)
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidToken):
         secret_crypto.fernet_decrypt(blob, b"\x22" * 32)
 
 

@@ -74,8 +74,8 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
         # must NOT ride along on the standard route: clone is gated on
         # beta_active (a genuine server-authorized beta session) so a stale
         # beta.clone from an old soak can't silently mis-gender speakers.
+        from .config import QWEN_WORKSPACE, merge_hotwords
         from .qwen_translator import QwenTranslator  # lazy: keep websockets off cold start
-        from .config import QWEN_WORKSPACE, merge_hotwords  # noqa: PLC0415
         beta = cfg.get("beta") or {}
         clone = beta.get("clone", "off") if beta_active else "off"
         tr = QwenTranslator(

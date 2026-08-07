@@ -28,7 +28,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.pipeline import ModeController  # noqa: E402
+from app.pipeline import ModeController
 
 
 # ---- duck-typed fakes (match what _is_session_live reads) ----
@@ -184,7 +184,7 @@ def main():
         except AssertionError as e:
             failed += 1
             print(f"  FAIL  {t.__name__}: {e}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             failed += 1
             print(f"  ERROR {t.__name__}: {type(e).__name__}: {e}")
     print(f"\n{len(tests) - failed}/{len(tests)} billing invariants passed.")

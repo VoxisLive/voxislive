@@ -1,0 +1,64 @@
+[tool.ruff]
+target-version = "py311"  # CI's oldest tested interpreter (.github/workflows/quality.yml matrix)
+line-length = 100
+exclude = ["build", "dist", "production_release", ".venv", ".venv-linux", ".flatpak-builder", "client"]
+
+[tool.ruff.lint]
+# Curated, not "everything ruff has": a blanket select on an i18n-heavy,
+# comment-dense, long-lived codebase produces mostly noise (line-length and
+# ambiguous-unicode alone were ~1,500 of ~1,900 hits on a first pass — the
+# project deliberately writes long why-comments and ships 23 UI locales with
+# non-Latin scripts). This set is chosen to catch real bugs cheaply:
+select = [
+  "E4", "E7", "E9",  # pycodestyle: import placement, statement structure, syntax errors
+  "F",               # pyflakes: unused imports/vars, undefined names, unreachable code
+  "B",               # flake8-bugbear: mutable defaults, loop-var misuse, broad except patterns
+  "C4",              # flake8-comprehensions
+  "UP",              # pyupgrade: modern syntax for the py311+ floor
+  "I",               # isort: import ordering
+  "PIE",             # misc anti-patterns (redundant bool checks, etc.)
+  "ASYNC",           # asyncio misuse — real signal here: base_translator.py/qwen_translator.py/
+                      # translator.py/webui.py all mix async engine sessions with threads
+  "RUF005", "RUF012", "RUF021", "RUF023", "RUF046", "RUF059", "RUF100",
+]
+ignore = [
+  "RUF001", "RUF002", "RUF003",  # ambiguous-unicode-*: false positive on every non-Latin
+                                   # string/comment (Cyrillic, Turkish, CJK) in a 23-locale UI
+]
+
+# Not enabled, deliberately, rather than silently absent:
+#   E501 (line-too-long)  — ~1,000 hits; this codebase's convention is long why-comments
+#                            (see CLAUDE.md "Conventions"), not a line budget. Revisit only
+#                            alongside an actual reformat pass, not as a lint side effect.
+#   N (naming)             — 23 hits, mostly COM/Win32 interop (win_audio.py, process_loopback.py)
+#                            and pywebview callback signatures matching external APIs.
+#   BLE001 (blind-except)  — 228 hits. Real signal exists in there, but triaging "deliberate
+#                            fail-soft/fail-open catch-all" (this codebase's dominant pattern,
+#                            see CLAUDE.md fail-soft/fail-closed notes throughout) vs. an
+#                            accidentally-swallowed bug is a one-by-one review, not a lint
+#                            default. Left for a dedicated follow-up pass.
+#   S (flake8-bandit)      — belongs to a security-review pass (see the security-review skill),
+#                            not bundled into general lint.
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+# ctypes/comtypes _fields_/_methods_ are a runtime API contract (the ctypes
+# machinery reads the class attribute directly) — must stay a plain list,
+# not a ClassVar-annotated one; the class itself IS the mutable-shape struct.
+# (comtypes' own .pyi stub declares _methods_/_fields_ as list[...], which is
+# also why these are lists rather than tuples — see the pyright pass.)
+"app/process_loopback.py" = ["RUF012"]
+"app/win_audio.py" = ["RUF012"]
+
+[tool.pyright]
+# Scope: shipped engine + release/bench tooling. NOT tests/ — its monkeypatch-
+# heavy fixtures (dynamic attributes bolted onto real classes for test doubles)
+# throw ~150 errors of a fundamentally different, lower-value kind (correct at
+# runtime, foreign to static typing) than the ~125 found and fixed in app/ +
+# scripts/ on 2026-08-07. Left for a dedicated follow-up if ever worth doing.
+include = ["app", "scripts"]
+exclude = ["**/__pycache__", "build", "dist", "production_release", ".venv", ".venv-linux"]
+pythonVersion = "3.11"  # CI's oldest tested interpreter (.github/workflows/quality.yml matrix)
+typeCheckingMode = "basic"

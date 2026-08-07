@@ -20,6 +20,7 @@ import asyncio
 import contextlib
 import threading
 from types import SimpleNamespace
+from typing import ClassVar
 
 import pytest
 
@@ -59,7 +60,7 @@ class _FakeResp:
 def _session_key_env(monkeypatch, body):
     monkeypatch.setattr(vc, "IS_OFFICIAL_RELEASE", True)
     monkeypatch.setattr(vc, "_valid_jwt", lambda: "tok")
-    monkeypatch.setattr(vc, "_device_headers", lambda: {})
+    monkeypatch.setattr(vc, "_device_headers", dict)
     seen = {}
 
     class _FakeHttp:
@@ -102,7 +103,7 @@ class _FakeClient:
     """Stands in for genai.Client: records construction, hands out an async-CM
     connection whose object carries the api_key it was opened with."""
 
-    instances: list = []
+    instances: ClassVar[list] = []
 
     def __init__(self, api_key=None, http_options=None):
         self.api_key = api_key

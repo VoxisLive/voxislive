@@ -9,9 +9,9 @@ wasted work — see _on_text_locked).
 """
 import threading
 
-from app.pipeline import IncomingPipeline, ModeController
 import app.webui as webui
-from app.webui import Bridge, LINE_GAP
+from app.pipeline import IncomingPipeline, ModeController
+from app.webui import LINE_GAP, Bridge
 
 
 class _FakeStager:

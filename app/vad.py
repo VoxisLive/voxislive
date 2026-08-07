@@ -9,6 +9,7 @@ import hashlib
 import os
 import tempfile
 import urllib.request
+from typing import cast
 
 import numpy as np
 import onnxruntime as ort
@@ -99,7 +100,9 @@ class SileroVAD:
             },
         )
         self._context = x[-self.CONTEXT:]
-        return float(out[0][0])
+        # This model's "output" is always a dense ndarray; onnxruntime's own
+        # return type is a broad union (incl. SparseTensor) it can't narrow.
+        return float(cast(np.ndarray, out)[0][0])
 
 
 class SpeechGate:

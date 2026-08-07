@@ -498,7 +498,7 @@ def _sanitize_devices(cfg: dict) -> bool:
     if not isinstance(devs, dict):
         return False
     try:
-        import sounddevice as sd  # noqa: PLC0415
+        import sounddevice as sd
         devices = sd.query_devices()
     except Exception as exc:
         _log_failure("device sanitize: enumeration failed", exc)
@@ -507,7 +507,7 @@ def _sanitize_devices(cfg: dict) -> bool:
         return False
     has_out = any(d.get("max_output_channels", 0) > 0 for d in devices)
     has_in = any(d.get("max_input_channels", 0) > 0 for d in devices)
-    from .audio_io import _linux_safe_indices, find_device  # noqa: PLC0415
+    from .audio_io import _linux_safe_indices, find_device
     safe = _linux_safe_indices()  # None off Linux, or when nothing "safe" was found
     changed = False
     for field, kind, has_kind in (("headphones_output", "output", has_out),
@@ -565,7 +565,7 @@ def load_config() -> dict:
         _seed_from_bundle()
     if os.path.exists(CONFIG_PATH):
         try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            with open(CONFIG_PATH, encoding="utf-8") as f:
                 raw = json.load(f)
             if not isinstance(raw, dict):
                 # Valid JSON but not an object (e.g. "[]"/"null" from a corrupt or

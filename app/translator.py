@@ -96,6 +96,11 @@ class LiveTranslator(BaseTranslator):
                  model: str = GEMINI_LIVE_MODEL, key_provider=None):
         super().__init__(api_key, target_lang, on_audio, on_text, on_status,
                          rotate_minutes=rotate_minutes, name=name)
+        # Matches QwenTranslator/CascadeTranslator's self-declared .engine;
+        # engines.py's factory overwrites it with the same value right after
+        # construction (kept there, not hardcoded here, since that call site
+        # is the single source of truth for which engine string was routed).
+        self.engine = "gemini"
         self.voice = voice
         self.temperature = temperature
         self.model = model
@@ -168,8 +173,11 @@ class LiveTranslator(BaseTranslator):
                 api_key=self.api_key,
                 http_options=types.HttpOptions(
                     async_client_args={"compression": None}))
-        return self._client.aio.live.connect(model=self.model,
-                                             config=self._build_config())
+        # _build_config() assembles a plain dict dynamically (conditional keys);
+        # the SDK's LiveConnectConfigDict TypedDict accepts this shape at
+        # runtime but pyright can't verify a non-literal dict against it.
+        return self._client.aio.live.connect(
+            model=self.model, config=self._build_config())  # pyright: ignore[reportArgumentType]
 
     @contextlib.asynccontextmanager
     async def _ephemeral_session_cm(self):
@@ -192,8 +200,8 @@ class LiveTranslator(BaseTranslator):
             http_options=types.HttpOptions(
                 api_version="v1alpha" if is_ephemeral_key(self.api_key) else None,
                 async_client_args={"compression": None}))
-        async with client.aio.live.connect(model=self.model,
-                                           config=self._build_config()) as conn:
+        async with client.aio.live.connect(
+            model=self.model, config=self._build_config()) as conn:  # pyright: ignore[reportArgumentType]
             yield conn
 
     def _reset_reconnect_state(self):

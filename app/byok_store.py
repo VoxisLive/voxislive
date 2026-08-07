@@ -44,7 +44,7 @@ def _dpapi_call(func_name: str, data: bytes, entropy: bytes) -> bytes:
         _fields_ = [("cbData", wintypes.DWORD),
                     ("pbData", ctypes.POINTER(ctypes.c_char))]
 
-    def to_blob(b: bytes) -> DATA_BLOB:
+    def to_blob(b: bytes) -> tuple[DATA_BLOB, ctypes.Array]:
         buf = ctypes.create_string_buffer(b, len(b))
         return DATA_BLOB(len(b), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), buf
 

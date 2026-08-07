@@ -109,7 +109,7 @@ def _resolve_prod_key(engine: str = "gemini",
         key, *_mid, err = voxis_client.get_session_key()
         got, workspace, model = "gemini", "", None
     else:
-        key, got, model, _q, _quota, workspace, _kt, err = voxis_client.get_session_key(
+        key, got, model, _q, _quota, workspace, _kt, _fallback, err = voxis_client.get_session_key(
             target=target, caps="engine-routing")
     if err or not key:
         raise SystemExit(f"session-key failed: {err}")
@@ -126,6 +126,7 @@ def _resolve_prod_key(engine: str = "gemini",
 def _load_pcm16(path: str, rate: int) -> bytes:
     """Read any wav/flac, downmix to mono, resample to `rate`, return PCM16 bytes."""
     import soundfile as sf
+
     from app.audio_io import _make_resampler
 
     x, sr = sf.read(path, dtype="float32", always_2d=True)
@@ -164,8 +165,8 @@ def run_clip(clip: dict, api_key: str, *, engine: str = "gemini",
 
     heard: list[str] = []   # on_text("in", ...)  -> source transcription
     trans: list[str] = []   # on_text("out", ...) -> translation
-    first_audio = {"t": None}
-    started = {"t": None}
+    first_audio: dict[str, float | None] = {"t": None}
+    started: dict[str, float | None] = {"t": None}
     audio_bytes = {"n": 0, "total": 0}   # audible / all translated audio received
     statuses: list[str] = []
     lock = threading.Lock()

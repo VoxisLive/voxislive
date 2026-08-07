@@ -68,7 +68,7 @@ class DualTrackRecorder:
         # `stamp` (the session-folder stamp) is passed by the live pipeline so the
         # WAVs share the transcript JSON's stamp inside the same self-contained
         # session folder; fall back to a fresh stamp for standalone use.
-        base = "voxis_%s_%s" % (stamp or time.strftime("%Y-%m-%d_%H-%M-%S"), tag)
+        base = f"voxis_{stamp or time.strftime('%Y-%m-%d_%H-%M-%S')}_{tag}"
         self._source = _Track(os.path.join(out_dir, base + "_source.wav"),
                               source_rate)
         self._translated = _Track(os.path.join(out_dir, base + "_translated.wav"),

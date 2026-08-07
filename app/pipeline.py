@@ -11,19 +11,25 @@ import os
 import threading
 import time
 import uuid
+from collections.abc import Callable
 
 import numpy as np
 
-from .audio_io import Capture, Player, find_device, resolve_name, _make_resampler
-from .config import (ENGINE_CASCADE, ENGINE_GEMINI, ENGINE_QWEN,
-                     gate_params, resolve_voice, stream_gated)
+from . import audio_io, sysaudio, voxis_client
+from .audio_io import Capture, Player, _make_resampler, find_device, resolve_name
+from .base_translator import BaseTranslator
+from .cascade_translator import CascadeTranslator
+from .config import (
+    ENGINE_CASCADE,
+    ENGINE_GEMINI,
+    ENGINE_QWEN,
+    gate_params,
+    resolve_voice,
+    stream_gated,
+)
 from .engines import make_translator
 from .i18n import t
 from .playback_sync import AdaptivePlaybackStager
-
-from . import audio_io
-from . import sysaudio
-from . import voxis_client
 
 _log = logging.getLogger("voxis")
 
@@ -285,10 +291,16 @@ class IncomingPipeline:
         self._sducker = None
         self._routing_handle = None
         self.capture = None
-        self._source = None
+        # These three are unset only for the brief window between construction
+        # and start() (which always sets them before returning); every reader
+        # below (including nested capture-thread callbacks defined inside
+        # start()) only runs once the pipeline is live. Declared non-Optional
+        # so those call sites don't all need their own None-guard; the actual
+        # deferred-init gap is acknowledged once, right here.
+        self._source: _GatedSource = None  # pyright: ignore[reportAttributeAccessIssue]
         self._recorder = None
-        self.player = None
-        self.translator = None
+        self.player: Player = None  # pyright: ignore[reportAttributeAccessIssue]
+        self.translator: BaseTranslator | CascadeTranslator = None  # pyright: ignore[reportAttributeAccessIssue]
         self._stager = None
         self._mode = mode
         self._spk_tracker = None
@@ -338,7 +350,7 @@ class IncomingPipeline:
         # orphan the tracker's worker thread.
         if on_speaker is not None and cfg.get("speaker_labels", True):
             try:
-                from .speaker_id import SpeakerTracker  # noqa: PLC0415
+                from .speaker_id import SpeakerTracker
                 self._spk_tracker = SpeakerTracker(on_change=on_speaker)
             except Exception:
                 _log.exception("speaker tracker init failed — labels disabled")
@@ -526,7 +538,7 @@ class IncomingPipeline:
         self._source.feed(mono)
 
     def _acquire_capture(self, cfg, vad_cfg, send_fn, out_name, on_status):
-        from .vad import SpeechGate  # noqa: PLC0415
+        from .vad import SpeechGate
         # Every current engine ingests 16 kHz and the VAD runs at 16 kHz, so the
         # capture, the gate and the wire all share one rate — _GatedSource no
         # longer carries a second, engine-facing rate (see its _emit).
@@ -542,14 +554,18 @@ class IncomingPipeline:
             self._sducker = sysaudio.make_ducker(routing_handle=self._routing_handle)
 
             def on_loop(chunk: np.ndarray):
-                lvl = self._sducker.current
+                # Bound once per call: set just above, cleared only on teardown
+                # (after the capture that invokes this callback has stopped).
+                sducker = self._sducker
+                assert sducker is not None
+                lvl = sducker.current
                 # Windows' ducker attenuates the SAME mix its loopback then
                 # captures, so the level must be compensated back up for
                 # VAD/Gemini. Linux's capture point sits upstream of the duck
                 # (see ducking.LinuxSessionDucker.duck_affects_capture) so it
                 # is never tainted in the first place -- compensating it too
                 # would wrongly amplify already-full-level audio.
-                if getattr(self._sducker, "duck_affects_capture", True) and lvl < 0.95:
+                if getattr(sducker, "duck_affects_capture", True) and lvl < 0.95:
                     chunk = np.clip(chunk / max(lvl, 0.15), -1.0, 1.0)
                 # Observe the raw capture before VAD/translator work. A consumer
                 # fault must not make a healthy WASAPI signal look like −∞ dB;
@@ -565,13 +581,13 @@ class IncomingPipeline:
                 self._prev_active = active
                 speaking = self._source.speech_active or self.player.tts_active
                 if self._original_mode == "mix":
-                    self._sducker.target = 1.0
+                    sducker.target = 1.0
                 elif self._original_mode == "mute_during_speech":
-                    self._sducker.target = 0.0 if speaking else 1.0
+                    sducker.target = 0.0 if speaking else 1.0
                 else:
-                    self._sducker.target = self._duck_gain if speaking else 1.0
+                    sducker.target = self._duck_gain if speaking else 1.0
 
-            suppress = None
+            suppress: Callable[[], bool] | None = None
             # Preferred path on Win10 2004+: process-exclude loopback. Our own TTS
             # is excluded at the hardware level so the translator keeps receiving
             # input even while playback is active. Activation can fail TRANSIENTLY
@@ -603,8 +619,9 @@ class IncomingPipeline:
                 on_status(t("st_classic_capture_warning", e=pe_err))
                 self.capture = sysaudio.make_loopback_capture(
                     on_loop, prefer_name=out_name, on_status=on_status)
-                def suppress():
+                def _suppress_while_tts_active():
                     return self.player.tts_active
+                suppress = _suppress_while_tts_active
             self._source = _GatedSource(
                 self.capture.rate, SpeechGate(**vad_cfg), send_fn,
                 suppress_when=suppress, smart=not self._stream_is_gated(cfg),
@@ -633,6 +650,7 @@ class IncomingPipeline:
                 speaking = self._source.speech_active or self.player.tts_active
                 level = self._apply_original_gain(speaking)
                 if self._use_premium:
+                    assert _premium is not None  # _use_premium is only True when set
                     processed = _premium.execute_vocal_split(chunk, speaking, level)
                     self.player.feed_passthrough(processed)
                 else:
@@ -654,8 +672,7 @@ class IncomingPipeline:
         # model on continuous speech are the classic-loopback echo-suppress
         # (suppress=True zeroes input while TTS plays) and original=mute_during_speech.
         on_status(
-            "capture: backend=%s mode=%s suppress=%s smart=%s original=%s duck=%.2f engine=%s rate=%d"
-            % (
+            "capture: backend={} mode={} suppress={} smart={} original={} duck={:.2f} engine={} rate={:d}".format(
                 type(self.capture).__name__,
                 "vbcable" if not self.driverless else "driverless",
                 self._source._suppress_when is not None,
@@ -681,8 +698,8 @@ class IncomingPipeline:
             _log.info("audio recording skipped in meeting mode (two-party consent)")
         if cfg.get("record_audio") and self._mode != "meeting":
             try:
-                from .audio_recorder import DualTrackRecorder  # noqa: PLC0415
-                from . import paths  # noqa: PLC0415
+                from . import paths
+                from .audio_recorder import DualTrackRecorder
                 # Write into this session's own folder (so the WAVs sit beside the
                 # transcript JSON and share its stamp); fall back to the flat root
                 # when no session folder was supplied (non-webui callers).
@@ -786,6 +803,7 @@ class IncomingPipeline:
         if not self.translator.wait_ready(timeout=6):
             raise RuntimeError(t("st_server_unreachable"))
         self.player.start()
+        assert self.capture is not None  # set by _acquire_capture(), called before start_io()
         self.capture.start()
 
     def start(self):
@@ -908,7 +926,7 @@ def _swap_to_gemini(pipe, target_key, name, exc):
 
 class OutgoingPipeline:
     def __init__(self, cfg: dict, resolve, on_text, on_status):
-        from .vad import SpeechGate  # noqa: PLC0415
+        from .vad import SpeechGate
         vad_cfg = gate_params(cfg)
         mic_dev = find_device(cfg["devices"]["microphone"], "input")
 
@@ -923,10 +941,14 @@ class OutgoingPipeline:
         # source drags an already-open capture stream exactly like Faz 3's
         # sink-side finding, so it must never be touched).
         self.monitor_player = None
-        self.player = None
-        self.translator = None
+        # See IncomingPipeline.__init__ for why these three are declared
+        # non-Optional: unset only until start() returns, read only by
+        # capture-thread callbacks defined inside start() (i.e. after it set
+        # them).
+        self.player: Player = None  # pyright: ignore[reportAttributeAccessIssue]
+        self.translator: BaseTranslator | CascadeTranslator = None  # pyright: ignore[reportAttributeAccessIssue]
         self.capture = None
-        self._source = None
+        self._source: _GatedSource = None  # pyright: ignore[reportAttributeAccessIssue]
         try:
             self._mic_handle = sysaudio.make_virtual_mic()
             before_streams = sysaudio.snapshot_own_audio_streams()
@@ -1073,6 +1095,7 @@ class OutgoingPipeline:
                 except Exception:
                     pass
                 self.monitor_player = None
+        assert self.capture is not None  # set earlier in start(), before start_io()
         self.capture.start()
 
     def start(self):
@@ -1194,7 +1217,12 @@ class ModeController:
                  on_session_failed=None, on_speaker=None):
         self.cfg = cfg
         self.api_key = api_key       # legacy field; key resolution now via self.resolve
-        self.resolve = None          # callable(target)->(engine, key, model, fallback); set by the bridge
+        # callable(target)->(engine, key, model, fallback); set by the bridge.
+        # webui._build_engine_resolver() also hangs ad-hoc `beta_active` /
+        # `gemini_key_provider` attributes off some of its returned callables
+        # (read defensively via getattr elsewhere), which don't fit a Callable
+        # type — hence the plain signature here rather than a stricter Protocol.
+        self.resolve: Callable[..., tuple] | None = None
         self.on_text = on_text
         self.on_status = on_status
         # Speaker-change events (incoming direction) from the local tracker;
@@ -1331,10 +1359,11 @@ class ModeController:
                                      self.on_status, session_dir=session_dir,
                                      on_speaker=self.on_speaker)]
         if mode == "meeting":
-            pipes = [IncomingPipeline(self.cfg, resolve, "meeting",
-                                      self._text_sink("incoming"), self.on_status,
-                                      session_dir=session_dir,
-                                      on_speaker=self.on_speaker)]
+            pipes: list[IncomingPipeline | OutgoingPipeline] = [
+                IncomingPipeline(self.cfg, resolve, "meeting",
+                                  self._text_sink("incoming"), self.on_status,
+                                  session_dir=session_dir,
+                                  on_speaker=self.on_speaker)]
             try:
                 # Outbound direction requires a virtual microphone driver. If
                 # none is installed, the meeting gracefully falls back to
@@ -1426,6 +1455,7 @@ class ModeController:
             self._log_playback_health()
             if not sid:
                 continue
+            assert source is not None  # _consume_minutes: sid and source are set together
             if delta > 0:
                 # Same client clamp the stop() tail applies: one interval can never
                 # legitimately exceed a heartbeat (+ bounded slack). On sleep/resume
@@ -1565,7 +1595,7 @@ class ModeController:
         # Peak, not the instantaneous meter: the meter's slow release can dip to
         # ~0 in a pause, but a session that has heard anything at all keeps a peak.
         if (inc.peak_input_level > self.INPUT_SILENT_LEVEL
-                or getattr(inc, "_rtt", None) is not None and inc._rtt.speech_seen):
+                or (getattr(inc, "_rtt", None) is not None and inc._rtt.speech_seen)):
             self._no_input_notified = True   # audio arrived — never ask again
             return
         self._no_input_notified = True
@@ -1773,7 +1803,9 @@ class ModeController:
             "mode": mode, "reason": _event_error_class(last_err) if last_err else "other",
             "attempt": 3,
         })
-        raise last_err
+        if last_err is not None:
+            raise last_err
+        raise RuntimeError("audio retry loop exhausted without capturing an error")
 
     def set_tts_volume(self, volume: float):
         self.cfg["tts_volume"] = volume
@@ -1827,7 +1859,10 @@ class ModeController:
         if inc is None:
             return
         try:
-            from .endpoint_volume import EndpointVolumeMirror, OutputLevelNeutralizer  # noqa: PLC0415
+            from .endpoint_volume import (
+                EndpointVolumeMirror,
+                OutputLevelNeutralizer,
+            )
             out_name = getattr(inc, "_out_device_name", "")
             if out_name:
                 self._out_neutralizer = OutputLevelNeutralizer(out_name)
@@ -1960,6 +1995,7 @@ class ModeController:
         # remains the billing authority and re-derives minutes from its own
         # observed session state regardless.
         if sid and delta > 0:
+            assert source is not None  # _consume_minutes: sid and source are set together
             max_tail = (self.HEARTBEAT_SECONDS + 2.0) / 60.0
             voxis_client.report_usage_async(sid, min(delta, max_tail), source, tail_engine)
             self._dispatch_usage_reported()

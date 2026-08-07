@@ -30,6 +30,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from typing import cast
 
 import numpy as np
 
@@ -152,7 +153,10 @@ class SpeakerEmbedder:
     def embed(self, wav: np.ndarray) -> np.ndarray:
         feats = fbank(wav)
         feats -= feats.mean(axis=0, keepdims=True)  # model's global-mean CMN
-        e = self.sess.run(None, {"x": feats[None]})[0][0]
+        # This model's "output" is always a dense ndarray; onnxruntime's own
+        # return type is a broad union (incl. SparseTensor) it can't narrow.
+        out = cast(list[np.ndarray], self.sess.run(None, {"x": feats[None]}))
+        e = out[0][0]
         return e / max(float(np.linalg.norm(e)), 1e-9)
 
 

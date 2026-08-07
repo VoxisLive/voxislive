@@ -53,7 +53,7 @@ class LookaheadLimiter:
     def __init__(self, fs: float, lookahead_ms: float = 1.5,
                  ceiling: float = 0.97, release_ms: float = 80.0):
         self.fs = float(fs)
-        self.L = max(1, int(round(fs * lookahead_ms / 1000.0)))
+        self.L = max(1, round(fs * lookahead_ms / 1000.0))
         self.ceil = float(ceiling)
         self.rel = float(np.exp(-1.0 / max(1.0, fs * release_ms / 1000.0)))
         self._delay = None
@@ -83,7 +83,7 @@ class LookaheadLimiter:
         # 1) Required per-sample gain (<= 1); peak across channels. nan_to_num
         # keeps a non-finite input sample from driving gr to nan/inf.
         peak = np.max(np.abs(x), axis=1) + 1e-9
-        peak = np.nan_to_num(peak, nan=1.0, posinf=np.float32(3.0e38), neginf=1e-9)
+        peak = np.nan_to_num(peak, nan=1.0, posinf=float(np.float32(3.0e38)), neginf=1e-9)
         gr = np.minimum(1.0, self.ceil / peak).astype(np.float32)
 
         # 2) Look-ahead: rolling minimum over the next L samples.
@@ -199,7 +199,7 @@ class DelayLine:
         self.max_delay = None if max_delay is None else float(max_delay)
         # Equal-power cross-fade length applied on a resync snap so the read
         # pointer's discontinuity does not click.
-        self._xfade = max(1, int(round(fs * xfade_ms / 1000.0)))
+        self._xfade = max(1, round(fs * xfade_ms / 1000.0))
         self._snapped_from: float | None = None
 
     def set_target(self, delay_samples: float) -> None:

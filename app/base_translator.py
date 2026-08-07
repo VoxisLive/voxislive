@@ -88,7 +88,10 @@ def is_terminal_error(exc, phrases, codes=_DEFAULT_TERMINAL_CODES) -> bool:
             except Exception:
                 val = None
         try:
-            if val is not None and int(val) in codes:
+            # val's real type is whatever the exception happens to carry under
+            # this attribute name (str/int/callable-result/anything) — genuinely
+            # dynamic introspection, guarded by the except below.
+            if val is not None and int(val) in codes:  # pyright: ignore[reportArgumentType]
                 return True
         except (TypeError, ValueError):
             pass
@@ -106,7 +109,7 @@ class BaseTranslator(threading.Thread):
     ROTATE_DRAIN_SECONDS = 1.5
     # Cap consecutive transient failures so a hard outage surfaces one actionable
     # status instead of spinning forever.
-    MAX_TRANSIENT_FAILURES = 8
+    MAX_TRANSIENT_FAILURES: int = 8
     # A session the server accepts then closes under this many seconds (no error,
     # no planned rotation) is a covert transient failure — otherwise an
     # account/region/endpoint reject would spin a no-backoff reconnect loop.
@@ -181,8 +184,13 @@ class BaseTranslator(threading.Thread):
         self._fallback = fallback
         self._used_fallback = False
         self.rotate_seconds = rotate_minutes * 60
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._queue: asyncio.Queue | None = None
+        # Both unset only before run() (the thread entry point) creates them;
+        # every reader other than the two explicit pre-thread-start guards
+        # below (send_pcm16, stop) only runs once the loop is live — including
+        # callbacks scheduled onto the loop itself, which by definition cannot
+        # run before it exists.
+        self._loop: asyncio.AbstractEventLoop = None  # pyright: ignore[reportAttributeAccessIssue]
+        self._queue: asyncio.Queue = None  # pyright: ignore[reportAttributeAccessIssue]
         self._stopping = threading.Event()
         self._ready = threading.Event()
         # Frames carried over a rotation: re-injected into the next session so the
@@ -265,7 +273,10 @@ class BaseTranslator(threading.Thread):
         add = BaseTranslator._USAGE_ADD
         if add is None:
             from .translator import _add_usage  # lazy: keep vendor runtimes off cold start
-            add = BaseTranslator._USAGE_ADD = _add_usage
+            # staticmethod() so a class-level lookup never tries to bind `self`
+            # (BaseTranslator._USAGE_ADD is read via the class, not an instance).
+            BaseTranslator._USAGE_ADD = staticmethod(_add_usage)
+            add = _add_usage
         add(key, amount)
 
     def _account_sent(self, nbytes: int):
@@ -601,7 +612,7 @@ class BaseTranslator(threading.Thread):
         try:
             await asyncio.wait_for(asyncio.shield(receiver),
                                    timeout=self.ROTATE_DRAIN_SECONDS)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             pass
         except Exception:
             # A receiver error during drain is non-fatal: we are rotating anyway.
@@ -665,7 +676,7 @@ class BaseTranslator(threading.Thread):
                     self.on_status(t("st_no_voice_warning"))
             try:
                 item = await asyncio.wait_for(self._queue.get(), timeout=0.5)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Quiet window — loop back and re-check the rotation deadline.
                 continue
             if not item:

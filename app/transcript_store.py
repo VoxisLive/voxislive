@@ -194,7 +194,7 @@ def save_record(directory: str, record: dict, *, subdir: str | None = None) -> s
 
 
 def load_record(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -267,7 +267,7 @@ def _load_index_locked() -> None:
     if not path or not os.path.exists(path):
         return
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw = json.load(f)
         if not isinstance(raw, dict):
             return
@@ -407,7 +407,7 @@ def _cue_bounds(turns, idx):
 def _fmt_ts(seconds: float, *, vtt: bool) -> str:
     """Format a timestamp as SRT (HH:MM:SS,mmm) or VTT (HH:MM:SS.mmm)."""
     seconds = max(0.0, seconds)
-    ms = int(round(seconds * 1000))
+    ms = round(seconds * 1000)
     h, ms = divmod(ms, 3600000)
     m, ms = divmod(ms, 60000)
     s, ms = divmod(ms, 1000)

@@ -12,8 +12,8 @@ import threading
 import numpy as np
 import sounddevice as sd
 
-from .mix_core import DelayLine, LookaheadLimiter, place_center
 from .i18n import t
+from .mix_core import DelayLine, LookaheadLimiter, place_center
 
 _log = logging.getLogger("voxis")
 
@@ -37,7 +37,12 @@ def refresh():
 try:
     import soxr
 
-    def _make_resampler(in_rate: int, out_rate: int):
+    # Deliberate try/except feature-detection: this def and the fallback def
+    # in the except branch below are two implementations of one contract
+    # ((in_rate, out_rate) -> Callable[[ndarray], ndarray]); only one ever
+    # executes, but pyright still cross-checks their signatures as if both
+    # were live in the same scope.
+    def _make_resampler(in_rate: int, out_rate: int):  # pyright: ignore[reportRedeclaration]
         # Ratio 1.0 (ProcessExclude 16k input, or a device already at the TTS
         # rate) is a no-op — skip the soxr stream call on the hot per-frame path.
         if in_rate == out_rate:
@@ -319,9 +324,9 @@ def device_rate(index: int | None, kind: str) -> int:
 
 
 def _linux_real_sink_rate() -> int | None:
-    import os          # noqa: PLC0415 -- Linux-only path
-    import re          # noqa: PLC0415
-    import subprocess  # noqa: PLC0415
+    import os
+    import re
+    import subprocess
     try:
         env = {**os.environ, "LC_ALL": "C"}
         default_name = subprocess.run(
@@ -767,7 +772,8 @@ class _Ring:
 
 
 def _mix_to_stereo(tts_mono: np.ndarray, amb: np.ndarray, tts_gain: float,
-                   width: float, route_ambient: bool, mid_gain: float = 1.0) -> np.ndarray:
+                   width: float, route_ambient: bool,
+                   mid_gain: float | np.ndarray = 1.0) -> np.ndarray:
     """Psychoacoustic stereo mix. Pure and testable; a handful of elementwise
     ops on a ~20 ms block (~9 µs), cheap enough to run in the audio callback.
 
@@ -1040,6 +1046,7 @@ class Player:
         # under/overrun and every pulled block clicks.
         chunk = np.asarray(chunk, dtype=np.float32)
         if self._pass_rs_l is not None and chunk.ndim == 2 and chunk.shape[1] >= 2:
+            assert self._pass_rs_r is not None  # configure_passthrough sets both together
             left = self._pass_rs_l(np.ascontiguousarray(chunk[:, 0]))
             right = self._pass_rs_r(np.ascontiguousarray(chunk[:, 1]))
             n = min(len(left), len(right))

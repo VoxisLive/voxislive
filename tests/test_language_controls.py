@@ -49,6 +49,7 @@ def test_language_swap_rolls_back_when_config_cannot_be_saved():
 
 def _hotword_bridge(cfg):
     import threading
+
     from app.webui import Bridge
     b = object.__new__(Bridge)
     b.cfg = cfg
