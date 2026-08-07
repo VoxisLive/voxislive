@@ -52,6 +52,20 @@ known-first-party = ["app"]
 "app/process_loopback.py" = ["RUF012"]
 "app/win_audio.py" = ["RUF012"]
 
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+# Baseline measured 2026-08-07 (windows-latest, full suite, branch coverage
+# on): ~51% total. Set well below that as a regression guard, not a quality
+# bar — the point is to catch a real drop (e.g. a module losing its tests),
+# not to gate on today's number. Raise it deliberately as coverage improves;
+# do not lower it to make a red build pass.
+fail_under = 45
+show_missing = true
+skip_covered = false
+
 [tool.pyright]
 # Scope: shipped engine + release/bench tooling. NOT tests/ — its monkeypatch-
 # heavy fixtures (dynamic attributes bolted onto real classes for test doubles)

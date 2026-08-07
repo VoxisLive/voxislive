@@ -61,15 +61,12 @@ class AuthRepositoryImpl implements AuthRepository {
     required double deltaMinutes,
     required String source,
   }) =>
-      // Map the void result through Ok(null); a bare void expression cannot be
-      // passed as an Ok argument, so wrap it explicitly.
       _guard<void>(() async {
         await _remote.reportUsage(
           sessionId:    sessionId,
           deltaMinutes: deltaMinutes,
           source:       source,
         );
-        return null;
       });
 
   /// Runs [action], mapping known [Failure]s through and collapsing any

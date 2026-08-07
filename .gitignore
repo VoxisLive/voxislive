@@ -42,6 +42,10 @@ build/
 dist/
 *.egg-info/
 .pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 .ruff_cache/
 .flatpak-builder/
 

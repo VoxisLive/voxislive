@@ -37,10 +37,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install --require-hashes -r requirements.lock
-          python -m pip install pytest==9.1.1 ruff==0.15.22 pyright==1.1.411
+          python -m pip install pytest==9.1.1 pytest-cov==7.1.0 ruff==0.15.22 pyright==1.1.411
 
-      - name: Run tests
-        run: python -m pytest -q
+      - name: Run tests with coverage
+        run: python -m pytest -q --cov=app --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-py${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 14
 
       - name: Check localization parity
         run: python scripts/check_i18n.py
@@ -89,3 +97,61 @@ jobs:
           if (-not (Test-Path dist/VoxisLive/_internal/BUILD_VERSION)) {
             throw "BUILD_VERSION stamp is missing"
           }
+
+  test-linux:
+    name: Linux sysaudio port
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      # app/sysaudio's is_supported() checks for these on PATH; installing
+      # them lets the dispatch tests exercise the real "supported" branch
+      # instead of only the shutil.which-mocked one.
+      - name: Install PipeWire/PulseAudio CLI tools (pactl, parec)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pulseaudio-utils
+
+      # Not requirements.lock: it pins Windows-only packages (pywin32,
+      # comtypes, pycaw, pyaudiowpatch) unconditionally, and most of the
+      # suite transitively imports Windows-only modules (e.g. win_audio's
+      # `from ctypes.wintypes import ...`) at collection time. Only
+      # app/sysaudio and its Linux backend are OS-dispatched cleanly enough
+      # to import and test on Linux today.
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==9.1.1 numpy==2.4.6
+
+      - name: Run Linux sysaudio tests
+        run: >
+          python -m pytest -q
+          tests/test_sysaudio.py
+          tests/test_sysaudio_linux_capture.py
+          tests/test_sysaudio_linux_routing.py
+          tests/test_sysaudio_linux_virtual_mic.py
+
+  flutter:
+    name: Flutter client analysis
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/flutter
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
