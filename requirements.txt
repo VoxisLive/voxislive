@@ -21,8 +21,14 @@ python-dotenv==1.2.2
 cryptography==50.0.0
 pywebview==6.2.1
 pycaw==20251023
-# keyboard installs a low-level global hook (admin/AV-sensitive, unmaintained);
-# re-evaluate before each release — a scoped hotkey lib may replace it.
+# keyboard installs a low-level global hook (admin/AV-sensitive, unmaintained).
+# Since app/global_hotkey.py (ctypes RegisterHotKey), this is no longer on the
+# always-on path — _register_hotkeys() uses that instead, so the hook is not
+# installed for the app's whole lifetime. Still needed for webui.py's
+# capture_hotkey()/cancel_hotkey() (Settings' "press a key" recorder), which
+# has to detect an arbitrary combo the user is currently pressing — something
+# RegisterHotKey can't do — but that only runs for the few seconds the
+# recording box is open, not for the whole session.
 keyboard==0.13.5
 PyAudioWPatch==0.2.12.8
 # Local neural TTS for the cascade free tier (app/local_tts.py). Piper VITS

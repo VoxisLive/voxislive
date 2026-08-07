@@ -3610,22 +3610,25 @@ class Bridge:
         t.start()
 
     def _register_hotkeys(self):
-        try:
-            import keyboard
-            keyboard.remove_all_hotkeys()
-        except Exception:
-            return
+        # RegisterHotKey-based (app/global_hotkey.py), not `keyboard.add_hotkey`:
+        # this path is armed for the app's whole lifetime, so it must not carry
+        # the low-level global hook `keyboard` installs for that. `keyboard`
+        # itself stays in use only for the brief interactive capture_hotkey()
+        # recording flow (Settings' "press a key" box), a few seconds at a time.
+        from . import global_hotkey
         hk = self.cfg.get("hotkeys", {})
+        bindings = {}
+        for mode in ("video", "meeting"):
+            if hk.get(mode):
+                bindings[mode] = (hk[mode], lambda m=mode: self._hotkey(m))
+        if hk.get("stop"):
+            bindings["stop"] = (hk["stop"], lambda: self._hotkey("stop"))
+        if hk.get("overlay"):
+            bindings["overlay"] = (hk["overlay"], lambda: self._hotkey("overlay"))
         try:
-            for mode in ("video", "meeting"):
-                if hk.get(mode):
-                    keyboard.add_hotkey(hk[mode], lambda m=mode: self._hotkey(m))
-            if hk.get("stop"):
-                keyboard.add_hotkey(hk["stop"], lambda: self._hotkey("stop"))
-            if hk.get("overlay"):
-                keyboard.add_hotkey(hk["overlay"], lambda: self._hotkey("overlay"))
+            global_hotkey.set_bindings(bindings)
         except Exception:
-            pass
+            _log.exception("global hotkey registration failed")
 
     def _hotkey(self, action):
         if action == "stop":
