@@ -145,10 +145,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.0"
-          channel: stable
+      # No third-party Action: this org's Actions policy (see decision-log
+      # ADR #36) only allows github_owned/verified Actions, and the Flutter
+      # Marketplace action isn't one. The SDK is a plain git checkout of its
+      # own release tag -- shell steps, not an Action, so the policy stays
+      # untouched. Pinned to the same 3.22.0 the prior action used.
+      - name: Install Flutter SDK
+        run: |
+          git clone https://github.com/flutter/flutter.git -b 3.22.0 --depth 1 "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: flutter pub get

@@ -99,6 +99,18 @@ FORBIDDEN_EXACT_RE = re.compile(r"^\.env\.[^/]+\.local$")
 HISTORY_PATH_ALLOWLIST: frozenset[str] = frozenset()
 HISTORY_PATH_ALLOWLIST_PREFIXES: tuple[str, ...] = ()
 
+# Same grandfathering, for the secret-pattern history scan: an exact matched
+# snippet (m.group(0)) that is a harmless post-squash false positive, not a
+# live secret, and not worth a force-push rewrite (see HISTORY_PATH_ALLOWLIST
+# above for the full rationale). tests/test_report_scrub.py's JWT-redaction
+# test committed jwt.io's public canonical sample token (header {"alg":
+# "HS256"}, payload {"sub":"1234567890"}) without a placeholder hint on that
+# line (commit cd194fc); the current tree carries the fix (a trailing
+# "# example" comment), but the old diff line is still in history verbatim.
+HISTORY_SECRET_ALLOWLIST: frozenset[str] = frozenset({
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w",  # example
+})
+
 # --- Secret content signatures ----------------------------------------------
 # Each entry: (human label, compiled pattern). Patterns are deliberately tight
 # so documentation placeholders (e.g. "AIza...", "sk_live_...") do NOT match.
@@ -272,7 +284,8 @@ def scan_history(patterns) -> list[str]:
             continue
         for label, pat in patterns:
             m = pat.search(line)
-            if m and not any(h in line for h in PLACEHOLDER_HINTS):
+            if (m and not any(h in line for h in PLACEHOLDER_HINTS)
+                    and m.group(0) not in HISTORY_SECRET_ALLOWLIST):
                 violations.append(f"history: {label} -> {m.group(0)[:6]}…")
     return violations
 
