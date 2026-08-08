@@ -11,6 +11,7 @@ cumulative ASR does not.
 import threading
 
 import app.webui as webui
+from app.history_bridge import _strip_inline_repeat
 from app.webui import LINE_GAP, SRC_LAG_S, Bridge
 
 
@@ -334,7 +335,7 @@ def test_inline_respeak_is_removed_keeping_the_tail():
     line = ("Ve daha fazlasi icin Leo English Podcast'e abone olmayi unutmayin. "
             "Tamam, Ve daha fazlasi icin Leo English Podcast'e abone olmayi "
             "unutmayin. pratik Ingilizce dersleri.")
-    out = webui._strip_inline_repeat(line)
+    out = _strip_inline_repeat(line)
     assert out.count("abone olmayi unutmayin") == 1
     assert out.endswith("pratik Ingilizce dersleri."), "tail must not be eaten"
 
@@ -343,26 +344,26 @@ def test_inline_respeak_never_drops_a_word_of_the_tail():
     """A fuzzy match may run one word past the real repeat; that word would be
     something the speaker actually said."""
     line = "bir iki uc dort bes alti X bir iki uc dort bes alti YENI kelime"
-    out = webui._strip_inline_repeat(line)
+    out = _strip_inline_repeat(line)
     assert out.split()[-2:] == ["YENI", "kelime"]
 
 
 def test_short_repetition_is_left_alone():
     """"Evet. Evet." is dialogue, not an artifact."""
     for line in ("Evet. Evet.", "Tamam, tamam.", "Konusmaya devam et. Konusmaya devam et."):
-        assert webui._strip_inline_repeat(line) == line
+        assert _strip_inline_repeat(line) == line
 
 
 def test_ordinary_line_is_untouched():
     line = "Bugun hava cok guzel ve yarin da guzel olacak diye dusunuyorum."
-    assert webui._strip_inline_repeat(line) == line
+    assert _strip_inline_repeat(line) == line
 
 
 def test_repaired_text_is_always_a_subsequence():
     """The repair may only DELETE — never reorder or invent."""
     line = ("aaa bbb ccc ddd eee fff ggg hhh "
             "aaa bbb ccc ddd eee fff ggg hhh son kelime")
-    out = webui._strip_inline_repeat(line).split()
+    out = _strip_inline_repeat(line).split()
     it = iter(line.split())
     assert all(tok in it for tok in out)
 
