@@ -125,7 +125,7 @@ def _resolve_prod_key(engine: str = "gemini",
 
 def _load_pcm16(path: str, rate: int) -> bytes:
     """Read any wav/flac, downmix to mono, resample to `rate`, return PCM16 bytes."""
-    import soundfile as sf
+    import soundfile as sf  # pyright: ignore[reportMissingImports] -- bench-only dep, not in requirements.lock
 
     from app.audio_io import _make_resampler
 

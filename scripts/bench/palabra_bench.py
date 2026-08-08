@@ -42,7 +42,7 @@ STREAM_HOST = "wss://streaming.palabra.ai/streaming-api"
 
 
 def _load_pcm16(path: str, rate: int) -> bytes:
-    import soundfile as sf
+    import soundfile as sf  # pyright: ignore[reportMissingImports] -- bench-only dep, not in requirements.lock
 
     from app.audio_io import _make_resampler
 

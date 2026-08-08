@@ -16,7 +16,10 @@ import argparse
 import json
 from pathlib import Path
 
-from datasets import Audio, load_dataset
+from datasets import (  # pyright: ignore[reportMissingImports] -- bench-only dep, not in requirements.lock
+    Audio,
+    load_dataset,
+)
 
 OUT_DIR = Path(__file__).resolve().parent / "fixtures" / "fleurs"
 

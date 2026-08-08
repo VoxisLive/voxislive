@@ -122,11 +122,18 @@ jobs:
       # suite transitively imports Windows-only modules (e.g. win_audio's
       # `from ctypes.wintypes import ...`) at collection time. Only
       # app/sysaudio and its Linux backend are OS-dispatched cleanly enough
-      # to import and test on Linux today.
+      # to import and test on Linux today. sounddevice IS cross-platform
+      # (PortAudio-backed, ships a bundled Linux binary) unlike the
+      # Windows-only packages above -- app/audio_io.py imports it
+      # unconditionally at module level, and test_sysaudio.py's
+      # test_mode_controller_declines_off_windows imports app.pipeline
+      # (which imports audio_io), so it must be installed for that import
+      # to succeed here the way it does on the real Raspberry Pi this test
+      # regressed against (2026-07-18).
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest==9.1.1 numpy==2.4.6
+          python -m pip install pytest==9.1.1 numpy==2.4.6 sounddevice==0.5.5
 
       - name: Run Linux sysaudio tests
         run: >

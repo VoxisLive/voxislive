@@ -26,7 +26,9 @@ import shutil
 import subprocess
 from xml.sax.saxutils import escape
 
-from PIL import Image
+from PIL import (
+    Image,  # pyright: ignore[reportMissingImports] -- build-time-only dep, not in requirements.lock
+)
 
 # --- Paths ---
 APP_DIR = pathlib.Path(__file__).resolve().parent

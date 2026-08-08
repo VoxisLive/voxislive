@@ -52,7 +52,7 @@ def _percentile(xs: list[float], p: float) -> float:
 
 
 def score(records: list[dict]) -> dict:
-    import sacrebleu
+    import sacrebleu  # pyright: ignore[reportMissingImports] -- bench-only dep, not in requirements.lock
 
     hyps = [r["hypothesis"] for r in records if r.get("hypothesis") and r.get("reference")]
     refs = [r["reference"] for r in records if r.get("hypothesis") and r.get("reference")]
@@ -66,7 +66,7 @@ def score(records: list[dict]) -> dict:
     asr = [(r["source_ref"], r["source_heard"]) for r in records
            if r.get("source_ref") and r.get("source_heard")]
     if asr:
-        import jiwer
+        import jiwer  # pyright: ignore[reportMissingImports] -- bench-only dep, not in requirements.lock
         ref_n = [_norm(a) for a, _ in asr]
         hyp_n = [_norm(b) for _, b in asr]
         out["n_asr"] = len(asr)

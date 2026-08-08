@@ -27,7 +27,9 @@ def main() -> int:
     ap.add_argument("--compute", default="int8", help="int8 (fast CPU) / float16 / float32")
     args = ap.parse_args()
 
-    from faster_whisper import WhisperModel
+    from faster_whisper import (
+        WhisperModel,  # pyright: ignore[reportMissingImports] -- bench-only dep, not in requirements.lock
+    )
     print(f"Loading faster-whisper {args.model} ({args.compute}, CPU)... (first run downloads the model)")
     model = WhisperModel(args.model, device="cpu", compute_type=args.compute)
 
