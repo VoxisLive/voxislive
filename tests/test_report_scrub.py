@@ -20,7 +20,10 @@ def test_scrub_text_leaves_ordinary_text_unchanged():
 
 
 def test_scrub_text_redacts_jwt_with_and_without_bearer_prefix():
-    jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w"
+    # jwt.io's canonical sample token (public documentation example, not a
+    # live credential) -- flagged as "example" so the release-hygiene secret
+    # scanner (scripts/check_release_hygiene.py PLACEHOLDER_HINTS) skips it.
+    jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w"  # example
     assert report_scrub.scrub_text(f"token={jwt}") == "token=[REDACTED_JWT]"
     assert report_scrub.scrub_text(f"Authorization: Bearer {jwt}") == \
         "Authorization: [REDACTED_JWT]"

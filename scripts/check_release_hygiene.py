@@ -58,8 +58,9 @@ PUBLIC_TOPLEVEL = frozenset({
     ".env.example", ".gitattributes", ".github", ".gitignore", ".vscode",
     "CHANGELOG.md", "LICENSE", "README.md", "README.de.md", "README.tr.md",
     "app", "client", "config.example.json", "docs", "installer", "main.py",
-    "models", "pytest.ini", "release.py", "requirements.lock",
-    "requirements.txt", "research", "scripts", "start.bat", "tests",
+    "models", "pyproject.toml", "pytest.ini", "release.py",
+    "requirements.lock", "requirements.txt", "research", "scripts",
+    "start.bat", "tests",
 })
 
 # Directory prefixes rejected even when their top level is public (any tracked
