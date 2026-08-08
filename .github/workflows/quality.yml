@@ -112,10 +112,15 @@ jobs:
       # app/sysaudio's is_supported() checks for these on PATH; installing
       # them lets the dispatch tests exercise the real "supported" branch
       # instead of only the shutil.which-mocked one.
-      - name: Install PipeWire/PulseAudio CLI tools (pactl, parec)
+      # libportaudio2: the sounddevice pip wheel does NOT bundle a PortAudio
+      # binary on Linux (only its Windows/macOS wheels do) -- it resolves
+      # the shared library at import time via ctypes.util.find_library and
+      # raises OSError without it, even though the Python package itself
+      # installed fine from pip.
+      - name: Install PipeWire/PulseAudio CLI tools (pactl, parec) + libportaudio2
         run: |
           sudo apt-get update
-          sudo apt-get install -y pulseaudio-utils
+          sudo apt-get install -y pulseaudio-utils libportaudio2
 
       # Not requirements.lock: it pins Windows-only packages (pywin32,
       # comtypes, pycaw, pyaudiowpatch) unconditionally, and most of the

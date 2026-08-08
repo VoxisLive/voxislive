@@ -22,14 +22,14 @@ Install:
 import os
 import sys
 
-from alibabacloud_bssopenapi20171214 import (
-    models as bss_models,  # pyright: ignore[reportMissingImports] -- ops-only dep, not in requirements.lock
+from alibabacloud_bssopenapi20171214 import (  # pyright: ignore[reportMissingImports] -- ops-only dep, not in requirements.lock
+    models as bss_models,
 )
-from alibabacloud_bssopenapi20171214.client import (
-    Client as BssOpenApiClient,  # pyright: ignore[reportMissingImports]
+from alibabacloud_bssopenapi20171214.client import (  # pyright: ignore[reportMissingImports]
+    Client as BssOpenApiClient,
 )
-from alibabacloud_tea_openapi import (
-    models as open_api_models,  # pyright: ignore[reportMissingImports]
+from alibabacloud_tea_openapi import (  # pyright: ignore[reportMissingImports]
+    models as open_api_models,
 )
 from alibabacloud_tea_util import models as util_models  # pyright: ignore[reportMissingImports]
 from Tea.exceptions import (  # pyright: ignore[reportMissingImports]
