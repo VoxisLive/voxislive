@@ -202,6 +202,20 @@ class QwenTranslator(BaseTranslator):
         if fb.get("workspace"):
             self.workspace = fb["workspace"]
 
+    # ping_timeout=10 (the websockets default is 20) used to race ahead of our
+    # own STALL_ROTATE_SECONDS/NO_OUTPUT_ROTATE_SECONDS watchdogs (20s/22s):
+    # DashScope confirmed (support ticket, 2026-08-10) that a large in-flight
+    # session can leave its event loop too busy to answer a PONG in time, so
+    # the websockets library closed a healthy-but-busy connection out from
+    # under a session our own watchdogs would have handled more gracefully
+    # (fallback pool, then Gemini). Raised per DashScope's own guidance
+    # ("600 seconds or longer"); STALL_ROTATE_SECONDS still catches a truly
+    # dead socket within 20s in continuous-streaming mode since audio keeps
+    # being sent regardless of ping/pong, so this only widens the window for
+    # a large-payload session to stay alive without weakening dead-connection
+    # detection in the common case.
+    PING_TIMEOUT = 600
+
     async def _connect(self):
         import websockets  # lazy: keep it off the cold path
         headers = {"Authorization": f"Bearer {self.api_key}"}
@@ -209,11 +223,13 @@ class QwenTranslator(BaseTranslator):
         try:
             return await websockets.connect(url, additional_headers=headers,
                                             max_size=None, compression=None,
-                                            ping_interval=20, ping_timeout=10)
+                                            ping_interval=20,
+                                            ping_timeout=self.PING_TIMEOUT)
         except TypeError:
             return await websockets.connect(url, extra_headers=headers,
                                             max_size=None, compression=None,
-                                            ping_interval=20, ping_timeout=10)
+                                            ping_interval=20,
+                                            ping_timeout=self.PING_TIMEOUT)
 
     async def _open_session(self, conn):
         await conn.send(self._session_update())

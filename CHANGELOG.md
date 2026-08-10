@@ -6,6 +6,15 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 ## Unreleased
 
 ### Fixed
+- A long-running Qwen session carrying a lot of speech could be dropped and
+  reconnected even though the connection was healthy: the WebSocket ping/pong
+  keepalive (`ping_timeout=10s`) could fire before the app's own stall
+  watchdogs did, if DashScope's server was still busy processing a large
+  in-flight exchange. Raised to 600s per DashScope's own support-ticket
+  guidance — the app's stall/no-output watchdogs already catch a genuinely
+  dead connection within ~20s during active streaming (they key off actual
+  traffic, not ping/pong), so this only removes the false-positive disconnect
+  on healthy, busy sessions.
 - A Qwen capacity error ("thread pool exhausted") that used to be retried up
   to 8 times with fast backoff is now recognized as terminal instead of
   generic-transient — it was hammering an already-saturated shared rate limit

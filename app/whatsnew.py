@@ -150,6 +150,77 @@ NOTES = {
             "ตอนนี้ Voxis จะแสดงเวอร์ชันที่คุณกำลังใช้อยู่ในแถบด้านบน และแจ้งให้คุณทราบเมื่อมีเวอร์ชันใหม่",
         ],
     },
+    "1.0.55": {
+        "en": [
+            "Fixed a rare case where a long or busy translation session would disconnect and reconnect on its own — a background connection check was giving up on a healthy connection too early while a large amount of speech was still being processed. Long sessions should now run through without this interruption.",
+        ],
+        "tr": [
+            "Uzun veya yoğun bir çeviri oturumunun kendiliğinden bağlantısının kopup yeniden bağlanmasına yol açan nadir bir durum düzeltildi — arka plandaki bir bağlantı kontrolü, büyük miktarda konuşma hâlâ işlenirken sağlıklı bir bağlantıdan çok erken vazgeçiyordu. Uzun oturumlar artık bu kesintiye uğramadan sürüyor.",
+        ],
+        "de": [
+            "Ein seltener Fall behoben, in dem eine lange oder stark ausgelastete Übersetzungssitzung sich von selbst trennte und neu verband — eine Hintergrundverbindungsprüfung gab eine gesunde Verbindung zu früh auf, während noch eine große Menge an Sprache verarbeitet wurde. Lange Sitzungen laufen jetzt ohne diese Unterbrechung durch.",
+        ],
+        "fr": [
+            "Correction d'un cas rare où une session de traduction longue ou chargée se déconnectait et se reconnectait d'elle-même — une vérification de connexion en arrière-plan abandonnait une connexion pourtant saine trop tôt, alors qu'une grande quantité de parole était encore en cours de traitement. Les sessions longues se déroulent désormais sans cette interruption.",
+        ],
+        "es": [
+            "Se corrigió un caso poco frecuente en el que una sesión de traducción larga o con mucha actividad se desconectaba y se reconectaba por sí sola — una comprobación de conexión en segundo plano abandonaba una conexión sana demasiado pronto mientras todavía se procesaba una gran cantidad de voz. Las sesiones largas ahora deberían completarse sin esta interrupción.",
+        ],
+        "pt": [
+            "Corrigido um caso raro em que uma sessão de tradução longa ou intensa se desconectava e reconectava sozinha — uma verificação de conexão em segundo plano desistia de uma conexão saudável cedo demais enquanto uma grande quantidade de fala ainda estava sendo processada. Sessões longas agora devem continuar sem essa interrupção.",
+        ],
+        "it": [
+            "Corretto un caso raro in cui una sessione di traduzione lunga o intensa si disconnetteva e riconnetteva da sola — un controllo di connessione in background abbandonava una connessione sana troppo presto mentre veniva ancora elaborata una grande quantità di parlato. Le sessioni lunghe ora dovrebbero proseguire senza questa interruzione.",
+        ],
+        "nl": [
+            "Een zeldzaam geval opgelost waarbij een lange of drukke vertaalsessie zichzelf verbrak en opnieuw verbond — een achtergrondverbindingscontrole gaf een gezonde verbinding te vroeg op terwijl er nog een grote hoeveelheid spraak werd verwerkt. Lange sessies zouden nu zonder deze onderbreking moeten doorlopen.",
+        ],
+        "pl": [
+            "Naprawiono rzadki przypadek, w którym długa lub intensywna sesja tłumaczenia sama się rozłączała i łączyła ponownie — sprawdzanie połączenia w tle zbyt wcześnie rezygnowało ze sprawnego połączenia, gdy wciąż przetwarzana była duża ilość mowy. Długie sesje powinny teraz przebiegać bez tego przerwania.",
+        ],
+        "cs": [
+            "Opravena vzácná situace, kdy se dlouhá nebo vytížená překladová relace sama odpojila a znovu připojila — kontrola připojení na pozadí příliš brzy vzdávala funkční spojení, zatímco se ještě zpracovávalo velké množství řeči. Dlouhé relace by nyní měly probíhat bez tohoto přerušení.",
+        ],
+        "hu": [
+            "Kijavítottunk egy ritka esetet, amikor egy hosszú vagy forgalmas fordítási munkamenet magától megszakadt és újracsatlakozott — egy háttérben futó kapcsolatellenőrzés túl korán adta fel az egyébként egészséges kapcsolatot, miközben még nagy mennyiségű beszéd feldolgozása zajlott. A hosszú munkamenetek mostantól ez a megszakítás nélkül futnak végig.",
+        ],
+        "ro": [
+            "A fost corectat un caz rar în care o sesiune de traducere lungă sau încărcată se deconecta și se reconecta de la sine — o verificare a conexiunii din fundal renunța prea devreme la o conexiune sănătoasă, în timp ce se procesa încă un volum mare de vorbire. Sesiunile lungi ar trebui acum să continue fără această întrerupere.",
+        ],
+        "sv": [
+            "Åtgärdat ett sällsynt fall där en lång eller intensiv översättningssession kopplades bort och återanslöts av sig själv — en bakgrundskontroll av anslutningen gav upp en fungerande anslutning för tidigt medan en stor mängd tal fortfarande bearbetades. Långa sessioner bör nu köras igenom utan detta avbrott.",
+        ],
+        "sr": [
+            "Ispravljen redak slučaj u kome se duga ili zauzeta sesija prevođenja sama prekidala i ponovo povezivala — provera veze u pozadini je odustajala od zdrave veze prerano dok se još uvek obrađivala velika količina govora. Duge sesije bi sada trebalo da teku bez ovog prekida.",
+        ],
+        "ru": [
+            "Исправлен редкий случай, когда длинный или загруженный сеанс перевода сам разрывал и восстанавливал соединение — фоновая проверка соединения слишком рано отказывалась от исправного соединения, пока ещё обрабатывался большой объём речи. Теперь длинные сеансы должны проходить без этого прерывания.",
+        ],
+        "ja": [
+            "長時間または発話量の多い翻訳セッションが自動的に切断・再接続されるまれなケースを修正しました — バックグラウンドの接続チェックが、大量の音声をまだ処理している最中の正常な接続を早々に諦めてしまうことがありました。長時間のセッションは、この中断なく最後まで実行されるようになりました。",
+        ],
+        "ko": [
+            "길거나 발화량이 많은 번역 세션이 저절로 연결이 끊겼다가 다시 연결되던 드문 경우를 수정했습니다 — 백그라운드 연결 점검이 많은 양의 음성을 아직 처리 중인 정상적인 연결을 너무 일찍 포기하곤 했습니다. 이제 긴 세션은 이런 중단 없이 끝까지 이어집니다.",
+        ],
+        "zh": [
+            "修复了一个罕见问题：时间较长或对话较密集的翻译会话会自行断开并重新连接——后台连接检查会在仍有大量语音待处理时，过早放弃一个本来正常的连接。现在，长时间的会话应该不会再受到这种中断的影响。",
+        ],
+        "zh-Hant": [
+            "修正了一個罕見問題：時間較長或對話較密集的翻譯工作階段會自行斷線並重新連線——背景連線檢查會在仍有大量語音待處理時，過早放棄一個原本正常的連線。現在，長時間的工作階段應該不會再受到這種中斷影響。",
+        ],
+        "hi": [
+            "एक दुर्लभ स्थिति ठीक की गई जिसमें लंबा या व्यस्त अनुवाद सत्र अपने आप डिस्कनेक्ट होकर फिर से जुड़ जाता था — बैकग्राउंड कनेक्शन जांच एक स्वस्थ कनेक्शन को बहुत जल्दी छोड़ देती थी, जबकि अभी भी बड़ी मात्रा में आवाज़ प्रोसेस हो रही होती थी। लंबे सत्र अब इस रुकावट के बिना पूरे चलने चाहिए।",
+        ],
+        "id": [
+            "Memperbaiki kasus langka saat sesi terjemahan yang panjang atau sibuk terputus dan tersambung kembali dengan sendirinya — pemeriksaan koneksi di latar belakang menyerah pada koneksi yang sebenarnya sehat terlalu cepat, saat masih ada banyak ucapan yang sedang diproses. Sesi panjang kini seharusnya berjalan tanpa gangguan ini.",
+        ],
+        "vi": [
+            "Đã sửa một trường hợp hiếm gặp khi phiên dịch dài hoặc bận rộn tự ngắt kết nối rồi kết nối lại — một bước kiểm tra kết nối chạy nền đã từ bỏ một kết nối vẫn đang hoạt động tốt quá sớm, trong khi vẫn còn một lượng lớn giọng nói đang được xử lý. Các phiên dài giờ đây sẽ chạy suốt mà không bị gián đoạn này.",
+        ],
+        "th": [
+            "แก้ไขกรณีที่พบได้ยากซึ่งเซสชันการแปลที่ยาวนานหรือมีการพูดจำนวนมากจะตัดการเชื่อมต่อแล้วเชื่อมต่อใหม่เอง — การตรวจสอบการเชื่อมต่อในพื้นหลังยกเลิกการเชื่อมต่อที่ยังปกติดีเร็วเกินไป ขณะที่ยังมีเสียงพูดจำนวนมากกำลังถูกประมวลผลอยู่ เซสชันที่ยาวนานตอนนี้ควรทำงานต่อเนื่องโดยไม่มีการขัดจังหวะนี้",
+        ],
+    },
 }
 
 
