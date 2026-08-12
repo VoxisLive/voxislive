@@ -128,12 +128,79 @@ VOICES: dict[str, tuple[str, str]] = {
 }
 
 
+# Premium (paid-tier trial) voices — Apache-2.0 Kokoro models, officially
+# supported by sherpa-onnx since k2-fsa/sherpa-onnx PR #1795. Kept in a
+# SEPARATE registry from VOICES on purpose: Kokoro's language coverage does
+# not overlap cleanly with Piper's (no Turkish at all, for one), so mixing
+# the two into one dict would make a tier pick the wrong model family for a
+# language neither one actually has. Verified 2026-08-08: downloaded the
+# real asset and hashed it — sha256 below is the model.onnx digest, not a
+# placeholder.
+#
+# kokoro-multi-lang-v1_0 (53 speakers), NOT the newer kokoro-multi-lang-v1_1
+# ("v1.1-zh") — that release's own model card says it "is not a strict
+# upgrade" and DROPS most English voices down to 3 crowdsourced speakers
+# with only 3 hours of training data, trained instead for added Chinese
+# coverage. v1_0 is the broader/better-trained English set (a "few hundred
+# hrs" per hexgrad/Kokoro-82M's own README vs v0_19's "under 100 hrs").
+#
+# sid=3 — owner-auditioned live 2026-08-08 (sid 0-11 rendered to WAV and
+# played back; sid 9 was clearer, sid 3 sounded more natural, owner picked 3
+# "for now" — revisit if it wears thin).
+#
+# hi/ja added 2026-08-13: the SAME already-downloaded kokoro-multi-lang-v1_0
+# asset (no new download, no new licence question — still Apache-2.0,
+# already verified 2026-08-08) also carries trained Hindi and Japanese
+# speakers — confirmed by reading the model's own ONNX metadata
+# (`speaker2id`/`id2speaker` custom_metadata_map), not assumed:
+#   hi: 31=hf_alpha, 32=hf_beta (female) · 33=hm_omega, 34=hm_psi (male)
+#   ja: 37=jf_alpha, 38=jf_gongitsune, 39=jf_nezumi, 40=jf_tebukuro (female)
+#       · 41=jm_kumo (male)
+# Live-synthesized (not just loaded) on the owner's machine with real
+# Hindi/Japanese sentences — non-silent, plausible duration/RTF for all 9
+# sids. Picked from hexgrad's own published per-voice grades
+# (huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md) rather than by
+# ear — the owner doesn't speak either language, and reading a language
+# they can judge is worth more than a guess at one they can't:
+#   ja: jf_alpha is trained on HOURS of audio (Overall C+) vs every other
+#       Japanese voice's tens-of-minutes-or-less (jf_gongitsune/jf_tebukuro
+#       C, jf_nezumi/jm_kumo C- off a "🤏" sliver of data) — not a close
+#       call, sid=37 (jf_alpha) is the clear pick.
+#   hi: all four Hindi voices grade IDENTICALLY (Target Quality B, Overall
+#       C, same training-data bracket) — the card gives no numeric
+#       tiebreaker. Kept sid=31 (hf_alpha) for the same reason ja's winner
+#       happened to also be an "alpha": hexgrad's own naming reserves that
+#       slot for the flagship/default voice per language where one is
+#       designated, and it's this project's existing pattern too (en's
+#       af_heart, ja's now-confirmed jf_alpha). A genuine coin flip among
+#       the four, but not an arbitrary one.
+# Kokoro's other 3 non-English languages in this asset (es, fr, it, pt, zh)
+# are NOT added here — Piper already voices all five, so they'd add nothing.
+#
+# This exhausts Kokoro-82M's language set (en/es/fr/hi/it/ja/pt/zh — 8
+# total, per hexgrad's own model card). Further premium-cascade languages
+# need a different model family, not more of this one.
+PREMIUM_VOICES: dict[str, tuple[str, str]] = {
+    "en": ("kokoro-multi-lang-v1_0",
+           "c436dc6a842b62aba06af67e40bafcfb9c60ac3af895358f1974ad9a7f7c026b"),
+    "hi": ("kokoro-multi-lang-v1_0",
+           "c436dc6a842b62aba06af67e40bafcfb9c60ac3af895358f1974ad9a7f7c026b"),
+    "ja": ("kokoro-multi-lang-v1_0",
+           "c436dc6a842b62aba06af67e40bafcfb9c60ac3af895358f1974ad9a7f7c026b"),
+}
+PREMIUM_SID: dict[str, int] = {"en": 3, "hi": 31, "ja": 37}
+
+
 class VoiceUnavailable(RuntimeError):
     """No registered/usable voice for this language — run captions-only."""
 
 
 def voice_available(lang: str) -> bool:
     return _norm(lang) in VOICES
+
+
+def premium_voice_available(lang: str) -> bool:
+    return _norm(lang) in PREMIUM_VOICES
 
 
 def _norm(lang: str) -> str:
@@ -221,6 +288,25 @@ def ensure_voice(lang: str, on_status=None) -> str:
         raise VoiceUnavailable(f"voice download failed for '{lang}': {e}") from e
 
 
+def ensure_premium_voice(lang: str, on_status=None) -> str:
+    """Kokoro counterpart of ensure_voice() — separate function rather than a
+    refactor of the (already load-bearing, free-tier-serving) original, so
+    this trial can't regress the existing Piper download path.
+    Raises VoiceUnavailable when the language has no registered premium
+    voice or the download/verify fails."""
+    key = _norm(lang)
+    if key not in PREMIUM_VOICES:
+        raise VoiceUnavailable(f"no premium voice for '{lang}'")
+    asset, sha = PREMIUM_VOICES[key]
+    d = _voice_dir(asset)
+    if _find_onnx(d):
+        return d
+    try:
+        return _download_voice(asset, sha, on_status=on_status)
+    except Exception as e:
+        raise VoiceUnavailable(f"premium voice download failed for '{lang}': {e}") from e
+
+
 def build_tts(voice_dir: str, num_threads: int = 2):
     """Load a sherpa OfflineTts from an extracted voice dir.
 
@@ -252,16 +338,79 @@ def build_tts(voice_dir: str, num_threads: int = 2):
     return sherpa_onnx.OfflineTts(cfg)
 
 
-class LocalTTS:
-    """One loaded Piper voice. Synth is CPU-cheap (measured RTF ~0.06-0.4)."""
+def build_tts_kokoro(voice_dir: str, num_threads: int = 2):
+    """Load a sherpa OfflineTts from an extracted Kokoro voice dir.
 
-    def __init__(self, lang: str, on_status=None, num_threads: int = 2):
-        voice_dir = ensure_voice(lang, on_status=on_status)
-        self._tts = build_tts(voice_dir, num_threads)
+    Kokoro ships a `voices.bin` speaker-embedding file alongside
+    model.onnx/tokens.txt. The multi-lang packs (unlike the old English-only
+    kokoro-en-v0_19) also carry per-language lexicons and Chinese
+    text-normalization rule FSTs; both are optional-by-file-presence, same
+    pattern build_tts() already uses for Piper's zh voice.
+    """
+    import sherpa_onnx  # lazy: OSS builds without the wheel never pay for it
+    lexicons = [os.path.join(voice_dir, n) for n in
+               ("lexicon-us-en.txt", "lexicon-gb-en.txt", "lexicon-zh.txt")]
+    fsts = [os.path.join(voice_dir, n) for n in
+           ("date-zh.fst", "number-zh.fst", "phone-zh.fst")]
+    cfg = sherpa_onnx.OfflineTtsConfig(
+        model=sherpa_onnx.OfflineTtsModelConfig(
+            kokoro=sherpa_onnx.OfflineTtsKokoroModelConfig(
+                model=_find_onnx(voice_dir),
+                voices=os.path.join(voice_dir, "voices.bin"),
+                tokens=os.path.join(voice_dir, "tokens.txt"),
+                data_dir=os.path.join(voice_dir, "espeak-ng-data"),
+                lexicon=",".join(f for f in lexicons if os.path.exists(f)),
+            ),
+            provider="cpu",
+            num_threads=num_threads,
+        ),
+        rule_fsts=",".join(f for f in fsts if os.path.exists(f)),
+        max_num_sentences=1,
+    )
+    return sherpa_onnx.OfflineTts(cfg)
+
+
+def _premium_num_threads() -> int:
+    """Kokoro's heavier model benefits far more from extra CPU threads than
+    Piper does — benched 2026-08-08 on the owner's machine (8-core i5):
+    RTF 0.436 at 2 threads -> 0.288 at 8 threads (~34% faster), while GPU
+    (provider="cuda") is a silent no-op on the standard sherpa-onnx wheel
+    (no GPU build compiled in — would need the separate sherpa-onnx-gpu
+    package, not attempted here). Deliberately NOT changed for the free-tier
+    Piper path (_STANDARD_NUM_THREADS stays 2, proven safe on weak/shared
+    hardware across the whole install base) — only one license reaches this
+    premium path today, so spending more of ITS OWN cpu_count() is safe."""
+    cpu = os.cpu_count() or 4
+    return max(2, min(cpu - 2, 8))
+
+
+_STANDARD_NUM_THREADS = 2
+
+
+class LocalTTS:
+    """One loaded voice. Synth is CPU-cheap for Piper (measured RTF
+    ~0.06-0.4). Kokoro's ~330 MB model is heavier (measured RTF ~0.29-0.44
+    depending on thread count — see _premium_num_threads).
+    """
+
+    def __init__(self, lang: str, on_status=None, num_threads: int | None = None,
+                 tier: str = "standard"):
+        self._sid = 0
+        if tier == "premium" and premium_voice_available(lang):
+            voice_dir = ensure_premium_voice(lang, on_status=on_status)
+            self._tts = build_tts_kokoro(
+                voice_dir, num_threads or _premium_num_threads())
+            self._sid = PREMIUM_SID.get(_norm(lang), 0)
+        else:
+            # Falls through here for "premium" requested on a language Kokoro
+            # doesn't cover (e.g. tr) — same Piper voice the free tier gets.
+            voice_dir = ensure_voice(lang, on_status=on_status)
+            self._tts = build_tts(
+                voice_dir, num_threads or _STANDARD_NUM_THREADS)
         # Warm up off the session path: first generate pays JIT/alloc costs.
-        self._tts.generate(".", sid=0, speed=1.0)
+        self._tts.generate(".", sid=self._sid, speed=1.0)
 
     def synth(self, text: str, speed: float = 1.0) -> tuple[np.ndarray, int]:
         """Returns (float32 mono samples, sample_rate)."""
-        audio = self._tts.generate(text, sid=0, speed=speed)
+        audio = self._tts.generate(text, sid=self._sid, speed=speed)
         return np.asarray(audio.samples, dtype=np.float32), int(audio.sample_rate)

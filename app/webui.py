@@ -1379,6 +1379,19 @@ class Bridge(HistoryMixin):
         tier = str(q.get("tier") or q.get("plan") or "").strip().lower()
         return tier in ("creator", "pro", "enterprise", "premium", "paid")
 
+    def _taste_active(self) -> bool:
+        """True for a free/non-paid account still inside its one-time 15-minute
+        Pro taste — the population the Qwen-failure cascade rescue exists for
+        (pipeline._swap_to_cascade). False for a paid account (gets the Gemini
+        failover instead — see _is_paid), an unknown/unreachable quota (fails
+        closed: no client-side rescue attempt rather than a guess — the server
+        re-checks eligibility from scratch at the moment of use regardless),
+        and an already-spent taste (that account's cascade is the ordinary
+        daily one, not this path)."""
+        if not IS_OFFICIAL_RELEASE or self._is_paid():
+            return False
+        return not self._taste_spent()
+
     def _badge_removable(self) -> bool:
         """Whether the user may turn the attribution badge off (paid only)."""
         return self._is_paid()
@@ -2299,7 +2312,7 @@ class Bridge(HistoryMixin):
         Gemini (the engine selector is server-controlled). Dev/BYOK routes locally
         over the stored keys. Raises a localized error if no key is available.
         """
-        from .config import ENGINE_GEMINI, qwen_can_voice, resolve_model
+        from .config import ENGINE_CASCADE, ENGINE_GEMINI, qwen_can_voice, resolve_model
         # Beta engine opt-in (Qwen): only honored when the account is
         # beta-eligible (server flag; dev builds are always eligible) AND the
         # user switched it on. Never touches the normal server-side routing.
@@ -2424,9 +2437,25 @@ class Bridge(HistoryMixin):
         # surface as localized errors from get_session_key itself.
         # Zero-round-trip start: a fresh prefetched key (warmed at login /
         # target change / previous stop) skips even that one call.
-        def _resolve_saas(target, force_gemini=False):
+        def _resolve_saas(target, force_gemini=False, cascade_rescue=False):
             if force_gemini:
                 return gemini_key()
+            if cascade_rescue:
+                # Server-authoritative grant (see voxis_client.get_session_key's
+                # rescue= docstring): a falsy key here just means "not granted
+                # right now" — not_paid/not_taste/meeting/qwen-is-fine are all
+                # legitimate reasons and none of them are errors. The caller
+                # (pipeline._swap_to_cascade) treats a non-cascade/no-key
+                # response as "no rescue" and lets the existing give-up path
+                # surface normally.
+                key, engine, model, quality, _quota, workspace, _kt, _fb, _err = voxis_client.get_session_key(
+                    target=target, caps=voxis_client.SESSION_KEY_CAPS,
+                    mode=getattr(self, "_starting_mode", None), rescue=True)
+                if key and engine == ENGINE_CASCADE:
+                    if quality:
+                        self.cfg["quality_preset"] = quality
+                    return engine, key, (model or resolve_model(self.cfg, engine)), None
+                return None, None, None, None
             pre = self._pop_prefetched_key(target)
             if pre:
                 engine, key, model, quality, workspace, fallback = pre
@@ -2521,7 +2550,8 @@ class Bridge(HistoryMixin):
                     self._session_start = t0
                 try:
                     started = self.controller.start(mode, session_dir=self._session_dir,
-                                                    paid=self._is_paid())
+                                                    paid=self._is_paid(),
+                                                    taste_rescue=self._taste_active())
                 except BaseException:
                     with self._text_lock:
                         self._session_start = 0.0

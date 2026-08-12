@@ -435,10 +435,18 @@ class IncomingPipeline:
                 on_status=on_status, name=t("name_in"),
                 # Gemini failover is a PAID perk (2026-08-12 cost-pressure
                 # policy — see .vault/decision-log.md): free/taste sessions
-                # never buy a Gemini fallback, so on_fatal stays unset for
-                # them and BaseTranslator._give_up just surfaces the existing
-                # connection-error status instead of substituting an engine.
-                on_fatal=self._failover_to_gemini if cfg.get("_paid_customer") else None,
+                # never buy a Gemini fallback. A free/taste session still
+                # inside its one-time 15-minute Pro taste instead gets a
+                # shot at the cascade rescue (_swap_to_cascade) — server-
+                # granted only, see that function's docstring. Anyone else
+                # (taste already spent, Meeting mode — the incoming leg of a
+                # meeting reaches here too, but the server refuses to
+                # cascade a meeting regardless of this wiring) falls through
+                # to None: BaseTranslator._give_up just surfaces the
+                # existing connection-error status.
+                on_fatal=(self._failover_to_gemini if cfg.get("_paid_customer")
+                         else self._failover_to_cascade
+                         if cfg.get("_taste_rescue_eligible") else None),
                 # SaaS resolvers hang the Gemini key fountain off the resolve fn so
                 # a single-use ephemeral key can be refreshed on every rotation
                 # (dev/BYOK resolvers carry none — raw keys need no refetch).
@@ -476,6 +484,9 @@ class IncomingPipeline:
 
     def _failover_to_gemini(self, exc) -> bool:
         return _swap_to_gemini(self, "target_language_incoming", t("name_in"), exc)
+
+    def _failover_to_cascade(self, exc) -> bool:
+        return _swap_to_cascade(self, "target_language_incoming", t("name_in"), exc)
 
     def _apply_original_gain(self, speaking: bool) -> float:
         """Compute the "original audio" duck level, on the VB-CABLE path (the
@@ -924,6 +935,110 @@ def _swap_to_gemini(pipe, target_key, name, exc):
     # watcher counts these events and flips qwen_enabled off for everyone
     # once several licenses report the same dead engine.
     voxis_client.report_event_async("engine_failover", None, {
+        "from": from_engine, "reason": type(exc).__name__ if exc else "",
+    })
+    return True
+
+
+def _swap_to_cascade(pipe, target_key, name, exc):
+    """Mid-session rescue for a free-tier session still inside its one-time
+    15-minute Pro taste: a terminal Qwen failure would otherwise just end the
+    session (2026-08-12 policy — free tier never buys a Gemini fallback).
+    Swaps to cascade (the same Gemini-text + local voice engine the free
+    tier's daily allowance already uses) instead, running the PREMIUM
+    (Kokoro) voice tier when the target language has one — see
+    local_tts.PREMIUM_VOICES — so the user doesn't drop from a paid-quality
+    voice to nothing.
+
+    THE GRANT IS SERVER-AUTHORITATIVE, not a client decision: pipe._resolve
+    is asked with cascade_rescue=True, and the server (handlers/cascade.go
+    CascadeRescueEligible) only answers with a cascade key while it
+    independently believes Qwen is degraded — EITHER a short auto-expiring
+    window (PB setting qwen_rescue_until, opened/extended by
+    WatchEngineHealth's existing storm-evidence check, itself fed only by
+    PAID customers' real engine_failover events, see _swap_to_gemini above)
+    OR an operator's manual qwen_enabled=false as a backstop for a longer
+    declared outage — AND this license still has unspent taste minutes AND
+    today's daily free-cascade allowance isn't already spent (a rescue
+    grant books against that SAME daily counter — not exempt from it, so a
+    taste account can't ride this indefinitely) AND the mode isn't Meeting.
+    This is the deliberate abuse cap: a free/taste account has no path of
+    its own to open the rescue window or flip qwen_enabled — engine_failover
+    is emitted ONLY by the paid path above — so it cannot grief its way into
+    free premium voice by faking failures. A refusal (no key / wrong
+    engine, including a healthy-Qwen "no, nothing's wrong") is silent and
+    not an error: the caller's existing give-up path surfaces normally, so
+    a session that gets no rescue behaves exactly as it did before this
+    existed. Full design + the corrected-mid-session history: see
+    .vault/cascade-rescue-taste-qwen-failure-2026-08-13.md.
+
+    Runs on the dying translator's thread (BaseTranslator._give_up), off
+    the audio path. True = handled, a status line explains it rather than
+    an error reaching the user. Never retried: fires at most once per
+    pipeline, same guard (_failover_done) as _swap_to_gemini — shared
+    rather than duplicated because a pipeline only ever substitutes an
+    engine once, regardless of which replacement it substitutes."""
+    if pipe._failover_done or pipe._engine == ENGINE_CASCADE:
+        return False
+    pipe._failover_done = True
+
+    target = pipe.cfg[target_key]
+    try:
+        engine, key, model, _fallback = pipe._resolve(target, cascade_rescue=True)
+    except Exception:
+        _log.exception("cascade rescue: resolver failed")
+        return False
+    if engine != ENGINE_CASCADE or not key:
+        return False
+
+    _log.warning("engine %s gave up (%s) — rescuing a taste session onto "
+                "cascade", pipe._engine, exc)
+    old = pipe.translator
+    try:
+        new = make_translator(
+            pipe.cfg, target, engine=ENGINE_CASCADE, key=key, model=model,
+            on_audio=pipe._tts_sink, on_text=pipe._on_text,
+            on_status=pipe._on_status, name=name,
+            # No on_fatal: if the cascade's own inner (Gemini-text) leg also
+            # dies, that's a second, independent failure and must reach the
+            # user rather than looping through further substitutions.
+        )
+    except Exception:
+        _log.exception("cascade rescue: could not build the cascade translator")
+        return False
+
+    # Same cleanup as _swap_to_gemini: drop whatever the dead engine had
+    # already buffered so the user doesn't go on hearing Qwen read sentences
+    # the captions have long passed.
+    stager = getattr(pipe, "_stager", None)
+    if stager is not None:
+        try:
+            stager.clear()
+        except Exception:
+            pass
+    for player in (getattr(pipe, "player", None),
+                   getattr(pipe, "monitor_player", None)):
+        if player is not None:
+            try:
+                player.clear_tts()
+            except Exception:
+                pass
+
+    from_engine = pipe._engine
+    pipe._engine = ENGINE_CASCADE
+    pipe.translator = new
+    new.start()
+    try:
+        old.stop()
+    except Exception:
+        pass
+    pipe._on_status(t("st_cascade_rescue"))
+    # Deliberately NOT "engine_failover": that event is what feeds
+    # WatchEngineHealth's qwen_enabled kill-switch, which this rescue is
+    # gated on. Emitting it from the free/taste path would let a free
+    # account influence the very signal that decides its own eligibility —
+    # a self-reinforcing loop. This name is observability-only.
+    voxis_client.report_event_async("cascade_rescue_fired", None, {
         "from": from_engine, "reason": type(exc).__name__ if exc else "",
     })
     return True
@@ -1668,7 +1783,8 @@ class ModeController:
         except Exception:
             pass
 
-    def start(self, mode: str, session_dir: str | None = None, paid: bool = False):
+    def start(self, mode: str, session_dir: str | None = None, paid: bool = False,
+             taste_rescue: bool = False):
         # "restart", not a user stop: this stop() is the implicit teardown of a
         # session the user is replacing (a mode switch, or a settings change that
         # has to re-open the engine handshake). Labeling it keeps config churn
@@ -1713,6 +1829,13 @@ class ModeController:
         # so any dropped connection hands off to Gemini immediately rather
         # than riding out a flaky free engine (see engines.py for why).
         self.cfg["_paid_customer"] = bool(paid)
+        # Free/taste session eligible for the mid-session Qwen-failure cascade
+        # rescue (see _swap_to_cascade below) — a separate flag rather than an
+        # else-branch off _paid_customer so the two perks (Gemini failover vs.
+        # cascade rescue) stay independently auditable. In practice mutually
+        # exclusive: _is_paid() and _taste_active() can't both be true for the
+        # same license (webui._taste_active).
+        self.cfg["_taste_rescue_eligible"] = bool(taste_rescue)
         # Correlation id shared by this session's funnel milestones. Generated
         # before the retry loop so session_start/live/error all carry the same id.
         sid = uuid.uuid4().hex[:16]

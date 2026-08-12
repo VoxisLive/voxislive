@@ -26,10 +26,14 @@ import queue
 import re
 import threading
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .i18n import t
+
+if TYPE_CHECKING:
+    from .local_tts import LocalTTS  # type-only: the real import stays lazy
 
 _log = logging.getLogger("voxis")
 
@@ -45,7 +49,29 @@ IDLE_FLUSH_HARD_S = 2.5
 QUIET_FLUSH_S = 0.7      # source audio silent (video paused): flush fast
 STALL_DRAIN_S = 1.5      # no new text: presume the speaker stopped
 MERGE_MAX_CHARS = 320    # queued sentences merge into one prosody arc
+# Premium (Kokoro) tail-latency fix, 2026-08-08: MERGE_MAX_CHARS was
+# bench-pinned for Piper (RTF as low as 0.06); merging up to 320 chars
+# (~20 s of speech) into ONE synth call before it's added to _play_deadline
+# is fine when synthesis is faster than realtime, but Kokoro's RTF (~0.29
+# even after thread-tuning) turns that same batch into several REAL seconds
+# of synthesis time committed in one shot — measured as a ~6 s "keeps
+# talking after I paused" tail, up from Piper's bench-pinned ~4 s. A smaller
+# cap here trades a little less prosodic smoothness (more, shorter synth
+# calls) for a shorter worst-case commit once the source goes quiet.
+MERGE_MAX_CHARS_PREMIUM = 120
 LOOKAHEAD_S = 1.0        # synth at most this far ahead of playback
+# Premium (Kokoro) gap fix, 2026-08-08: owner reported audible pauses
+# between sentences after the MERGE_MAX_CHARS_PREMIUM change above — NOT a
+# throughput problem (measured: aggregate RTF is ~identical whether the
+# same text is synthesized as one big call or several small ones). It's a
+# STARVATION problem: the synth loop only starts a new synth call once
+# buffered-but-unplayed audio drops to LOOKAHEAD_S (1.0s) or less, but one
+# Kokoro synth call can itself take 1.5-2.3s of REAL wall-clock time
+# (measured on a 120-char chunk) — so the player can run out of buffered
+# audio and go silent WHILE that call is still running, well before RTF<1
+# lets the buffer catch back up. A bigger premium-only lookahead keeps more
+# runway in reserve so a single slow call can't outrun the buffer.
+LOOKAHEAD_S_PREMIUM = 2.5
 _SILENCE_PEAK = 33       # int16 peak below this = silent source frame (~1e-3)
 
 
@@ -124,10 +150,15 @@ class CascadeTranslator(threading.Thread):
     def __init__(self, api_key, target_lang, on_audio, on_text, on_status, *,
                  rotate_minutes=13, name="cascade", model=None, voice="Aoede",
                  temperature=0.3, key_provider=None, on_fatal=None,
-                 inner_factory=None, tts_factory=None):
+                 inner_factory=None, tts_factory=None, voice_tier="standard"):
         super().__init__(daemon=True, name=name)
         self.engine = "cascade"
         self.target_lang = target_lang
+        self._voice_tier = voice_tier  # "standard" (Piper) | "premium" (Kokoro trial)
+        self._merge_max_chars = (MERGE_MAX_CHARS_PREMIUM if voice_tier == "premium"
+                                 else MERGE_MAX_CHARS)
+        self._lookahead_s = (LOOKAHEAD_S_PREMIUM if voice_tier == "premium"
+                             else LOOKAHEAD_S)
         self.on_audio = on_audio
         self.on_text = on_text
         self.on_status = on_status
@@ -138,7 +169,8 @@ class CascadeTranslator(threading.Thread):
         self._last_pcm_ts = 0.0        # last frame of ANY kind (gated stream)
         self._play_deadline = 0.0      # when already-emitted audio finishes
         self._asm = SentenceAssembler(self._enqueue_sentence)
-        self._tts = None
+        self._tts: LocalTTS | None = None
+        self._tts_ready = threading.Event()  # set once loading finishes (or fails)
         self._tts_error_warned = False
         self._tts_factory = tts_factory  # tests inject a fake; None = LocalTTS
         self._synth_thread = threading.Thread(
@@ -197,23 +229,37 @@ class CascadeTranslator(threading.Thread):
         return self._inner.wait_ready(timeout)
 
     def start(self):
-        try:
-            factory = self._tts_factory
-            self._tts = (factory() if factory is not None
-                         else self._make_local_tts())
-        except Exception as e:
-            # Captions-only degrade: translation must never die for a voice.
-            self._tts = None
-            _log.warning("cascade local voice unavailable; captions only: %s", e)
-            self.on_status(t("st_no_voice_warning"))
+        # Load the voice OFF this thread: a small Piper voice (~60 MB) loads
+        # near-instantly and this never mattered, but Kokoro's ~325 MB model
+        # measured ~1.5-1.7s to load+warm on ordinary hardware — and this
+        # used to run BEFORE self._inner.start(), so the cloud leg's own
+        # connect didn't even begin until the voice had finished loading.
+        # Owner-reported "6s to start" (2026-08-08) was that load time
+        # STACKED serially in front of the cloud leg's own ~3.5s first-token
+        # lag, not synthesis speed. Loading now runs concurrently with the
+        # cloud connect; only the synth loop (not session start) waits on it.
+        def _load_tts():
+            try:
+                factory = self._tts_factory
+                self._tts = (factory() if factory is not None
+                             else self._make_local_tts())
+            except Exception as e:
+                # Captions-only degrade: translation must never die for a voice.
+                self._tts = None
+                _log.warning("cascade local voice unavailable; captions only: %s", e)
+                self.on_status(t("st_no_voice_warning"))
+            finally:
+                self._tts_ready.set()
+        threading.Thread(target=_load_tts, daemon=True,
+                         name=f"{self.name}-ttsload").start()
         self._inner.start()
-        if self._tts is not None:
-            self._synth_thread.start()
+        self._synth_thread.start()
         super().start()
 
     def _make_local_tts(self):
         from .local_tts import LocalTTS  # lazy: sherpa wheel optional on OSS
-        return LocalTTS(self.target_lang, on_status=self.on_status)
+        return LocalTTS(self.target_lang, on_status=self.on_status,
+                        tier=self._voice_tier)
 
     def stop(self):
         self._stopping.set()
@@ -249,9 +295,15 @@ class CascadeTranslator(threading.Thread):
                 pass
 
     def _synth_loop(self):
-        assert self._tts is not None  # start() only launches this thread when set
+        # Voice loads concurrently with the cloud connect now (see start());
+        # wait here, off the session-start critical path, rather than delay
+        # self._inner.start(). A load failure still degrades to
+        # captions-only — on_status was already fired from the loader.
+        self._tts_ready.wait()
+        if self._tts is None:
+            return
         while not self._stopping.is_set():
-            if self._play_deadline - time.monotonic() > LOOKAHEAD_S:
+            if self._play_deadline - time.monotonic() > self._lookahead_s:
                 time.sleep(0.05)   # player has audio — let merges accumulate
                 continue
             try:
@@ -259,7 +311,7 @@ class CascadeTranslator(threading.Thread):
             except queue.Empty:
                 continue
             merged = [text]
-            while len(" ".join(merged)) < MERGE_MAX_CHARS:
+            while len(" ".join(merged)) < self._merge_max_chars:
                 try:
                     nxt, _ = self._sentq.get_nowait()
                     merged.append(nxt)

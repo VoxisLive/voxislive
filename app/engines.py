@@ -64,7 +64,8 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             rotate_minutes=cfg.get("session_rotate_minutes", 13), name=name,
             model=model, voice=cfg.get("gemini_voice", "Aoede"),
             temperature=float(cfg.get("gemini_temperature", 0.3)),
-            key_provider=key_provider)
+            key_provider=key_provider,
+            voice_tier=cfg.get("_cascade_voice_tier", "standard"))
         tr.on_fatal = on_fatal
         return tr
 

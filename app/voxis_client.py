@@ -636,7 +636,8 @@ class DeviceBlockedError(RuntimeError):
         self.remaining_minutes = remaining_minutes
 
 
-def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[str | None, str | None, str | None, str | None, dict | None, str | None, str | None, dict | None, str | None]:
+def get_session_key(target=None, caps=None, engine=None, mode=None,
+                    rescue=False) -> tuple[str | None, str | None, str | None, str | None, dict | None, str | None, str | None, dict | None, str | None]:
     """SaaS execution path: retrieves a server-issued translation key. With
     caps='engine-routing' the server picks the engine by TARGET language and also
     returns {engine, model, quality, quota} — plus {workspace} on Qwen (DashScope
@@ -664,7 +665,24 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[str
     machine's free tier) the tuple has no slot for. Every existing caller
     already treats a falsy key as fatal and raises/propagates, so an uncaught
     DeviceBlockedError reaches the same place a RuntimeError would. Never
-    embedded in the client build."""
+    embedded in the client build.
+
+    rescue=True asks for a mid-session Qwen-failure cascade grant (see
+    pipeline._swap_to_cascade): a free/taste account whose Qwen session just
+    died gets a cascade (Gemini-text + local premium voice) key that does
+    NOT draw down its 15-minute taste quota — it DOES book against the
+    ordinary daily free-cascade allowance, same as any other cascade
+    session, so the perk is bounded rather than indefinite. The server is
+    the sole authority on whether this is granted — it only issues one
+    while it independently believes Qwen is degraded: EITHER a short
+    auto-expiring window opened by WatchEngineHealth's existing storm
+    detector (fed only by PAID customers' real Gemini failovers) OR an
+    operator's manual qwen_enabled=false as a backstop — AND this license
+    still has unspent taste minutes AND today's daily allowance isn't
+    already spent AND mode isn't Meeting. A denial comes back as an
+    ordinary falsy-key response, same as any other refusal from this
+    endpoint — never an exception. Full design:
+    .vault/cascade-rescue-taste-qwen-failure-2026-08-13.md."""
     if not IS_OFFICIAL_RELEASE:
         return None, None, None, None, None, None, None, None, "SaaS keys are disabled in developer builds."
     token = _valid_jwt()
@@ -684,6 +702,8 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[str
         # synthetic voice speaking as the user. It cannot infer the mode from the
         # key request, so the client has to say which one it is starting.
         params["mode"] = mode
+    if rescue:
+        params["rescue"] = "1"
     try:
         resp = _http.get(
             f"{_BASE_URL}/auth/session-key",
@@ -701,6 +721,11 @@ def get_session_key(target=None, caps=None, engine=None, mode=None) -> tuple[str
             # Carried on the quota snapshot so the free-tier chip can name the
             # real allowance instead of hard-coding a number the server owns.
             quota["cascade_daily_minutes"] = d.get("cascade_daily_minutes")
+        if quota is not None and d.get("cascade_voice_tier") is not None:
+            # Same piggyback as cascade_daily_minutes above — trial-only
+            # field (see the Kokoro premium-cascade trial plan), server-set
+            # only for the allowlisted license, absent for everyone else.
+            quota["cascade_voice_tier"] = d.get("cascade_voice_tier")
         fallback = d.get("fallback") if isinstance(d.get("fallback"), dict) else None
         return (d.get("key"), d.get("engine", "gemini"), d.get("model"),
                 d.get("quality"), quota, d.get("workspace"),
