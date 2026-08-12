@@ -64,11 +64,7 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             rotate_minutes=cfg.get("session_rotate_minutes", 13), name=name,
             model=model, voice=cfg.get("gemini_voice", "Aoede"),
             temperature=float(cfg.get("gemini_temperature", 0.3)),
-            key_provider=key_provider,
-            # "_cascade_voice_tier" is stamped on cfg by the caller from the
-            # server's session-key response (same pattern as _paid_customer
-            # below) — trial-only for now, see the Kokoro premium-voice plan.
-            voice_tier=cfg.get("_cascade_voice_tier", "standard"))
+            key_provider=key_provider)
         tr.on_fatal = on_fatal
         return tr
 
