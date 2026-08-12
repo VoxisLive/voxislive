@@ -388,7 +388,13 @@ class BaseTranslator(threading.Thread):
                     return
             except Exception:  # a broken handler must not mask the real failure
                 traceback.print_exc()
-        self.on_status(t("st_conn_err", name=self.name, s=0, e=exc))
+        # Generic, not st_conn_err: no substitute engine took over, so this is
+        # not a retry (the "retrying in 0s" phrasing was misleading) and the
+        # raw exc — which can be an upstream provider's verbatim error text,
+        # e.g. DashScope's {"code":"COMMON_ERROR","message":"thread pool
+        # exhausted..."} — must not reach the user unfiltered. Full exc still
+        # goes to the log line above for field diagnosis.
+        self.on_status(t("st_engine_gone", name=self.name))
         traceback.print_exc()
 
     # --- thread body --------------------------------------------------------

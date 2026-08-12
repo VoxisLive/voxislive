@@ -192,6 +192,34 @@ def test_give_up_logs_when_a_substitute_engine_takes_over(caplog):
     assert "a substitute engine took over" in caplog.text
 
 
+def test_give_up_without_a_substitute_hides_the_raw_upstream_error():
+    """No on_fatal (e.g. free/taste tier, 2026-08-12 gate) or a substitute that
+    declined to take over must not leak the upstream provider's verbatim error
+    text to the user — a DashScope payload like {"code":"COMMON_ERROR",
+    "message":"thread pool exhausted max_workers 100"} is not something a user
+    should ever see. The raw exc still reaches the log (test_give_up_is_logged),
+    just not on_status."""
+    from app.i18n import t
+    statuses = []
+    tr = _make(qwen.QwenTranslator, on_status=statuses.append)
+    raw = '{"code":"COMMON_ERROR","message":"thread pool exhausted max_workers 100"}'
+    tr._give_up(RuntimeError(raw))
+    assert len(statuses) == 1
+    assert raw not in statuses[0]
+    assert statuses[0] == t("st_engine_gone", name=tr.name)
+
+
+def test_give_up_when_substitute_declines_also_hides_the_raw_error():
+    """on_fatal exists (paid) but itself fails to take over (returns falsy, or
+    raises) — same leak risk, same fix applies regardless of tier."""
+    statuses = []
+    tr = _make(qwen.QwenTranslator, on_status=statuses.append)
+    tr.on_fatal = lambda exc: False
+    tr._give_up(RuntimeError("upstream said something ugly"))
+    assert len(statuses) == 1
+    assert "upstream said something ugly" not in statuses[0]
+
+
 def test_qwen_duplicate_audio_detection():
     import numpy as np
     tr = _make(qwen.QwenTranslator)
