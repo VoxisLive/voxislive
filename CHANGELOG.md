@@ -5,7 +5,20 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 
 ## Unreleased
 
+### Added
+- A free/taste-tier session whose fast translation engine hits a real,
+  server-confirmed problem mid-session now gets a backup voice instead of the
+  session simply ending — a short notice explains what's happening. The
+  backup voice never costs the session's trial minutes; it draws from the
+  same daily free-voice allowance every account already has, so it can't run
+  indefinitely. The server only grants it while it has real evidence of
+  trouble, so a session can't trigger this on its own.
+
 ### Fixed
+- A translation-engine failure with no substitute engine available could
+  surface the raw upstream error text to the user (e.g. a provider's literal
+  technical error payload) instead of a clear message. Now shows a plain
+  status in all 23 languages; the technical detail still reaches the log.
 - A long-running Qwen session carrying a lot of speech could be dropped and
   reconnected even though the connection was healthy: the WebSocket ping/pong
   keepalive (`ping_timeout=10s`) could fire before the app's own stall
