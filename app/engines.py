@@ -64,7 +64,11 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             rotate_minutes=cfg.get("session_rotate_minutes", 13), name=name,
             model=model, voice=cfg.get("gemini_voice", "Aoede"),
             temperature=float(cfg.get("gemini_temperature", 0.3)),
-            key_provider=key_provider)
+            key_provider=key_provider,
+            # "_cascade_voice_tier" is stamped on cfg by the caller from the
+            # server's session-key response (same pattern as _paid_customer
+            # below) — trial-only for now, see the Kokoro premium-voice plan.
+            voice_tier=cfg.get("_cascade_voice_tier", "standard"))
         tr.on_fatal = on_fatal
         return tr
 
@@ -96,23 +100,20 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
             fallback=fallback)
         tr.engine = engine
         tr.on_fatal = on_fatal
-        if cfg.get("_paid_customer"):
-            # A paying customer must never sit through Qwen's normal 8-retry
-            # reconnect budget for an UNCLASSIFIED transient error (network
-            # blip, covert immediate-close) — one dropped connection is reason
-            # enough to hand the session to Gemini rather than gamble on a
-            # free engine's stability. Free/BYOK sessions keep the full budget
-            # (self-heals silently; a slower fallback is an acceptable
-            # tradeoff against burning paid Gemini cost on every hiccup).
-            # Does NOT govern the specific pool-capacity failure measured
-            # 2026-08-01 ("thread pool exhausted" repeated outages) any more —
-            # that phrase is now classified TERMINAL (base_translator.py
-            # TERMINAL_PHRASES), which skips this counter entirely and gets
-            # its own, faster path: one immediate retry on the server-provided
-            # `fallback` pool (this call's `fallback` kwarg), then give up.
-            # That path runs for EVERY session, paid or not — a paying
-            # customer benefits from it exactly like everyone else.
-            tr.MAX_TRANSIENT_FAILURES = 1
+        # Paid sessions used to get MAX_TRANSIENT_FAILURES=1 here — bail to
+        # Gemini on the first unclassified hiccup rather than ride out Qwen's
+        # normal 8-retry budget. Reversed 2026-08-12 (cost-pressure policy
+        # change, see .vault/decision-log.md): Qwen is now the priority engine
+        # for EVERY tier, paid included, so a paying session self-heals on
+        # Qwen exactly like a free one instead of buying an expensive Gemini
+        # session for a single dropped connection. The terminal-error fast
+        # path is unaffected and stays the real "belirli hatadan sonra
+        # Gemini'a geç" trigger: a pool-capacity failure (e.g. the 2026-08-01
+        # "thread pool exhausted" outages) is classified TERMINAL
+        # (base_translator.py TERMINAL_PHRASES), skips this counter entirely,
+        # gets one immediate retry on the server-provided `fallback` pool,
+        # and only then gives up — see engines.py's `fallback` kwarg and
+        # pipeline.py's on_fatal wiring (paid-only) for what happens after.
         return tr
 
     from .translator import LiveTranslator  # lazy: keep google.genai off cold start

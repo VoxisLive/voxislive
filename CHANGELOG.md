@@ -29,6 +29,13 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   restores it on stop.
 
 ### Added
+- The language picker now locks out any language a free-tier session cannot
+  use, with a link to upgrade, instead of letting you pick it and finding out
+  later — mid-session — that it does not work. Paired with a cost-control
+  change: a free or taste-tier session no longer falls back to the paid engine
+  under any circumstance (an outage included), it only ever uses the primary
+  engine or ends the session cleanly. Paid sessions are unaffected — they
+  still fail over to the backup engine when needed.
 - The top bar now shows which version you're running, and flags it when a
   newer one is available — checked in the background against a small public
   manifest (`voxislive.com/app.json`) that also carries language coverage for

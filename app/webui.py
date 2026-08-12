@@ -1074,6 +1074,7 @@ class Bridge(HistoryMixin):
         byok_set = byok_status.get("gemini", False)  # back-compat: single bool
         from .paths import client_channel
         self._maybe_check_app_manifest()
+        qwen_voiced = _voice_choice_langs(self.cfg)
         return {
             "version": APP_VERSION,
             "channel": client_channel(),
@@ -1093,7 +1094,17 @@ class Bridge(HistoryMixin):
             # Computed here with the engine's own predicate, over the real picker
             # list, so the UI never has to re-implement BCP-47 normalization and
             # cannot drift from routing (which the server can also override).
-            "voice_choice_langs": _voice_choice_langs(self.cfg),
+            "voice_choice_langs": qwen_voiced,
+            # Targets a FREE-tier session (incl. the one-time Pro taste) may
+            # pick at all — Qwen's voiced tier, same list as voice_choice_langs
+            # above (identical predicate: qwen_can_voice). A free session must
+            # never reach Gemini (2026-08-12 cost-pressure policy — see
+            # .vault/decision-log.md), so the picker locks everything outside
+            # this list for a free/taste account instead of letting the user
+            # pick it and hit a late "unavailable" from _resolve_saas. Paid
+            # accounts ignore this entirely (Gemini catch-all still serves
+            # them for these targets, unchanged).
+            "free_engine_langs": qwen_voiced,
             # The prepacked term list, so Settings can show exactly what ships
             # instead of a second copy that could drift from config.DEFAULT_TERMS.
             "builtin_terms_list": list(DEFAULT_TERMS),
@@ -2216,6 +2227,11 @@ class Bridge(HistoryMixin):
                                                        fallback)
                 if isinstance(quota, dict):
                     self._last_quota = quota
+                    # Trial-only field, piggybacked on the quota dict the same
+                    # way cascade_daily_minutes is (voxis_client.py) rather
+                    # than widening the already-awkward 9-tuple return.
+                    self.cfg["_cascade_voice_tier"] = quota.get(
+                        "cascade_voice_tier", "standard")
             except Exception:
                 pass  # cold cache == old behavior
 
@@ -2416,6 +2432,12 @@ class Bridge(HistoryMixin):
                 engine, key, model, quality, workspace, fallback = pre
                 if quality:
                     self.cfg["quality_preset"] = quality
+                # No quota on the prefetch-hit path — best-effort from the last
+                # live fetch (same staleness tolerance the epoch guard above
+                # already accepts for this cache).
+                if isinstance(self._last_quota, dict):
+                    self.cfg["_cascade_voice_tier"] = self._last_quota.get(
+                        "cascade_voice_tier", "standard")
                 self._apply_qwen_workspace(engine, workspace)
                 return engine, key, (model or resolve_model(self.cfg, engine)), fallback
             key, engine, model, quality, quota, workspace, _kt, fallback, err = voxis_client.get_session_key(
@@ -2424,17 +2446,29 @@ class Bridge(HistoryMixin):
             if key:
                 if isinstance(quota, dict):
                     self._last_quota = quota  # keeps the paid-badge gate fresh
+                    self.cfg["_cascade_voice_tier"] = quota.get(
+                        "cascade_voice_tier", "standard")
                 if quality:
                     self.cfg["quality_preset"] = quality  # server-controlled default
                 self._apply_qwen_workspace(engine, workspace)
                 return engine, key, (model or resolve_model(self.cfg, engine)), fallback
-            # Routed engine unavailable (503) → fall back to Gemini via the legacy path.
-            key, engine, model, quality, quota, workspace, _kt, _fb, err2 = voxis_client.get_session_key()
-            if key:
-                if quality:
-                    self.cfg["quality_preset"] = quality
-                return "gemini", key, (model or resolve_model(self.cfg, "gemini")), None
-            raise RuntimeError(err or err2 or t("st_no_key"))
+            # Routed engine unavailable (503) → fall back to Gemini via the legacy
+            # path. PAID ONLY (2026-08-12 cost-pressure policy — see
+            # .vault/decision-log.md): the legacy no-caps call always answers
+            # Gemini regardless of tier, so without this gate a free/taste
+            # session would silently buy a Gemini session the moment Qwen is
+            # unavailable — exactly the leak measured in usage_events during
+            # the 2026-08-06..09 qwen_enabled=false window. The server now
+            # also refuses this 503 itself for free tier (session_key.go), so
+            # this is defense-in-depth, not the only gate.
+            if self._is_paid():
+                key, engine, model, quality, quota, workspace, _kt, _fb, err2 = voxis_client.get_session_key()
+                if key:
+                    if quality:
+                        self.cfg["quality_preset"] = quality
+                    return "gemini", key, (model or resolve_model(self.cfg, "gemini")), None
+                raise RuntimeError(err or err2 or t("st_no_key"))
+            raise RuntimeError(err or t("st_no_key"))
         # Read via getattr(resolve, "gemini_key_provider", None) by the caller —
         # see the docstring note on _resolve_byok_beta.beta_active above.
         _resolve_saas.gemini_key_provider = gemini_key_provider  # pyright: ignore[reportFunctionMemberAccess]

@@ -362,10 +362,56 @@ function renderVoiceHint(){
   const silent = known && target && voiced.indexOf(target) < 0;
   el.style.display = (silent && isTasteTier(QUOTA)) ? '' : 'none';
 }
+// Free-tier (incl. the one-time Pro taste) language lock — 2026-08-12,
+// cost-pressure policy: a free/taste session must never reach Gemini (see
+// .vault/decision-log.md), so a target Qwen can't voice is locked out of the
+// picker entirely rather than being offered and failing late. The server
+// enforces the same rule independently (session_key.go refuses it with a
+// 503), this is purely so the user sees an upgrade prompt instead of a
+// dead-end error. STATE.free_engine_langs is the exact same Qwen-voiced list
+// as STATE.voice_choice_langs (see webui.py get_init) — one list, two uses.
+function langLocked(lang){
+  const allowed = STATE.free_engine_langs;
+  if(!isTasteTier(QUOTA)) return false;
+  if(!Array.isArray(allowed) || allowed.length===0) return false; // no list => don't guess
+  return allowed.indexOf(lang) < 0;
+}
+function renderLangLock(){
+  const sel = $('#hear');
+  if(!sel) return;
+  let anyLocked = false;
+  Array.from(sel.options).forEach(o=>{
+    const locked = langLocked(o.value);
+    o.disabled = locked;
+    if(locked) anyLocked = true;
+  });
+  // The currently-selected target became locked (e.g. taste just started, or
+  // quota refreshed mid-session) — a disabled <option> can stay SELECTED even
+  // though it can no longer be chosen going forward, which would silently
+  // hand the next session start a target the server will now refuse. Bounce
+  // to the first unlocked language instead of leaving a dead selection.
+  if(sel.value && langLocked(sel.value)){
+    const ok = Array.from(sel.options).find(o=>!o.disabled);
+    if(ok){
+      sel.value = ok.value;
+      if(STATE.cfg) STATE.cfg.target_language_incoming = ok.value;
+      api().set_cfg('target_language_incoming', ok.value);
+    }
+  }
+  const hint = $('#hear-paidlock');
+  if(hint){
+    hint.style.display = anyLocked ? '' : 'none';
+    if(anyLocked){
+      hint.textContent = T('lang_paid_only');
+      hint.style.cursor = 'pointer';
+      hint.onclick = ()=>{ try{ api().open_url('https://voxislive.com/pricing'); }catch(_){} };
+    }
+  }
+}
 function applyQuotaGate(quota){
   const ok = isQuotaOk(quota);
   $('#quota-gate').style.display = ok ? 'none' : '';
-  renderVoiceHint();   // free-tier status just changed — the hint depends on it
+  renderVoiceHint(); renderLangLock();   // free-tier status just changed — both depend on it
   // Two very different reasons to be blocked, and the banner used to tell only
   // the paid one ("your monthly quota is used up — upgrade your licence"). A free
   // user who has simply spent today's ten minutes is not out of quota and has
@@ -433,7 +479,7 @@ async function init(){
   opt($('#mic'),  STATE.mics||[],    cfg.devices.microphone_label);
   opt($('#hear'), (STATE.langs||[]).map(langPair), cfg.target_language_incoming);
   opt($('#send'), (STATE.langs||[]).map(langPair), cfg.target_language_outgoing);
-  renderVoiceHint();
+  renderVoiceHint(); renderLangLock();
   opt($('#profile'), STATE.profiles||[],  cfg.active_profile);
   duck.value = Math.round((cfg.duck_gain ?? 0.3)*100);  updRange(duck,'duckv');
   vol.value  = Math.round((cfg.tts_volume ?? 1)*100); updRange(vol,'volv');
@@ -513,7 +559,7 @@ duck.oninput=()=>{updRange(duck,'duckv'); saveDuck(duck.value/100)};
 vol.oninput =()=>{updRange(vol,'volv');   saveVol(vol.value/100)};
 $('#hear').onchange   = e=>{
   if(STATE.cfg) STATE.cfg.target_language_incoming = e.target.value;
-  renderVoiceHint(); renderVoiceChoiceHints();
+  renderVoiceHint(); renderVoiceChoiceHints(); renderLangLock();
   return api().set_cfg('target_language_incoming', e.target.value);
 };
 $('#send').onchange   = e=>{
@@ -531,7 +577,7 @@ $('#langswap').onclick = async()=>{
         STATE.cfg.target_language_incoming=r.incoming;
         STATE.cfg.target_language_outgoing=r.outgoing;
       }
-      renderVoiceHint(); renderVoiceChoiceHints();
+      renderVoiceHint(); renderVoiceChoiceHints(); renderLangLock();
     }
   }finally{ b.disabled=false; }
 };

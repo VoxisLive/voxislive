@@ -433,7 +433,12 @@ class IncomingPipeline:
                 cfg, cfg["target_language_incoming"], engine=self._engine, key=_key,
                 model=_model, on_audio=_tts_sink, on_text=on_text,
                 on_status=on_status, name=t("name_in"),
-                on_fatal=self._failover_to_gemini,
+                # Gemini failover is a PAID perk (2026-08-12 cost-pressure
+                # policy — see .vault/decision-log.md): free/taste sessions
+                # never buy a Gemini fallback, so on_fatal stays unset for
+                # them and BaseTranslator._give_up just surfaces the existing
+                # connection-error status instead of substituting an engine.
+                on_fatal=self._failover_to_gemini if cfg.get("_paid_customer") else None,
                 # SaaS resolvers hang the Gemini key fountain off the resolve fn so
                 # a single-use ephemeral key can be refreshed on every rotation
                 # (dev/BYOK resolvers carry none — raw keys need no refetch).
@@ -1017,7 +1022,9 @@ class OutgoingPipeline:
                 cfg, cfg["target_language_outgoing"], engine=self._engine, key=_key,
                 model=_model, on_audio=self._tts_sink, on_text=on_text,
                 on_status=on_status, name=t("name_out"),
-                on_fatal=self._failover_to_gemini,
+                # See the matching comment in IncomingPipeline._build: Gemini
+                # failover is paid-only.
+                on_fatal=self._failover_to_gemini if cfg.get("_paid_customer") else None,
                 key_provider=getattr(resolve, "gemini_key_provider", None),
                 beta_active=getattr(resolve, "beta_active", False),
                 # The voice the OTHER party hears as the user — its own setting,
