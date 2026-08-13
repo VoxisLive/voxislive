@@ -46,6 +46,23 @@ def test_scrub_text_redacts_generic_secret_assignment():
     assert report_scrub.scrub_text(s) == "config had [REDACTED_SECRET]"
 
 
+def test_scrub_text_redacts_generic_secret_natural_language_phrasing():
+    # "X is Y" (no colon/equals) is how a non-technical user actually types
+    # this in a free-text field, not "key: value".
+    s = "my api key is ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 and it stopped working"
+    assert report_scrub.scrub_text(s) == \
+        "my [REDACTED_SECRET] and it stopped working"
+
+
+def test_scrub_text_redacts_bare_dashscope_key_with_no_label():
+    # DashScope (Qwen BYOK) keys use the "sk-..." shape (see
+    # build_official.py's _SEED_KEY_SHAPES) -- a bare paste with no "key:"
+    # prefix at all must still be caught.
+    key = "sk-" + "a1B2c3D4e5F6g7H8i9J0" * 2
+    assert report_scrub.scrub_text(f"here it is: {key}") == \
+        "here it is: [REDACTED_KEY]"
+
+
 def test_scrub_text_redacts_email():
     assert report_scrub.scrub_text("contact me at drypts@icloud.com please") == \
         "contact me at [REDACTED_EMAIL] please"

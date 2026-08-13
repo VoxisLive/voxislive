@@ -572,7 +572,15 @@ def load_config() -> dict:
                 # hand-edited file): _merge would raise AttributeError. Treat it as
                 # corrupt and fall back to DEFAULTS like a parse failure.
                 raise ValueError("config root is not a JSON object")
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, RecursionError) as exc:
+            # RecursionError: json's parser recurses per nesting level, so a
+            # pathologically deep (but small, ~tens of KB) config.json blows
+            # Python's stack before _merge ever runs (_merge itself is safe --
+            # DEFAULTS is only 2 levels deep, capping its own recursion).
+            # Whatever produced it (hand-edit, sync-conflict corruption), the
+            # only correct response is the same graceful fallback as any other
+            # corrupt file, not crashing the app on every launch until someone
+            # manually deletes it.
             _log_failure("load_config read/parse failed", exc)
             return _migrate(dict(DEFAULTS))
         # Read the true on-disk version BEFORE merging: _merge would otherwise let

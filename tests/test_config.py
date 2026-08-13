@@ -98,6 +98,18 @@ def test_non_object_root_falls_back(tmp_config):
     assert loaded["config_version"] == config.CONFIG_VERSION
 
 
+def test_pathologically_deep_config_falls_back_instead_of_crashing(tmp_config):
+    # json's parser recurses per nesting level -- a small (~tens of KB) but
+    # deeply nested file used to blow Python's stack with an uncaught
+    # RecursionError, crashing every launch until the file was hand-deleted.
+    n = 60000
+    with open(tmp_config, "w", encoding="utf-8") as f:
+        f.write('{"a":' * n + "1" + "}" * n)
+    loaded = config.load_config()
+    assert isinstance(loaded, dict)
+    assert loaded["engine"] == config.DEFAULT_ENGINE
+
+
 def test_migration_stamps_version_and_persists(tmp_config):
     old = {"target_language_incoming": "fr"}  # pre-versioned file
     with open(tmp_config, "w", encoding="utf-8") as f:

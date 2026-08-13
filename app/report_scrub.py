@@ -28,7 +28,19 @@ _SUBS = [
     (re.compile(r"(?:Bearer\s+)?eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*"), "[REDACTED_JWT]"),
     (re.compile(r"AIza[0-9A-Za-z_\-]{35}"), "[REDACTED_KEY]"),
     (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "[REDACTED_KEY]"),
-    (re.compile(r"(?i)(?:api[_-]?key|secret|token)\s*[:=]\s*[\"']?[A-Za-z0-9_\-]{16,}"), "[REDACTED_SECRET]"),
+    # Generic "key/secret/token" + value, tolerating how people actually type
+    # it ("api key is X", "secret: X", "token=X") rather than only key[:=]value.
+    # Runs before the bare sk- pattern below so a labeled "api_key: sk-..."
+    # gets consumed whole (label included) instead of leaving the label as
+    # visible leftover text around a narrower [REDACTED_KEY].
+    (re.compile(r"(?i)(?:api[\s_-]?key|secret|token)\s*(?:[:=]|is)\s*[\"']?[A-Za-z0-9_\-]{16,}"), "[REDACTED_SECRET]"),
+    # DashScope (Qwen) key shape -- same "sk-..." pattern build_official.py's
+    # _SEED_KEY_SHAPES already treats as a real key, but that scanner only
+    # guards the shipped seed config; this is the only thing standing between
+    # a raw pasted BYOK Qwen key and the report server, so it needs the same
+    # pattern independently (no label required -- a bare "sk-..." paste in a
+    # free-text field carries no "key:" prefix to key off of).
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{16,}\b"), "[REDACTED_KEY]"),
     (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[REDACTED_EMAIL]"),
 ]
 

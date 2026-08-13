@@ -477,7 +477,12 @@ class HistoryMixin:
             return None
         try:
             return transcript_store.load_record(path)
-        except (OSError, ValueError):
+        except (OSError, ValueError, RecursionError):
+            # RecursionError: json's parser recurses per nesting level, so a
+            # pathologically deep record (hand-edited, corrupted) can blow the
+            # stack before any of our own validation runs -- treat it as just
+            # another unreadable record, not a crash (see config.load_config
+            # for the same fix on the config.json path).
             return None
 
     def delete_session(self, file: str) -> bool:

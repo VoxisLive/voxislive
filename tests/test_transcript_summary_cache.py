@@ -167,6 +167,22 @@ def test_corrupt_index_falls_back_to_reading_records(tmp_path, _isolated_cache, 
     assert [r["preview"] for r in transcript_store.list_records(d)] == ["bir"]
 
 
+def test_pathologically_deep_index_falls_back_to_reading_records(
+        tmp_path, _isolated_cache, monkeypatch):
+    # json's parser recurses per nesting level -- an uncaught RecursionError
+    # from a deeply nested index file used to propagate instead of degrading
+    # like any other corrupt cache (the index is a cache, never data).
+    d = str(tmp_path)
+    _write(d, "1", [{"text": "bir"}])
+    _isolated_cache.parent.mkdir(parents=True, exist_ok=True)
+    n = 60000
+    _isolated_cache.write_text('{"a":' * n + "1" + "}" * n, encoding="utf-8")
+    monkeypatch.setattr(transcript_store, "_SUMMARY_CACHE", {})
+    monkeypatch.setattr(transcript_store, "_INDEX_LOADED", False)
+
+    assert [r["preview"] for r in transcript_store.list_records(d)] == ["bir"]
+
+
 def test_index_entries_of_the_wrong_shape_are_skipped(tmp_path, _isolated_cache, monkeypatch):
     d = str(tmp_path)
     path = _write(d, "1", [{"text": "gercek"}])

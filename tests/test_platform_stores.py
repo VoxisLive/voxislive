@@ -98,6 +98,49 @@ def test_jwt_fernet_round_trip(tmp_path, monkeypatch):
     assert voxis_client.get_jwt() == "my.jwt.token"
 
 
+# --- voxis_client Windows JWT at rest (DPAPI) --------------------------------
+# The Windows path used to DPAPI-wrap the JWT with a bare, hardcoded public
+# constant as entropy (_JWT_ENTROPY alone) -- readable from this open-source
+# file, so it added nothing beyond DPAPI's own per-user binding. _jwt_entropy()
+# now mixes in install_secret() like byok_store.py already did. These run for
+# real (no sys.platform fake) since DPAPI is only meaningful on actual Windows.
+
+@pytest.mark.skipif(sys.platform != "win32", reason="DPAPI is Windows-only")
+def test_jwt_dpapi_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(voxis_client, "_JWT_PATH", str(tmp_path / "jwt.dat"))
+    monkeypatch.setattr(voxis_client, "_ENV_PATH", str(tmp_path / ".env"))
+    monkeypatch.setattr(voxis_client, "install_secret", lambda *a, **k: b"\x0a" * 32)
+    voxis_client._store_jwt("dpapi.jwt.token")
+    raw = open(voxis_client._JWT_PATH, "rb").read()
+    assert b"dpapi.jwt.token" not in raw
+    monkeypatch.setattr(voxis_client, "_jwt", None)
+    voxis_client._load_stored_jwt()
+    assert voxis_client.get_jwt() == "dpapi.jwt.token"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="DPAPI is Windows-only")
+def test_jwt_dpapi_migrates_legacy_bare_entropy_blob_on_read(tmp_path, monkeypatch):
+    # Simulate a blob written by the pre-fix build: DPAPI-protected with the
+    # bare public _JWT_ENTROPY constant, no install_secret mixed in.
+    monkeypatch.setattr(voxis_client, "_JWT_PATH", str(tmp_path / "jwt.dat"))
+    monkeypatch.setattr(voxis_client, "_ENV_PATH", str(tmp_path / ".env"))
+    monkeypatch.setattr(voxis_client, "install_secret", lambda *a, **k: b"\x0b" * 32)
+    legacy_blob = voxis_client._dpapi_call("CryptProtectData", b"legacy.jwt.token")
+    with open(voxis_client._JWT_PATH, "wb") as f:
+        f.write(legacy_blob)
+
+    monkeypatch.setattr(voxis_client, "_jwt", None)
+    voxis_client._load_stored_jwt()
+    assert voxis_client.get_jwt() == "legacy.jwt.token"
+
+    # Migrate-on-read must have rewritten the file under the new entropy: a
+    # decrypt using ONLY the new entropy (no bare-entropy fallback) now works.
+    raw = open(voxis_client._JWT_PATH, "rb").read()
+    migrated = voxis_client._dpapi_call(
+        "CryptUnprotectData", raw, voxis_client._jwt_entropy()).decode()
+    assert migrated == "legacy.jwt.token"
+
+
 # --- device_id Linux fingerprint --------------------------------------------
 
 def test_linux_fingerprint_machine_id_and_dmi(monkeypatch):

@@ -1314,7 +1314,31 @@ class Bridge(HistoryMixin):
         self.cfg["whatsnew_seen"] = APP_VERSION
         return self._save_cfg()
 
+    # The only keys the generic set_cfg() escape hatch may write. Anything with
+    # its own dedicated, validated setter (transcript_dir -> choose_transcript_dir,
+    # hotwords -> set_hotwords, voice gender -> set_voice_gender, device ->
+    # set_device, profile -> set_profile...) is deliberately absent here even
+    # though it is a real cfg key elsewhere — set_cfg must not become a second,
+    # unvalidated way to write it. Keep in sync with every literal key app.js
+    # passes to api().set_cfg(...) (tests/test_js_api_facade.py-style drift
+    # would be silent otherwise: an unlisted key here just gets ignored).
+    _SET_CFG_ALLOWED_KEYS = frozenset((
+        "ui_theme", "ui_language", "target_language_incoming",
+        "target_language_outgoing", "duck_gain", "tts_volume",
+        "show_subtitles", "obs_subtitle_enabled", "record_audio",
+        "auto_export_txt", "auto_export_srt", "auto_export_vtt",
+        "speaker_labels", "builtin_terms", "allow_multiple_instances",
+        "monitor_outgoing_translation", "branding_badge_enabled",
+        "meeting_consent_ack",
+        # Not currently wired to a UI control, but already handled specially
+        # below and legitimate to keep accepting (dev/A-B knobs).
+        "quality_preset", "engine", "gemini_voice",
+    ))
+
     def set_cfg(self, key, value):
+        if key not in self._SET_CFG_ALLOWED_KEYS:
+            _log.warning("set_cfg: rejected unlisted key %r", key)
+            return False
         # The attribution badge can only be turned off by a paid subscriber;
         # silently ignore a disable attempt from a free/OSS user (defense-in-depth
         # behind the already-disabled UI toggle).
@@ -1984,6 +2008,9 @@ class Bridge(HistoryMixin):
                 # a loopback address gets a preflight that must be answered with
                 # this header or the POST is blocked.
                 self.send_header("Access-Control-Allow-Private-Network", "true")
+                # This server's only payload is a one-time auth token; never let
+                # it sit in a disk cache after the tab closes.
+                self.send_header("Cache-Control", "no-store")
 
             def do_OPTIONS(self):
                 self.send_response(204)
@@ -2010,7 +2037,13 @@ class Bridge(HistoryMixin):
                     b"<body style=\"font-family:Segoe UI,system-ui,sans-serif;background:#050507;"
                     b"color:#fafafa;display:flex;min-height:100vh;align-items:center;justify-content:center\">"
                     b"<div style=\"text-align:center\"><h2>Signed in</h2>"
-                    b"<p style=\"color:#a1a1aa\">You can close this tab and return to Voxis.</p></div>")
+                    b"<p style=\"color:#a1a1aa\">You can close this tab and return to Voxis.</p></div>"
+                    # The token rode the query string (POST-first, this is only the
+                    # fallback) — scrub it from the address bar and this tab's current
+                    # history entry the instant the page loads, so it stops showing up
+                    # in autocomplete/session-restore for a token that has already been
+                    # consumed. Does not purge entries a browser already synced.
+                    b"<script>history.replaceState(null,'',location.pathname)</script>")
                 if ok:
                     done.set()
 
@@ -2817,7 +2850,7 @@ class Bridge(HistoryMixin):
                 self._overlay_win = webview.create_window(
                     "VoxisOverlay", html=_OVERLAY_HTML, frameless=True, on_top=True,
                     width=w, height=84, x=self._ov_x, y=self._ov_bottom - 84,
-                    background_color="#0a0b10", js_api=self, hidden=True,
+                    background_color="#0a0b10", js_api=OverlayJsApi(self), hidden=True,
                 )
             except Exception:
                 self._overlay_win = None
@@ -3227,6 +3260,78 @@ class Bridge(HistoryMixin):
             self.start(action)
 
 
+class _JsApiFacade:
+    """Base for an explicit allowlist of methods exposed to a webview's JS.
+
+    pywebview's own leading-underscore convention (`Bridge._save_cfg` etc.) is
+    NOT a security boundary: it only controls which names appear in the
+    auto-generated `window.pywebview.api` stub object. The actual native
+    message-bridge dispatcher (pywebview's edgechromium.on_script_notify ->
+    js_bridge_call -> get_nested_attribute) resolves ANY attribute name via a
+    raw getattr() with no allowlist or token check, so passing a `Bridge`
+    instance directly as `js_api=` would let any JS executing in that window
+    invoke every method on it — including the "private" underscore ones
+    (config writes, thread starts, report/log building, transcript
+    migration...) — by name, with attacker-controlled arguments, via
+    `window.chrome.webview.postMessage(...)` directly (bypassing the stub
+    object entirely). This class is the actual enforcement point: only names
+    listed in a subclass's `_EXPOSED` are reachable from that window's JS,
+    full stop. Fails closed — a method not listed here is simply absent from
+    `self`, so pywebview logs "Function ... does not exist" and nothing runs.
+
+    When adding a new JS-facing Bridge/HistoryMixin method, add its name to
+    the relevant `_EXPOSED` tuple too, or it stays silently unreachable."""
+
+    _EXPOSED: tuple[str, ...] = ()
+
+    def __init__(self, target):
+        for name in self._EXPOSED:
+            setattr(self, name, getattr(target, name))
+
+
+class JsApi(_JsApiFacade):
+    """Main-window facade. Kept in sync with every `api().X(...)` call in
+    app/web/app.js (the only place the shipped UI calls the bridge from)."""
+
+    _EXPOSED = (
+        # session lifecycle / polling
+        "start", "stop", "poll", "check_auth", "get_init",
+        # config
+        "get_cfg", "set_cfg", "set_profile", "set_device", "set_hotwords",
+        "hotword_stats", "set_voice_gender", "swap_languages",
+        # auth / licensing
+        "voxis_login", "google_login", "voxis_logout", "voxis_quota",
+        "save_keys", "clear_byok",
+        # window chrome + hotkeys
+        "win_minimize", "win_toggle_max", "win_close", "win_resize",
+        "win_begin_drag", "capture_hotkey", "cancel_hotkey", "toggle_overlay",
+        # meeting / audio diagnostics
+        "meeting_cable_available", "open_cable_download",
+        "soundcheck_start", "soundcheck_play_tone", "soundcheck_stop",
+        # onboarding / lifecycle prompts
+        "whatsnew", "mark_whatsnew_seen", "mark_seen", "mark_onboarding_done",
+        "reset_onboarding", "rate_voxis",
+        "free_voice_preview", "pro_voice_replay",
+        # transcripts / history
+        "save_txt", "list_sessions", "load_session", "delete_session",
+        "export_session", "open_transcript", "reveal_transcript",
+        "open_transcript_folder", "choose_transcript_dir",
+        "reset_transcript_dir",
+        # problem reports
+        "flush_reports", "preview_report", "send_report",
+        # navigation
+        "open_url", "open_store_page",
+    )
+
+
+class OverlayJsApi(_JsApiFacade):
+    """Overlay-window facade. Kept in sync with the `window.pywebview.api.X`
+    calls inside `_OVERLAY_HTML`'s own inline <script> below — that HTML only
+    ever calls these four."""
+
+    _EXPOSED = ("overlay_poll", "overlay_fit", "overlay_show", "overlay_hide")
+
+
 _OVERLAY_HTML = """<!DOCTYPE html><html><head><meta charset='utf-8'>
 <style>
 /* Graphite Console language (see index.html): flat graphite, hairline border,
@@ -3425,7 +3530,7 @@ def run(cfg):
     # lurching erratically instead of following the cursor).
     window = webview.create_window(
         t("app_title"), os.path.join(WEB_DIR, "index.html"),
-        js_api=bridge, width=win_w, height=win_h, min_size=(940, 600),
+        js_api=JsApi(bridge), width=win_w, height=win_h, min_size=(940, 600),
         background_color="#0b0c10", frameless=True, easy_drag=False,
         resizable=True, **geo_kwargs,
     )

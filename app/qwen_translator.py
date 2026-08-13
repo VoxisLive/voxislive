@@ -41,6 +41,7 @@ Hard-won rules baked in here — do not "improve" these without re-measuring:
 import base64
 import json
 import logging
+import re
 
 import numpy as np
 
@@ -51,6 +52,31 @@ _log = logging.getLogger("voxis")
 
 URL_TEMPLATE = ("wss://{ws}.ap-southeast-1.maas.aliyuncs.com"
                 "/api-ws/v1/realtime?model={model}")
+# `workspace` lands in the URL's HOST label and `model` in its query string,
+# both server-supplied (session-key issuance, and the sibling-pool fallback --
+# see _apply_fallback_credentials below and webui._apply_qwen_workspace).
+# Confirmed live against the actual `websockets` library: a workspace value of
+# "attacker.example.com?x=" is ACCEPTED by its URI parser and resolves the
+# connection host to attacker.example.com:443 -- sending the real DashScope
+# Authorization header (and the live audio stream) there instead of Alibaba's
+# endpoint. That requires the session-key response itself to be attacker-
+# influenced (backend compromise or a backend bug), but validating a value
+# before it builds a security-relevant URL should not depend on trusting the
+# sender, even when the sender is normally our own backend. DashScope's own
+# workspace/model naming is plain alphanumeric-with-hyphens (e.g.
+# "ws-o9euzpyp254xo4es"); anything else falls back to the known-good default
+# rather than reaching websockets.connect() at all.
+_SAFE_URL_LABEL = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+
+
+def _safe_url_label(value: str, default: str, what: str) -> str:
+    if isinstance(value, str) and _SAFE_URL_LABEL.match(value):
+        return value
+    _log.warning("qwen: rejected malformed %s %r from session-key response, "
+                 "using default", what, value)
+    return default
+
+
 IN_RATE = 16000     # capture side (same as Gemini — the classic gate path)
 OUT_RATE = 24000
 
@@ -219,7 +245,9 @@ class QwenTranslator(BaseTranslator):
     async def _connect(self):
         import websockets  # lazy: keep it off the cold path
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        url = URL_TEMPLATE.format(ws=self.workspace, model=self.model)
+        ws = _safe_url_label(self.workspace, QWEN_WORKSPACE, "workspace")
+        model = _safe_url_label(self.model, QWEN_TRANSLATE_MODEL, "model")
+        url = URL_TEMPLATE.format(ws=ws, model=model)
         try:
             return await websockets.connect(url, additional_headers=headers,
                                             max_size=None, compression=None,
@@ -375,7 +403,12 @@ class QwenTranslator(BaseTranslator):
             self._reset_stall()
             try:
                 ev = json.loads(raw)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, RecursionError):
+                # RecursionError: json's parser recurses per nesting level, so
+                # a pathologically deep message would otherwise kill this loop
+                # uncaught instead of just being skipped like any other
+                # malformed event (see config.load_config for the same class
+                # of fix on the config.json path).
                 continue
             et = ev.get("type", "")
             if et == "response.audio.delta":

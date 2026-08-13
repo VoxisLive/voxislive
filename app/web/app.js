@@ -784,7 +784,11 @@ function renderMembership(){
   }
   const q = QUOTA || {};
   const tier = String(q.tier || q.plan || (q.unlimited?'pro':'free')).toLowerCase();
-  const tierName = ({free:'Free', creator:'Creator', pro:'Pro', enterprise:'Enterprise'})[tier] || (tier.charAt(0).toUpperCase()+tier.slice(1));
+  // tier comes from the server's quota response; an unrecognized value falls
+  // through to echoing it back capitalized, and this whole block goes into
+  // innerHTML below -- escape it so a server bug/anomaly can never inject
+  // markup, the same way a raw tier name currently could.
+  const tierName = ({free:'Free', creator:'Creator', pro:'Pro', enterprise:'Enterprise'})[tier] || escHtml(tier.charAt(0).toUpperCase()+tier.slice(1));
   let quotaLine;
   if(q.unlimited){ quotaLine = T('mem_unlimited'); }
   else if(tasteSpent(q)){

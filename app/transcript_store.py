@@ -278,7 +278,10 @@ def _load_index_locked() -> None:
                     and isinstance(entry[0], int) and isinstance(entry[1], int)
                     and isinstance(entry[2], dict)):
                 _SUMMARY_CACHE[key] = (entry[0], entry[1], entry[2])
-    except (OSError, ValueError, TypeError):
+    except (OSError, ValueError, TypeError, RecursionError):
+        # RecursionError: same class of gap as config.load_config -- a
+        # pathologically deep index file must degrade like any other corrupt
+        # cache (this is a cache, never data; see the docstring above).
         _SUMMARY_CACHE.clear()
 
 

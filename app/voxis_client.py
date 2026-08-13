@@ -94,8 +94,12 @@ def _log_detail(where: str, exc: Exception) -> None:
         pass
 
 
-def _dpapi_call(func_name: str, data: bytes) -> bytes:
-    """CryptProtectData / CryptUnprotectData via ctypes (no pywin32 dependency)."""
+def _dpapi_call(func_name: str, data: bytes, entropy: bytes = _JWT_ENTROPY) -> bytes:
+    """CryptProtectData / CryptUnprotectData via ctypes (no pywin32 dependency).
+
+    `entropy` defaults to the bare version tag only for backward-compat reads
+    of a blob written before _jwt_entropy() existed (see _load_stored_jwt) --
+    every new write must pass the mixed-in entropy explicitly."""
     import ctypes
     from ctypes import wintypes
 
@@ -108,7 +112,7 @@ def _dpapi_call(func_name: str, data: bytes) -> bytes:
         return DATA_BLOB(len(b), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), buf
 
     in_blob, _in = to_blob(data)
-    ent_blob, _ent = to_blob(_JWT_ENTROPY)
+    ent_blob, _ent = to_blob(entropy)
     out_blob = DATA_BLOB()
     crypt32 = ctypes.windll.crypt32
     kernel32 = ctypes.windll.kernel32
@@ -141,11 +145,13 @@ def _restrict_acl(path: str) -> None:
         pass
 
 
-def _linux_jwt_entropy() -> bytes:
-    """Per-install Fernet key material for the non-Windows JWT at rest. DPAPI's
-    account binding is unavailable off Windows, so mix the per-install random
-    secret with the version tag (a public constant alone would be trivially
-    derivable)."""
+def _jwt_entropy() -> bytes:
+    """Entropy for the JWT at rest, both platforms: the per-install random
+    secret mixed with the version tag. A bare public constant alone (the
+    original DPAPI entropy on Windows) is trivially derivable from this open-
+    source file by any other process running as the same user, so it adds
+    nothing beyond DPAPI's own user-binding; mixing in install_secret() makes
+    it install-specific like byok_store.py's key derivation already is."""
     return hashlib.sha256(install_secret() + _JWT_ENTROPY).digest()
 
 
@@ -174,7 +180,7 @@ def _store_jwt(token: str) -> None:
         return
     if sys.platform == "win32":
         try:
-            blob = _dpapi_call("CryptProtectData", token.encode())
+            blob = _dpapi_call("CryptProtectData", token.encode(), _jwt_entropy())
             with open(_JWT_PATH, "wb") as f:
                 f.write(blob)
             _restrict_acl(_JWT_PATH)
@@ -189,7 +195,7 @@ def _store_jwt(token: str) -> None:
     # Non-Windows: Fernet at rest keyed by the per-install secret, file 0600.
     try:
         from . import secret_crypto
-        blob = secret_crypto.fernet_encrypt(token.encode(), _linux_jwt_entropy())
+        blob = secret_crypto.fernet_encrypt(token.encode(), _jwt_entropy())
         with open(_JWT_PATH, "wb") as f:
             f.write(blob)
         try:
@@ -212,11 +218,20 @@ def _load_stored_jwt():
             with open(_JWT_PATH, "rb") as f:
                 blob = f.read()
             if sys.platform == "win32":
-                _jwt = _dpapi_call("CryptUnprotectData", blob).decode()
+                try:
+                    _jwt = _dpapi_call(
+                        "CryptUnprotectData", blob, _jwt_entropy()).decode()
+                except Exception:
+                    # Blob written before _jwt_entropy() existed (bare public
+                    # tag as entropy). Decrypt once under the old entropy,
+                    # then immediately re-wrap under the new one so this
+                    # fallback is only ever needed once per install.
+                    _jwt = _dpapi_call("CryptUnprotectData", blob).decode()
+                    _store_jwt(_jwt)
             else:
                 from . import secret_crypto
                 _jwt = secret_crypto.fernet_decrypt(
-                    blob, _linux_jwt_entropy()).decode()
+                    blob, _jwt_entropy()).decode()
             return
     except Exception as exc:
         _log_detail("load_jwt", exc)

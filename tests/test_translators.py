@@ -319,6 +319,25 @@ def test_ws_main_sets_ready_only_after_session_event():
     assert ws.closed
 
 
+def test_ws_receive_loop_survives_pathologically_deep_json_message():
+    # json's parser recurses per nesting level -- an uncaught RecursionError
+    # from one malformed message used to kill the whole receive loop instead
+    # of being skipped like any other bad event (see qwen._receive_loop).
+    n = 60000
+    deep = ('{"a":' * n) + '1' + ('}' * n)
+    ws = _FakeWS([deep, '{"type":"session.updated"}'])
+
+    async def _connect():
+        return ws
+
+    tr, _events = _run_ws_translator(qwen.QwenTranslator, _connect)
+    try:
+        assert tr.wait_ready(5.0)
+    finally:
+        tr.stop()
+        tr.join(timeout=5.0)
+
+
 def test_ws_main_terminal_error_breaks_without_retry(caplog):
     import logging
     connects = []
