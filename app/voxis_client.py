@@ -416,7 +416,7 @@ def auth_register(email: str, password: str, name: str = "") -> tuple[str | None
         from . import device_id
         device = device_id.fingerprint()
     except Exception:
-        device = {"primary": "", "secondary": ""}
+        device = {"primary": "", "secondary": "", "secondary_strong": False}
     try:
         resp = _http.post(
             f"{_BASE_URL}/auth/register",
@@ -424,6 +424,7 @@ def auth_register(email: str, password: str, name: str = "") -> tuple[str | None
                 "email": email, "password": password, "name": name,
                 "device_primary": device.get("primary", ""),
                 "device_secondary": device.get("secondary", ""),
+                "device_secondary_strong": bool(device.get("secondary_strong")),
             },
             timeout=_TIMEOUT,
         )
@@ -613,6 +614,11 @@ def _device_headers() -> dict:
         v = "".join(ch for ch in v if ch.isprintable()).strip()
         if v:
             headers[name] = v
+    # Tells the server whether 'secondary' is a real per-unit identifier or
+    # the registry-fallback model string (see device_id.fingerprint) — the
+    # server must not merge/block accounts on a weak secondary alone.
+    if fp.get("secondary_strong"):
+        headers["X-Voxis-Device-Secondary-Strong"] = "1"
     return headers
 
 

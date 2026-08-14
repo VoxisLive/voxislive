@@ -136,13 +136,25 @@ def _linux_ids() -> dict:
 
 
 def fingerprint() -> dict:
-    """Return {'primary', 'secondary'} raw identifiers (either may be empty).
+    """Return {'primary', 'secondary', 'secondary_strong'} (primary/secondary
+    may be empty).
 
     Windows: primary = MachineGuid (survives reboots; changes on OS reinstall);
-    secondary = baseboard serial + system UUID (survive OS reinstall; very stable).
-    Linux: primary = /etc/machine-id; secondary = DMI serial/UUID or SBC
-    device-tree serial. Two independent components let the server tolerate a
-    partial hardware change.
+    secondary = baseboard serial + system UUID (survive OS reinstall; very
+    stable) when WMI succeeds. Linux: primary = /etc/machine-id; secondary =
+    DMI serial/UUID or SBC device-tree serial. Two independent components let
+    the server tolerate a partial hardware change.
+
+    'secondary_strong' says whether 'secondary' is a real per-unit identifier
+    (WMI board serial / system UUID on Windows; DMI/device-tree serial on
+    Linux) versus the Windows registry fallback, which only has
+    SystemManufacturer|SystemProductName — a MODEL string, identical across
+    every unit of that model, not unique to one machine. A server that merges
+    devices on a weak secondary risks binding unrelated users who happen to
+    share a common hardware model to the same "device" (confirmed in the wild
+    2026-08-14: 39 distinct MachineGuids on one secondary-only cluster,
+    41 free-tier accounts across 24 countries). The server must not use
+    'secondary' for matching/merging when this is false.
     """
     global _cache
     if _cache is not None:
@@ -155,16 +167,22 @@ def fingerprint() -> dict:
         _cache = {
             "primary": _clean(ids["primary"]),
             "secondary": "|".join(p for p in (board, uuid) if p),
+            "secondary_strong": True,
         }
         return dict(_cache)
 
     primary = _clean(_machine_guid())
     hw = _wmi_props()
-    if not (hw["board"] or hw["uuid"]):
+    secondary_strong = bool(hw["board"] or hw["uuid"])
+    if not secondary_strong:
         hw = _registry_hw()
     board = _clean(hw.get("board", ""))
     uuid = _clean(hw.get("uuid", ""))
     secondary = "|".join(p for p in (board, uuid) if p)
 
-    _cache = {"primary": primary, "secondary": secondary}
+    _cache = {
+        "primary": primary,
+        "secondary": secondary,
+        "secondary_strong": secondary_strong,
+    }
     return dict(_cache)

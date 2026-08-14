@@ -118,6 +118,27 @@ def test_device_headers_sanitized(monkeypatch):
     assert h["X-Voxis-Device-Secondary"] == "board|uid"
 
 
+def test_device_headers_secondary_strong_flag(monkeypatch):
+    import app.device_id as device_id
+    monkeypatch.setattr(
+        device_id, "fingerprint",
+        lambda: {"primary": "guid-1", "secondary": "hw", "secondary_strong": True})
+    h = vc._device_headers()
+    assert h["X-Voxis-Device-Secondary-Strong"] == "1"
+
+
+def test_device_headers_secondary_weak_omits_flag(monkeypatch):
+    # Registry-fallback secondary (manufacturer|product, shared across every
+    # unit of that model) must not claim strength — the server must not
+    # merge/block accounts on it alone (see device_id.fingerprint docstring).
+    import app.device_id as device_id
+    monkeypatch.setattr(
+        device_id, "fingerprint",
+        lambda: {"primary": "guid-1", "secondary": "hw", "secondary_strong": False})
+    h = vc._device_headers()
+    assert "X-Voxis-Device-Secondary-Strong" not in h
+
+
 def test_device_headers_omit_empty_components(monkeypatch):
     import app.device_id as device_id
     monkeypatch.setattr(
