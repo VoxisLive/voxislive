@@ -217,6 +217,55 @@ def test_the_dead_engine_stops_talking(pipe):
     assert pipe.player.cleared == 1
 
 
+def _cascade_pipe(resolve):
+    p = P.IncomingPipeline.__new__(P.IncomingPipeline)
+    p.cfg = {"target_language_incoming": "tr"}
+    p._engine = ENGINE_QWEN
+    p._failover_done = False
+    p.translator = _FakeTr(ENGINE_QWEN)
+    p._stager = _FakeStager()
+    p.player = _FakePlayer()
+    p._tts_sink = lambda d: None
+    p._on_text = lambda *a: None
+    p._on_status = lambda *a: None
+    p._resolve = resolve
+    return p
+
+
+def test_cascade_rescue_forwards_watchdog_reason(monkeypatch):
+    """A watchdog-exhausted give-up (base_translator._WatchdogExhausted) is a
+    client-CONFIRMED dead stream, so it must tell the resolver
+    reason="watchdog" — the server grants THIS independently of the
+    fleet-storm window, rate-limited to once/license/day server-side
+    instead (handlers/cascade.go CascadeRescueSelfVerifiedAllowed). Any
+    OTHER exception (a bare terminal Qwen reject) must pass reason=None,
+    same as before this existed — only the confirmed-dead-stream signal
+    earns the bypass."""
+    from app.base_translator import _WatchdogExhausted
+
+    def fake_make_translator(cfg, target, *, engine, key, model, on_audio,
+                             on_text, on_status, name):
+        return _FakeTr(engine)
+    monkeypatch.setattr(P, "make_translator", fake_make_translator)
+
+    seen = {}
+
+    def resolve(target, cascade_rescue=False, reason=None):
+        seen["cascade_rescue"] = cascade_rescue
+        seen["reason"] = reason
+        return ENGINE_CASCADE, "cascade-key", "cascade-model", None
+
+    watchdog_pipe = _cascade_pipe(resolve)
+    assert P._swap_to_cascade(watchdog_pipe, "target_language_incoming", "in",
+                              _WatchdogExhausted("no output")) is True
+    assert seen == {"cascade_rescue": True, "reason": "watchdog"}
+
+    terminal_pipe = _cascade_pipe(resolve)
+    assert P._swap_to_cascade(terminal_pipe, "target_language_incoming", "in",
+                              Exception("arrearage")) is True
+    assert seen == {"cascade_rescue": True, "reason": None}
+
+
 def test_cascade_failover_installs_stager_when_missing(pipe, monkeypatch):
     monkeypatch.setattr(P, "AdaptivePlaybackStager", _FakeStager)
     pipe._engine = ENGINE_CASCADE

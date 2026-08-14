@@ -17,7 +17,7 @@ import numpy as np
 
 from . import audio_io, sysaudio, voxis_client
 from .audio_io import Capture, Player, _make_resampler, find_device, resolve_name
-from .base_translator import BaseTranslator
+from .base_translator import BaseTranslator, _WatchdogExhausted
 from .cascade_translator import CascadeTranslator
 from .config import (
     ENGINE_CASCADE,
@@ -983,8 +983,18 @@ def _swap_to_cascade(pipe, target_key, name, exc):
     pipe._failover_done = True
 
     target = pipe.cfg[target_key]
+    # A watchdog-exhausted give-up (base_translator._WatchdogExhausted) is a
+    # client-CONFIRMED dead stream (input flowing, 3 self-heal reconnects all
+    # failed to restore output) rather than a bare terminal-error guess, so
+    # the server grants it independently of the fleet-wide storm window
+    # (CascadeRescueWindowOpen) — capped to once per license per UTC day
+    # server-side (handlers/cascade.go CascadeRescueSelfVerifiedAllowed)
+    # since a free/taste session otherwise controls this signal itself. See
+    # .vault/cascade-rescue-taste-qwen-failure-2026-08-13.md.
+    reason = "watchdog" if isinstance(exc, _WatchdogExhausted) else None
     try:
-        engine, key, model, _fallback = pipe._resolve(target, cascade_rescue=True)
+        engine, key, model, _fallback = pipe._resolve(
+            target, cascade_rescue=True, reason=reason)
     except Exception:
         _log.exception("cascade rescue: resolver failed")
         return False

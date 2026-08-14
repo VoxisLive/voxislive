@@ -2470,7 +2470,7 @@ class Bridge(HistoryMixin):
         # surface as localized errors from get_session_key itself.
         # Zero-round-trip start: a fresh prefetched key (warmed at login /
         # target change / previous stop) skips even that one call.
-        def _resolve_saas(target, force_gemini=False, cascade_rescue=False):
+        def _resolve_saas(target, force_gemini=False, cascade_rescue=False, reason=None):
             if force_gemini:
                 return gemini_key()
             if cascade_rescue:
@@ -2480,10 +2480,14 @@ class Bridge(HistoryMixin):
                 # legitimate reasons and none of them are errors. The caller
                 # (pipeline._swap_to_cascade) treats a non-cascade/no-key
                 # response as "no rescue" and lets the existing give-up path
-                # surface normally.
+                # surface normally. `reason="watchdog"` (client-confirmed dead
+                # stream, see pipeline._swap_to_cascade) lets the server grant
+                # this independently of the fleet-storm window, rate-limited
+                # server-side instead.
                 key, engine, model, quality, _quota, workspace, _kt, _fb, _err = voxis_client.get_session_key(
                     target=target, caps=voxis_client.SESSION_KEY_CAPS,
-                    mode=getattr(self, "_starting_mode", None), rescue=True)
+                    mode=getattr(self, "_starting_mode", None), rescue=True,
+                    reason=reason)
                 if key and engine == ENGINE_CASCADE:
                     if quality:
                         self.cfg["quality_preset"] = quality

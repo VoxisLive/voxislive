@@ -658,7 +658,7 @@ class DeviceBlockedError(RuntimeError):
 
 
 def get_session_key(target=None, caps=None, engine=None, mode=None,
-                    rescue=False) -> tuple[str | None, str | None, str | None, str | None, dict | None, str | None, str | None, dict | None, str | None]:
+                    rescue=False, reason=None) -> tuple[str | None, str | None, str | None, str | None, dict | None, str | None, str | None, dict | None, str | None]:
     """SaaS execution path: retrieves a server-issued translation key. With
     caps='engine-routing' the server picks the engine by TARGET language and also
     returns {engine, model, quality, quota} — plus {workspace} on Qwen (DashScope
@@ -703,7 +703,15 @@ def get_session_key(target=None, caps=None, engine=None, mode=None,
     already spent AND mode isn't Meeting. A denial comes back as an
     ordinary falsy-key response, same as any other refusal from this
     endpoint — never an exception. Full design:
-    .vault/cascade-rescue-taste-qwen-failure-2026-08-13.md."""
+    .vault/cascade-rescue-taste-qwen-failure-2026-08-13.md.
+
+    reason="watchdog" (only meaningful alongside rescue=True) tells the
+    server this rescue follows a client-CONFIRMED dead stream (the no-output
+    watchdog exhausted its self-heal budget with input still flowing) rather
+    than a bare terminal-error guess — grantable independently of the
+    fleet-wide storm window, capped instead to once per license per UTC day
+    server-side (a free/taste session otherwise controls this signal
+    itself). Added 2026-08-14, VX-JQGPW5."""
     if not IS_OFFICIAL_RELEASE:
         return None, None, None, None, None, None, None, None, "SaaS keys are disabled in developer builds."
     token = _valid_jwt()
@@ -725,6 +733,8 @@ def get_session_key(target=None, caps=None, engine=None, mode=None,
         params["mode"] = mode
     if rescue:
         params["rescue"] = "1"
+        if reason:
+            params["rescue_reason"] = reason
     try:
         resp = _http.get(
             f"{_BASE_URL}/auth/session-key",
