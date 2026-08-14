@@ -2000,7 +2000,11 @@ class Bridge(HistoryMixin):
             def _cors(self):
                 origin = self.headers.get("Origin", "")
                 if origin == "https://voxislive.com":
-                    self.send_header("Access-Control-Allow-Origin", origin)
+                    # Write back the known-good literal, not the request-echoed
+                    # value — the equality check already pins it to this exact
+                    # string, but CodeQL's taint tracking doesn't model that, so
+                    # reflecting `origin` here reads as header injection to it.
+                    self.send_header("Access-Control-Allow-Origin", "https://voxislive.com")
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
