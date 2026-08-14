@@ -66,6 +66,19 @@ class _Rotate(Exception):
         self.heal = heal
 
 
+class _WatchdogExhausted(Exception):
+    """Raised by the sender when the no-output self-heal budget
+    (WATCHDOG_ROTATE_MAX) is spent and translated output is still absent.
+
+    Before this existed, an exhausted budget just stopped rotating: the
+    session sat "connected" but silently dead until the user noticed and
+    restarted by hand (VX-JQGPW5, 2026-08-14 — hi target, Qwen). Propagating
+    this to _main() routes it through the same give-up/on_fatal path as a
+    terminal engine error, so a paid session gets the Gemini failover and an
+    in-taste free session gets a shot at the cascade rescue, instead of
+    hanging."""
+
+
 # HTTP-style status codes that mean "retrying with the same key cannot succeed".
 # 429 is deliberately absent: a bare rate-limit is transient and recovers with
 # backoff (genuine quota exhaustion is caught by the per-engine phrase markers).
@@ -129,7 +142,12 @@ class BaseTranslator(threading.Thread):
     # report left the session dead until the user toggled engines by hand) —
     # force a reconnect. Bounded per session by WATCHDOG_ROTATE_MAX so a
     # genuinely output-less account can't spin an endless reconnect loop; the
-    # budget refills the moment healthy output resumes.
+    # budget refills the moment healthy output resumes. Once the budget is
+    # spent and the stream is STILL silent, _sender raises _WatchdogExhausted
+    # instead of continuing to sit connected-but-dead (VX-JQGPW5) — _main
+    # routes that through _give_up/on_fatal exactly like a terminal error, so
+    # a paid session gets the Gemini failover and an in-taste free session
+    # gets a shot at the cascade rescue.
     NO_OUTPUT_ROTATE_SECONDS = 22.0
     WATCHDOG_ROTATE_MAX = 3
     # Voice watchdog: translated TEXT is flowing but NO translated AUDIO for this
@@ -481,6 +499,16 @@ class BaseTranslator(threading.Thread):
                 self._ready.clear()
                 if self._stopping.is_set():
                     break
+                # No-output watchdog exhausted its self-heal budget: this is not
+                # a fresh failure to classify/retry, it's the same dead stream
+                # we already tried (and failed) to reconnect out of 3 times.
+                # Give up immediately, same as a terminal error, instead of
+                # feeding it through backoff/transient-failure counting.
+                if isinstance(e, _WatchdogExhausted):
+                    _log.error("%s: no-output watchdog exhausted, giving up: %r",
+                               self.name, e)
+                    self._give_up(e)
+                    break
                 # Terminal (auth/permission/quota/4xx): retrying with the same key
                 # cannot succeed — give up and let a substitute engine step in.
                 # EXCEPT: an unused server-provided fallback pool (see __init__)
@@ -658,16 +686,23 @@ class BaseTranslator(threading.Thread):
                 elif not self._no_output_warned:
                     self._no_output_warned = True
                     self.on_status(t("st_no_output_warning"))
-                if (stalled >= self.NO_OUTPUT_ROTATE_SECONDS
-                        and self._watchdog_rotations < self.WATCHDOG_ROTATE_MAX):
-                    self._watchdog_rotations += 1
-                    _log.warning("%s: no-output watchdog — input %.0fs ago but no "
-                                 "translation for %.0fs, self-heal rotation %d/%d",
-                                 self.name, now - self._last_input_ts, stalled,
-                                 self._watchdog_rotations, self.WATCHDOG_ROTATE_MAX)
-                    self.on_status(t("st_noout_reconnect", name=self.name,
-                                     s=int(self.NO_OUTPUT_ROTATE_SECONDS)))
-                    raise _Rotate(heal=True)
+                if stalled >= self.NO_OUTPUT_ROTATE_SECONDS:
+                    if self._watchdog_rotations < self.WATCHDOG_ROTATE_MAX:
+                        self._watchdog_rotations += 1
+                        _log.warning("%s: no-output watchdog — input %.0fs ago but no "
+                                     "translation for %.0fs, self-heal rotation %d/%d",
+                                     self.name, now - self._last_input_ts, stalled,
+                                     self._watchdog_rotations, self.WATCHDOG_ROTATE_MAX)
+                        self.on_status(t("st_noout_reconnect", name=self.name,
+                                         s=int(self.NO_OUTPUT_ROTATE_SECONDS)))
+                        raise _Rotate(heal=True)
+                    # Self-heal budget spent and the stream is still silent — a
+                    # fresh reconnect would just repeat what already failed 3
+                    # times. Escalate to give-up instead of looping in place.
+                    raise _WatchdogExhausted(
+                        f"no output {stalled:.0f}s after last input, "
+                        f"{self._watchdog_rotations}/{self.WATCHDOG_ROTATE_MAX} "
+                        "self-heal rotations exhausted")
             # Voice watchdog: translated TEXT is flowing (recently) but translated
             # AUDIO is absent — subtitles with no voice. Gated on recent text so a
             # normal end-of-speech (audio + text stop together) never trips it, and

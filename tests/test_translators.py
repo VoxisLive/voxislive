@@ -496,6 +496,39 @@ def test_no_output_watchdog_self_heals_by_reconnecting():
     assert not tr.is_alive()
 
 
+def test_no_output_watchdog_gives_up_after_exhausting_self_heal_budget():
+    # VX-JQGPW5 (2026-08-14, free-tier hi target): input kept arriving, output
+    # never resumed across repeated self-heal reconnects, and the session sat
+    # "connected" but silently dead once WATCHDOG_ROTATE_MAX was spent — no
+    # error, no give-up, nobody told the user or offered a substitute engine.
+    # Every reconnect below carries a fresh completed-transcript event so input
+    # never goes stale and the budget genuinely exhausts (not just disarms).
+    connects = []
+    completed = ('{"type":"conversation.item.input_audio_transcription.'
+                 'completed","transcript":"hola"}')
+
+    class _Driven(qwen.QwenTranslator):
+        NO_OUTPUT_WARN_SECONDS = 0.05
+        NO_OUTPUT_ROTATE_SECONDS = 0.1
+        INPUT_RECENT_SECONDS = 100.0
+        WATCHDOG_ROTATE_MAX = 2
+
+        async def _connect(self):
+            connects.append(1)
+            return _FakeWS([completed])
+
+    fatal_calls = []
+    tr = _Driven("k", "en", on_audio=_noop, on_text=_noop, on_status=_noop)
+    tr.on_fatal = lambda exc: fatal_calls.append(exc) or True
+    tr.start()
+    tr.join(timeout=8.0)
+    assert not tr.is_alive(), "watchdog exhaustion must end the session, not hang forever"
+    # 1 initial connect + WATCHDOG_ROTATE_MAX self-heal reconnects, then give up
+    # instead of a 4th.
+    assert len(connects) == 1 + _Driven.WATCHDOG_ROTATE_MAX
+    assert len(fatal_calls) == 1  # on_fatal reached exactly once
+
+
 def test_ws_main_transient_error_retries_then_succeeds(caplog):
     import logging
     calls = {"n": 0}
