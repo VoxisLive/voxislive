@@ -198,6 +198,123 @@ NOTES = {
             "แก้ไขกรณีที่พบได้ยากซึ่งข้อผิดพลาดในการแปลอาจแสดงข้อความทางเทคนิคแทนที่จะเป็นข้อความที่ชัดเจน",
         ],
     },
+    "1.0.58": {
+        "en": [
+            "Fixed an issue where the free trial could be incorrectly flagged as already used on some computers, even for a brand-new account.",
+            "Fixed a rare crash on launch caused by corrupted settings data.",
+            "Various security hardening improvements to how the app handles connections and login sessions.",
+        ],
+        "tr": [
+            "Bazı bilgisayarlarda, ücretsiz deneme süresinin yepyeni bir hesapta bile daha önce kullanılmış gibi yanlış işaretlenmesine neden olan bir sorun giderildi.",
+            "Bozuk ayar verisinden kaynaklanan nadir bir başlangıç çökmesi giderildi.",
+            "Uygulamanın bağlantıları ve oturum açma işlemlerini ele alış biçiminde çeşitli güvenlik sıkılaştırmaları yapıldı.",
+        ],
+        "de": [
+            "Ein Problem behoben, bei dem die kostenlose Testversion auf manchen Computern fälschlicherweise als bereits verwendet markiert wurde, selbst bei einem brandneuen Konto.",
+            "Einen seltenen Absturz beim Start behoben, der durch beschädigte Einstellungsdaten verursacht wurde.",
+            "Verschiedene Sicherheitsverbesserungen bei der Handhabung von Verbindungen und Anmeldesitzungen.",
+        ],
+        "fr": [
+            "Correction d'un problème où l'essai gratuit pouvait être signalé à tort comme déjà utilisé sur certains ordinateurs, même pour un tout nouveau compte.",
+            "Correction d'un plantage rare au démarrage causé par des données de paramètres corrompues.",
+            "Diverses améliorations de sécurité dans la gestion des connexions et des sessions de connexion.",
+        ],
+        "es": [
+            "Se corrigió un problema por el que la prueba gratuita podía marcarse incorrectamente como ya utilizada en algunos equipos, incluso con una cuenta completamente nueva.",
+            "Se corrigió un fallo poco frecuente al iniciar la aplicación causado por datos de configuración dañados.",
+            "Diversas mejoras de seguridad en la forma en que la aplicación gestiona las conexiones y las sesiones de inicio de sesión.",
+        ],
+        "pt": [
+            "Corrigido um problema em que o período de teste gratuito podia ser marcado incorretamente como já utilizado em alguns computadores, mesmo para uma conta totalmente nova.",
+            "Corrigida uma falha rara na inicialização causada por dados de configuração corrompidos.",
+            "Diversas melhorias de segurança na forma como o app lida com conexões e sessões de login.",
+        ],
+        "it": [
+            "Risolto un problema per cui la prova gratuita poteva essere erroneamente segnalata come già utilizzata su alcuni computer, anche con un account del tutto nuovo.",
+            "Risolto un raro arresto anomalo all'avvio causato da dati di configurazione danneggiati.",
+            "Diversi miglioramenti di sicurezza nella gestione delle connessioni e delle sessioni di accesso.",
+        ],
+        "nl": [
+            "Een probleem opgelost waarbij de gratis proefperiode op sommige computers onterecht als al gebruikt werd gemarkeerd, zelfs bij een gloednieuw account.",
+            "Een zeldzame crash bij het opstarten, veroorzaakt door beschadigde instellingengegevens, opgelost.",
+            "Diverse beveiligingsverbeteringen in hoe de app verbindingen en inlogsessies verwerkt.",
+        ],
+        "pl": [
+            "Naprawiono problem, przez który darmowy okres próbny mógł zostać błędnie oznaczony jako już wykorzystany na niektórych komputerach, nawet w przypadku zupełnie nowego konta.",
+            "Naprawiono rzadką awarię przy uruchamianiu spowodowaną uszkodzonymi danymi ustawień.",
+            "Wprowadzono różne usprawnienia bezpieczeństwa w sposobie obsługi połączeń i sesji logowania.",
+        ],
+        "cs": [
+            "Opravena chyba, kdy mohla být bezplatná zkušební verze na některých počítačích nesprávně označena jako již využitá, a to i u zcela nového účtu.",
+            "Opravena vzácná chyba při spuštění způsobená poškozenými daty nastavení.",
+            "Různá bezpečnostní vylepšení ve způsobu, jakým aplikace zpracovává připojení a přihlašovací relace.",
+        ],
+        "hu": [
+            "Kijavítottunk egy hibát, amely miatt az ingyenes próbaidőszak egyes számítógépeken tévesen már felhasználtként jelenhetett meg, még egy vadonatúj fiók esetén is.",
+            "Kijavítottunk egy ritka, sérült beállítási adatok okozta indítási összeomlást.",
+            "Több biztonsági fejlesztés történt az alkalmazás kapcsolat- és bejelentkezési munkamenet-kezelésében.",
+        ],
+        "ro": [
+            "A fost remediată o problemă prin care perioada de probă gratuită putea fi marcată incorect ca fiind deja utilizată pe unele computere, chiar și pentru un cont complet nou.",
+            "A fost remediată o blocare rară la pornire, cauzată de date de configurare corupte.",
+            "Diverse îmbunătățiri de securitate în modul în care aplicația gestionează conexiunile și sesiunile de autentificare.",
+        ],
+        "sv": [
+            "Åtgärdat ett problem där den kostnadsfria provperioden felaktigt kunde markeras som redan använd på vissa datorer, även för ett helt nytt konto.",
+            "Åtgärdad en sällsynt krasch vid start orsakad av skadade inställningsdata.",
+            "Olika säkerhetsförbättringar i hur appen hanterar anslutningar och inloggningssessioner.",
+        ],
+        "sr": [
+            "Ispravljen problem zbog kog je besplatna probna verzija na nekim računarima mogla biti pogrešno označena kao već iskorišćena, čak i za potpuno nov nalog.",
+            "Ispravljeno retko rušenje pri pokretanju izazvano oštećenim podacima podešavanja.",
+            "Razna bezbednosna poboljšanja u načinu na koji aplikacija rukuje vezama i sesijama prijave.",
+        ],
+        "ru": [
+            "Исправлена проблема, из-за которой бесплатный пробный период на некоторых компьютерах мог ошибочно помечаться как уже использованный, даже для совершенно нового аккаунта.",
+            "Исправлен редкий сбой при запуске, вызванный повреждёнными данными настроек.",
+            "Различные улучшения безопасности в обработке соединений и сеансов входа в приложении.",
+        ],
+        "ja": [
+            "一部のパソコンで、まったく新しいアカウントであっても無料トライアルがすでに使用済みと誤って判定される問題を修正しました。",
+            "設定データの破損が原因で起動時にまれに発生していたクラッシュを修正しました。",
+            "アプリの接続処理とログインセッションの扱いに関するセキュリティを強化しました。",
+        ],
+        "ko": [
+            "일부 컴퓨터에서 완전히 새로운 계정임에도 무료 체험판이 이미 사용된 것으로 잘못 표시되던 문제를 수정했습니다.",
+            "손상된 설정 데이터로 인해 드물게 발생하던 실행 시 충돌 문제를 수정했습니다.",
+            "앱이 연결 및 로그인 세션을 처리하는 방식에 대한 다양한 보안 강화가 이루어졌습니다.",
+        ],
+        "zh": [
+            "修复了部分电脑上免费试用可能被错误标记为已使用的问题，即使是全新账户也会受影响。",
+            "修复了因设置数据损坏导致的偶发启动崩溃问题。",
+            "对应用处理连接和登录会话的方式进行了多项安全加固。",
+        ],
+        "zh-Hant": [
+            "修復了部分電腦上免費試用可能被錯誤標記為已使用的問題，即使是全新帳戶也會受影響。",
+            "修復了因設定資料損毀導致的偶發啟動當機問題。",
+            "對應用程式處理連線和登入工作階段的方式進行了多項安全強化。",
+        ],
+        "hi": [
+            "एक समस्या ठीक की गई जिसके कारण कुछ कंप्यूटरों पर मुफ्‍त ट्रायल को गलत तरीके से पहले से इस्तेमाल किया हुआ दिखाया जा सकता था, भले ही खाता बिल्‍कुल नया हो।",
+            "खराब सेटिंग्‍स डेटा के कारण शुरू होते समय होने वाली एक दुर्लभ क्रैश समस्या ठीक की गई।",
+            "ऐप के कनेक्‍शन और लॉगिन सेशन को संभालने के तरीके में कई सुरक्षा सुधार किए गए।",
+        ],
+        "id": [
+            "Memperbaiki masalah di mana uji coba gratis dapat salah ditandai sebagai sudah digunakan di beberapa komputer, bahkan untuk akun yang benar-benar baru.",
+            "Memperbaiki crash langka saat memulai yang disebabkan oleh data pengaturan yang rusak.",
+            "Berbagai peningkatan keamanan dalam cara aplikasi menangani koneksi dan sesi login.",
+        ],
+        "vi": [
+            "Đã khắc phục sự cố khiến bản dùng thử miễn phí có thể bị đánh dấu sai là đã sử dụng trên một số máy tính, ngay cả với tài khoản hoàn toàn mới.",
+            "Đã khắc phục lỗi hiếm gặp gây treo ứng dụng khi khởi động do dữ liệu cài đặt bị hỏng.",
+            "Nhiều cải tiến bảo mật trong cách ứng dụng xử lý kết nối và phiên đăng nhập.",
+        ],
+        "th": [
+            "แก้ไขปัญหาที่ทดลองใช้ฟรีอาจถูกทำเครื่องหมายผิดพลาดว่าใช้ไปแล้วบนคอมพิวเตอร์บางเครื่อง แม้จะเป็นบัญชีใหม่ทั้งหมดก็ตาม",
+            "แก้ไขปัญหาแอปขัดข้องที่พบได้ยากขณะเริ่มทำงาน ซึ่งเกิดจากข้อมูลการตั้งค่าที่เสียหาย",
+            "ปรับปรุงความปลอดภัยหลายจุดในวิธีที่แอปจัดการการเชื่อมต่อและเซสชันการเข้าสู่ระบบ",
+        ],
+    },
 }
 
 

@@ -15,6 +15,22 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   trouble, so a session can't trigger this on its own.
 
 ### Fixed
+- A device fingerprint used to enforce the one-free-trial-per-computer rule
+  could fall back to a value that is identical across every unit of a common
+  hardware model (manufacturer + product name, not a real per-machine ID)
+  when a lower-level Windows API was unavailable. This could incorrectly
+  flag a brand-new account's free trial as already used on a shared hardware
+  model. The weak fallback is now recognized as such and never used for that
+  check.
+- Several client-side security hardening fixes: the internal JS-to-native
+  bridge now enforces an explicit allowlist instead of exposing every method
+  to page script; connection parameters supplied by the server are now
+  validated before use; a login fallback path no longer leaves a session
+  token in browser history; a settings key could be written without going
+  through its own validation; and a few crash-on-malformed-input edge cases
+  (settings, transcripts, connection data) now degrade gracefully instead of
+  crashing the app. A dependency was also updated to patch a known
+  vulnerability.
 - A translation-engine failure with no substitute engine available could
   surface the raw upstream error text to the user (e.g. a provider's literal
   technical error payload) instead of a clear message. Now shows a plain
