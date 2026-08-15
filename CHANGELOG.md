@@ -15,6 +15,13 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
   trouble, so a session can't trigger this on its own.
 
 ### Fixed
+- A translator session whose self-heal reconnect attempts ran out while
+  translation output stayed empty used to sit "connected" with a one-time
+  warning and never recover until the user noticed and restarted it by hand.
+  It now gives up and recovers the same way a terminal engine error does —
+  a paid session fails over to the backup engine, and an in-progress
+  free/taste session gets a shot at the cascade rescue instead of hanging
+  silently.
 - A device fingerprint used to enforce the one-free-trial-per-computer rule
   could fall back to a value that is identical across every unit of a common
   hardware model (manufacturer + product name, not a real per-machine ID)

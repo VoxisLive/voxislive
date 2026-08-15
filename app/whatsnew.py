@@ -315,6 +315,77 @@ NOTES = {
             "ปรับปรุงความปลอดภัยหลายจุดในวิธีที่แอปจัดการการเชื่อมต่อและเซสชันการเข้าสู่ระบบ",
         ],
     },
+    "1.0.59": {
+        "en": [
+            "Fixed a rare case where a session could get stuck with no audio and no error message — it now recovers automatically instead of requiring a manual restart.",
+        ],
+        "tr": [
+            "Oturumun bazen sessiz kalıp hiçbir hata göstermeden takılı kalabilmesi sorunu giderildi — artık elle yeniden başlatmaya gerek kalmadan kendiliğinden toparlanıyor.",
+        ],
+        "de": [
+            "Ein seltener Fall behoben, bei dem eine Sitzung ohne Ton und ohne Fehlermeldung hängen bleiben konnte — sie erholt sich jetzt automatisch, statt einen manuellen Neustart zu erfordern.",
+        ],
+        "fr": [
+            "Correction d'un cas rare où une session pouvait rester bloquée sans son ni message d'erreur — elle se rétablit désormais automatiquement, sans nécessiter de redémarrage manuel.",
+        ],
+        "es": [
+            "Se corrigió un caso poco frecuente en el que una sesión podía quedarse bloqueada sin audio ni mensaje de error — ahora se recupera automáticamente en lugar de requerir un reinicio manual.",
+        ],
+        "pt": [
+            "Corrigido um caso raro em que uma sessão podia travar sem áudio e sem mensagem de erro — agora ela se recupera automaticamente em vez de exigir um reinício manual.",
+        ],
+        "it": [
+            "Risolto un caso raro in cui una sessione poteva bloccarsi senza audio e senza messaggi di errore — ora si ripristina automaticamente invece di richiedere un riavvio manuale.",
+        ],
+        "nl": [
+            "Een zeldzaam geval opgelost waarbij een sessie kon vastlopen zonder geluid en zonder foutmelding — deze herstelt nu automatisch in plaats van een handmatige herstart te vereisen.",
+        ],
+        "pl": [
+            "Naprawiono rzadki przypadek, w którym sesja mogła się zawiesić bez dźwięku i bez komunikatu o błędzie — teraz wznawia się automatycznie zamiast wymagać ręcznego ponownego uruchomienia.",
+        ],
+        "cs": [
+            "Opraven vzácný případ, kdy se relace mohla zaseknout bez zvuku a bez chybové zprávy — nyní se automaticky obnoví, aniž by bylo nutné ruční restartování.",
+        ],
+        "hu": [
+            "Kijavítottunk egy ritka esetet, amikor a munkamenet hang és hibaüzenet nélkül leállhatott — mostantól automatikusan helyreáll, kézi újraindítás nélkül.",
+        ],
+        "ro": [
+            "A fost remediat un caz rar în care o sesiune putea rămâne blocată fără sunet și fără mesaj de eroare — acum se reface automat, fără a necesita o repornire manuală.",
+        ],
+        "sv": [
+            "Åtgärdat ett sällsynt fall där en session kunde fastna utan ljud och utan felmeddelande — den återhämtar sig nu automatiskt istället för att kräva en manuell omstart.",
+        ],
+        "sr": [
+            "Ispravljen redak slučaj u kome je sesija mogla da se zaglavi bez zvuka i bez poruke o grešci — sada se automatski oporavlja umesto da zahteva ručno ponovno pokretanje.",
+        ],
+        "ru": [
+            "Исправлен редкий случай, когда сеанс мог зависнуть без звука и без сообщения об ошибке — теперь он восстанавливается автоматически, без необходимости вручную перезапускать сеанс.",
+        ],
+        "ja": [
+            "音声も出ずエラーメッセージも表示されないままセッションが停止してしまう、まれな問題を修正しました。手動での再起動を行わなくても自動的に回復するようになりました。",
+        ],
+        "ko": [
+            "오디오도 오류 메시지도 없이 세션이 멈춰버리는 드문 문제를 수정했습니다 — 이제 수동으로 다시 시작하지 않아도 자동으로 복구됩니다.",
+        ],
+        "zh": [
+            "修复了会话偶尔会在没有声音、也没有错误提示的情况下卡住的问题——现在无需手动重启即可自动恢复。",
+        ],
+        "zh-Hant": [
+            "修復了工作階段偶爾會在沒有聲音、也沒有錯誤提示的情況下卡住的問題——現在無需手動重新啟動即可自動恢復。",
+        ],
+        "hi": [
+            "एक दुर्लभ समस्या ठीक की गई जिसमें सेशन बिना किसी ऑडियो और बिना किसी एरर मैसेज के अटक सकता था — अब यह बिना मैन्युअल रीस्टार्ट किए अपने आप ठीक हो जाता है।",
+        ],
+        "id": [
+            "Memperbaiki kasus langka di mana sesi dapat macet tanpa audio dan tanpa pesan error — kini pulih secara otomatis tanpa perlu memulai ulang secara manual.",
+        ],
+        "vi": [
+            "Đã khắc phục một trường hợp hiếm gặp khiến phiên làm việc có thể bị treo mà không có âm thanh và không có thông báo lỗi — giờ đây ứng dụng sẽ tự động khôi phục thay vì phải khởi động lại thủ công.",
+        ],
+        "th": [
+            "แก้ไขกรณีที่พบได้ยากซึ่งเซสชันอาจค้างโดยไม่มีเสียงและไม่มีข้อความแจ้งข้อผิดพลาด — ตอนนี้ระบบจะกู้คืนโดยอัตโนมัติแทนที่จะต้องรีสตาร์ทด้วยตนเอง",
+        ],
+    },
 }
 
 
