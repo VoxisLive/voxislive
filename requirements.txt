@@ -6,7 +6,7 @@
 # for numpy and the CPU-only onnxruntime. Python 3.14 would force a numpy dev
 # build and the onnxruntime-directml variant (ships DirectML.dll), so the engine
 # stays on 3.13 until stable cp314 wheels exist.
-google-genai==2.17.0
+google-genai==2.18.0
 sounddevice==0.5.5
 # numpy 2.5.x and scipy 1.18.x dropped Python 3.11 (Requires-Python >=3.12),
 # breaking the CI test matrix's 3.11 leg — hold both back until 3.11 support
