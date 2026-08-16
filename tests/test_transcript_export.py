@@ -1,4 +1,7 @@
 """transcript_store: bilingual vs translated-only export rendering."""
+import json
+import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import app.transcript_store as ts
@@ -181,3 +184,117 @@ def test_audio_track_records_produced_speech_seconds():
         {"t": 1.0, "sec": 0.5}, {"t": 9.0, "sec": 6.25},
     ])
     assert rec["audio_track"] == [{"t": 1.0, "sec": 0.5}, {"t": 9.0, "sec": 6.25}]
+
+
+# --- starred: schema-additive field + prune exemption ----------------------
+
+
+def test_starred_is_schema_additive_via_overwrite_record(tmp_path):
+    rec = ts.build_record(1.0, [{"t": 0, "src": "one", "text": "iki"}])
+    assert "starred" not in rec
+    path = ts.save_record(str(tmp_path), rec, subdir="voxis_star")
+
+    loaded = ts.load_record(path)
+    loaded["starred"] = True
+    ts.overwrite_record(path, loaded)
+    assert ts.load_record(path)["starred"] is True
+
+    # Unstarring must drop the key entirely, not just set it False — an
+    # unstarred record has to serialize exactly as it did before starring ever
+    # existed.
+    loaded = ts.load_record(path)
+    loaded.pop("starred", None)
+    ts.overwrite_record(path, loaded)
+    assert "starred" not in ts.load_record(path)
+    assert not list((tmp_path / "voxis_star").glob("*.tmp"))
+
+
+def test_overwrite_record_works_on_legacy_flat_layout(tmp_path):
+    # Legacy pre-1.0.28 records live directly in the transcripts root, not in
+    # their own voxis_<stamp>/ folder — overwrite_record must not assume nesting.
+    path = tmp_path / "voxis_flat.json"
+    rec = ts.build_record(1.0, [{"t": 0, "src": "one", "text": "iki"}])
+    path.write_text(json.dumps(rec), encoding="utf-8")
+
+    rec["starred"] = True
+    ts.overwrite_record(str(path), rec)
+    assert ts.load_record(str(path))["starred"] is True
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_list_records_summary_carries_starred_flag(tmp_path):
+    rec = ts.build_record(1.0, [{"t": 0, "src": "one", "text": "iki"}])
+    path = ts.save_record(str(tmp_path), rec, subdir="voxis_star2")
+    ts.invalidate_summary_cache()
+    summaries = {r["file"]: r for r in ts.list_records(str(tmp_path))}
+    assert summaries[os.path.basename(path)]["starred"] is False
+
+    loaded = ts.load_record(path)
+    loaded["starred"] = True
+    ts.overwrite_record(path, loaded)
+    ts.invalidate_summary_cache(path)
+    summaries = {r["file"]: r for r in ts.list_records(str(tmp_path))}
+    assert summaries[os.path.basename(path)]["starred"] is True
+
+
+def test_prune_transcripts_never_removes_a_starred_session(tmp_path, monkeypatch):
+    rec = ts.build_record(1.0, [{"t": 0, "src": "one", "text": "iki"}])
+    old_path = ts.save_record(str(tmp_path), rec, subdir="voxis_old_starred")
+    loaded = ts.load_record(old_path)
+    loaded["starred"] = True
+    ts.overwrite_record(old_path, loaded)
+
+    # Age it past the retention window on disk (mtime is what prune reads).
+    old_dir = tmp_path / "voxis_old_starred"
+    ancient = time.time() - 200 * 86400
+    os.utime(old_path, (ancient, ancient))
+    os.utime(old_dir, (ancient, ancient))
+
+    pruned = ts.prune_transcripts(str(tmp_path), max_age_days=90, max_files=500)
+    assert pruned == 0
+    assert old_dir.exists()
+
+
+def test_render_txt_prepends_summary_when_present():
+    rec = _rec()
+    rec["summary"] = "Two people discussed their day."
+    out = ts.render_txt(rec)
+    assert out.startswith("Two people discussed their day.\n\n---\n\n")
+    assert "Hello world" in out
+
+
+def test_render_txt_omits_summary_header_when_absent():
+    out = ts.render_txt(_rec())
+    assert "---" not in out
+
+
+def test_render_txt_bilingual_also_carries_the_summary():
+    rec = _rec()
+    rec["summary"] = "Recap."
+    out = ts.render_txt(rec, bilingual=True)
+    assert out.startswith("Recap.\n\n---\n\n")
+
+
+def test_render_srt_never_carries_a_summary_header():
+    rec = {"version": 1, "started": 0.0, "summary": "Recap.",
+           "turns": [{"t": 0.0, "dir": "out", "src": "", "text": "selam"}]}
+    assert "Recap." not in ts.render_srt(rec)
+    assert "Recap." not in ts.render_vtt(rec)
+
+
+def test_prune_transcripts_starred_session_does_not_count_against_max_files(tmp_path):
+    starred_rec = ts.build_record(1.0, [{"t": 0, "src": "one", "text": "iki"}])
+    starred_path = ts.save_record(str(tmp_path), starred_rec, subdir="voxis_pin")
+    loaded = ts.load_record(starred_path)
+    loaded["starred"] = True
+    ts.overwrite_record(starred_path, loaded)
+
+    for i in range(3):
+        ts.save_record(str(tmp_path), ts.build_record(
+            2.0 + i, [{"t": 0, "src": "x", "text": "y"}]), subdir=f"voxis_extra{i}")
+
+    # max_files=3 would normally have to evict the oldest of 4 sessions; the
+    # starred one must survive regardless of its age/order.
+    pruned = ts.prune_transcripts(str(tmp_path), max_age_days=90, max_files=3)
+    assert pruned <= 1
+    assert (tmp_path / "voxis_pin").exists()

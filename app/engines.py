@@ -17,7 +17,7 @@ from .config import ENGINE_CASCADE, ENGINE_QWEN, resolve_model
 def make_translator(cfg, target_lang, *, engine, key, model=None,
                     on_audio, on_text, on_status, name,
                     on_fatal=None, key_provider=None, beta_active=False,
-                    voice=None, fallback=None):
+                    voice=None, fallback=None, clone_override=None):
     """Build the translator thread for an ALREADY-RESOLVED engine + key + model.
     The caller resolves per target (locally for BYOK, server-side for SaaS) so the
     capture send-rate can match. Returns an object honoring the translator
@@ -48,7 +48,15 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
     when this is True (a genuine, server-authorized beta session — webui sets
     resolve.beta_active there). It is False for standard-routed Qwen so a stale
     beta.clone left in config.json by an old Beta-tab soak cannot silently turn
-    per-speaker cloning on (which mis-genders male source as a female voice)."""
+    per-speaker cloning on (which mis-genders male source as a female voice).
+
+    clone_override (Qwen only), when not None, takes priority over the
+    beta_active-gated cfg["beta"]["clone"] path above — the first-class,
+    UI-reachable clone toggles (config.py DEFAULTS["voice_clone_incoming"] for
+    the incoming/Video leg; the planned Meeting-outgoing "own voice" feature
+    shares this same kwarg name deliberately) live OUTSIDE cfg["beta"] and
+    must work regardless of beta_active. Passing "off" explicitly (as opposed
+    to None) still forces clone off, distinct from "let the beta path decide"."""
     if not key:
         raise RuntimeError(f"no API key for engine '{engine}'")
     model = model or resolve_model(cfg, engine)
@@ -78,7 +86,8 @@ def make_translator(cfg, target_lang, *, engine, key, model=None,
         from .config import QWEN_WORKSPACE, merge_hotwords
         from .qwen_translator import QwenTranslator  # lazy: keep websockets off cold start
         beta = cfg.get("beta") or {}
-        clone = beta.get("clone", "off") if beta_active else "off"
+        clone = (clone_override if clone_override is not None
+                else (beta.get("clone", "off") if beta_active else "off"))
         tr = QwenTranslator(
             key, target_lang,
             on_audio=on_audio, on_text=on_text, on_status=on_status,

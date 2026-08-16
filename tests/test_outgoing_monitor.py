@@ -15,6 +15,7 @@ def test_outgoing_translation_is_mirrored_to_monitor():
     pipe = OutgoingPipeline.__new__(OutgoingPipeline)
     pipe.player = _Sink()
     pipe.monitor_player = _Sink()
+    pipe._stager = None       # cascade-routed leg: no catch-up stager
 
     pipe._feed_translated_audio(b"translated")
 
@@ -26,6 +27,7 @@ def test_outgoing_translation_still_reaches_call_without_monitor():
     pipe = OutgoingPipeline.__new__(OutgoingPipeline)
     pipe.player = _Sink()
     pipe.monitor_player = None
+    pipe._stager = None
 
     pipe._feed_translated_audio(b"translated")
 

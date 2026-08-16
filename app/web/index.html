@@ -210,6 +210,9 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
           <span data-i18n="save">Kaydet</span>
         </button>
+        <button class="skipplayback" id="skip-playback" type="button" disabled title="Bu cümleyi geç" data-i18n-title="skip_playback" aria-label="Bu cümleyi geç" data-i18n-aria="skip_playback">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v16l10-8z"/><path d="M19 5v14"/></svg>
+        </button>
         <button class="clearstream" id="clearstream" title="Akışı temizle" data-i18n-title="clear_stream" aria-label="Akışı temizle" data-i18n-aria="clear_stream">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         </button>
@@ -275,29 +278,29 @@
           <div class="fieldlabel" data-i18n="ui_lang">Arayüz dili</div>
           <div class="selectwrap">
             <select id="uilang">
-              <option value="tr">Türkçe</option>
-              <option value="en">English</option>
-              <option value="de">Deutsch</option>
-              <option value="cs">Čeština</option>
-              <option value="fr">Français</option>
-              <option value="es">Español</option>
-              <option value="pt">Português (BR)</option>
-              <option value="ja">日本語</option>
-              <option value="ko">한국어</option>
-              <option value="ru">Русский</option>
-              <option value="zh">中文（简体）</option>
-              <option value="pl">Polski</option>
-              <option value="it">Italiano</option>
-              <option value="id">Bahasa Indonesia</option>
-              <option value="nl">Nederlands</option>
-              <option value="vi">Tiếng Việt</option>
-              <option value="th">ภาษาไทย</option>
-              <option value="ro">Română</option>
-              <option value="hi">हिन्दी</option>
-              <option value="hu">Magyar</option>
-              <option value="sv">Svenska</option>
-              <option value="sr">Srpski</option>
-              <option value="zh-Hant">中文（繁體）</option>
+              <option value="tr">🇹🇷 Türkçe</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="cs">🇨🇿 Čeština</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="pt">🇧🇷 Português (BR)</option>
+              <option value="ja">🇯🇵 日本語</option>
+              <option value="ko">🇰🇷 한국어</option>
+              <option value="ru">🇷🇺 Русский</option>
+              <option value="zh">🇨🇳 中文（简体）</option>
+              <option value="pl">🇵🇱 Polski</option>
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="id">🇮🇩 Bahasa Indonesia</option>
+              <option value="nl">🇳🇱 Nederlands</option>
+              <option value="vi">🇻🇳 Tiếng Việt</option>
+              <option value="th">🇹🇭 ภาษาไทย</option>
+              <option value="ro">🇷🇴 Română</option>
+              <option value="hi">🇮🇳 हिन्दी</option>
+              <option value="hu">🇭🇺 Magyar</option>
+              <option value="sv">🇸🇪 Svenska</option>
+              <option value="sr">🇷🇸 Srpski</option>
+              <option value="zh-Hant">🇹🇼 中文（繁體）</option>
             </select>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </div>
@@ -315,9 +318,14 @@
       <section class="dpane" data-pane="translation" role="tabpanel" hidden>
         <div class="dsection">
           <h3 data-i18n="voice_section">Ses</h3>
-          <div class="fieldlabel" data-i18n="voice_in_label">Çeviri sesi</div>
-          <div class="selectwrap"><select id="voice-in-s"></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
-          <div class="fieldhint" style="margin-top:6px" data-i18n="voice_in_hint">Videoda ve toplantıda karşı tarafı bu sesle duyarsınız.</div>
+          <label class="switch"><input type="checkbox" id="voice-clone-in"><span class="track"></span><span data-i18n="voice_clone_incoming_label">Dublaj Sesi</span></label>
+          <div class="fieldhint" style="margin-top:6px" data-i18n="voice_clone_incoming_hint">Çeviriyi konuşmacının kendi sesine benzer bir sesle duyarsınız (yalnızca bazı dillerde).</div>
+          <div class="fieldhint" id="voice-clone-mutex-hint" data-i18n="voice_clone_incoming_mutex_hint" style="display:none;margin-top:6px">—</div>
+          <div style="margin-top:16px">
+            <div class="fieldlabel" data-i18n="voice_in_label">Çeviri sesi</div>
+            <div class="selectwrap"><select id="voice-in-s"></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="fieldhint" style="margin-top:6px" data-i18n="voice_in_hint">Videoda ve toplantıda karşı tarafı bu sesle duyarsınız.</div>
+          </div>
           <div style="margin-top:16px">
             <div class="fieldlabel" data-i18n="voice_out_label">Benim sesim</div>
             <div class="selectwrap"><select id="voice-out-s"></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
@@ -331,6 +339,7 @@
           <div class="fieldhint" style="margin-bottom:8px" data-i18n="terms_hint">Marka, kişi ve ürün adlarını buraya yaz — çeviri motoru onları doğru yazsın. Video ve toplantı modunda geçerlidir.</div>
           <textarea id="hotwords" rows="4" spellcheck="false" data-i18n-ph="hotwords_ph" placeholder="Antler&#10;MENAP=MENAP&#10;Voxis"></textarea>
           <div class="fieldhint" id="hotwords-count" style="margin-top:6px"></div>
+          <div style="margin-top:8px"><button class="btn btn-ghost" id="terms-import" style="width:auto" data-i18n="terms_import">Dosyadan içe aktar…</button></div>
           <div style="margin-top:14px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 0">
             <label class="switch"><input type="checkbox" id="builtin-terms"><span class="track"></span><span id="builtin-terms-lbl" data-i18n="terms_builtin">Hazır terim listesi</span></label>
             <a id="builtin-terms-toggle" data-i18n="terms_show" style="font-size:11.5px;color:var(--accent);cursor:pointer;margin-left:10px">Göster</a>
@@ -734,10 +743,27 @@
     <button class="iconbtn" id="history-close" title="Kapat" data-i18n-title="title_close" aria-label="Kapat" data-i18n-aria="title_close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="mbody">
-    <div class="histsearchwrap"><input type="search" id="history-search" placeholder="Geçmişte ara…" data-i18n-ph="history_search_ph" aria-label="Geçmişte ara" data-i18n-aria="history_search_ph"></div>
+    <div class="histsearchwrap">
+      <input type="search" id="history-search" placeholder="Geçmişte ara…" data-i18n-ph="history_search_ph" aria-label="Geçmişte ara" data-i18n-aria="history_search_ph">
+      <button type="button" class="histstarfilter" id="hist-star-filter" aria-pressed="false" title="Sadece yıldızlılar" data-i18n-title="history_starred_only" aria-label="Sadece yıldızlılar" data-i18n-aria="history_starred_only">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.8-4.4 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1L3.3 9.9l6.1-.8z"/></svg>
+        <span data-i18n="history_starred_only">Sadece yıldızlılar</span>
+      </button>
+    </div>
     <div class="histpanes">
       <div class="histlist" id="history-list" role="listbox" aria-label="Çeviri geçmişi" data-i18n-aria="history_title"></div>
       <div class="histview" id="history-view">
+        <div class="histsummary" id="history-summary" hidden>
+          <div class="hs-head">
+            <span class="hs-title" data-i18n="history_summary_title">AI özeti</span>
+            <button type="button" class="btn btn-ghost hs-regen" id="hist-summary-regen" data-i18n="history_summary_regenerate">Yeniden oluştur</button>
+          </div>
+          <div class="hs-body" id="hist-summary-body"></div>
+        </div>
+        <div class="hs-gen-row" id="hist-summary-gen-row" hidden>
+          <button type="button" class="btn btn-ghost" id="hist-summary-gen" style="width:auto" data-i18n="history_summary_generate">Özet oluştur</button>
+          <span class="hs-status" id="hist-summary-status"></span>
+        </div>
         <div class="histempty" id="history-empty" data-i18n="history_pick">Görüntülemek için bir oturum seç.</div>
         <div class="histturns" id="history-turns" hidden></div>
       </div>
@@ -750,6 +776,9 @@
     <button class="btn btn-ghost" id="hist-export-srt" style="width:auto" disabled data-i18n="history_fmt_srt">SRT</button>
     <button class="btn btn-ghost" id="hist-export-vtt" style="width:auto" disabled data-i18n="history_fmt_vtt">VTT</button>
     <button class="btn btn-ghost" id="hist-open-folder" style="width:auto" data-i18n="open_folder">Klasörü aç</button>
+    <button class="btn btn-ghost" id="hist-edit" style="width:auto" disabled data-i18n="history_edit">Düzenle</button>
+    <button class="btn btn-primary" id="hist-edit-save" style="width:auto" hidden data-i18n="history_edit_save">Kaydet</button>
+    <button class="btn btn-ghost" id="hist-edit-cancel" style="width:auto" hidden data-i18n="history_edit_cancel">Vazgeç</button>
     <span class="spacer"></span>
     <button class="btn btn-danger" id="hist-delete" style="width:auto" disabled data-i18n="history_delete">Sil</button>
   </div>

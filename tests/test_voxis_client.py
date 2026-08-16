@@ -311,3 +311,22 @@ def test_get_quota_non_401_error_never_reverifies(monkeypatch):
     calls = _quota_env(monkeypatch, [_FakeResp(500)])
     assert vc.get_quota() is None
     assert calls["gets"] == 1 and calls["verifies"] == 0
+
+
+# --- get_referral_info: OSS/dev build never reaches the network -----------
+
+
+def test_get_referral_info_disabled_on_oss_build(monkeypatch):
+    monkeypatch.setattr(vc, "IS_OFFICIAL_RELEASE", False)
+    calls = {"gets": 0}
+
+    class _FakeHttp:
+        def get(self, *a, **kw):
+            calls["gets"] += 1
+            return _FakeResp(200, {})
+
+    monkeypatch.setattr(vc, "_http", _FakeHttp())
+    info, err = vc.get_referral_info()
+    assert info is None
+    assert err  # localized message, non-empty
+    assert calls["gets"] == 0

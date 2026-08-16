@@ -38,6 +38,10 @@ def built(monkeypatch):
     monkeypatch.setattr(P.sysaudio, "make_virtual_mic", lambda: None)
     monkeypatch.setattr(P.sysaudio, "snapshot_own_audio_streams", list)
     monkeypatch.setattr(P, "_GatedSource", _Stub)
+    # The outgoing leg now builds a real catch-up stager for Qwen/Gemini (see
+    # test_outgoing_playback_stager.py) — its own background thread has no
+    # place in a gender-routing test, so keep it a stub here too.
+    monkeypatch.setattr(P, "AdaptivePlaybackStager", _Stub)
 
     def _build(cfg):
         seen.clear()

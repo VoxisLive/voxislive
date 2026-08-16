@@ -24,6 +24,7 @@ from .config import (
     ENGINE_GEMINI,
     ENGINE_QWEN,
     gate_params,
+    qwen_can_voice,
     resolve_voice,
     stream_gated,
 )
@@ -459,6 +460,24 @@ class IncomingPipeline:
                 voice=resolve_voice(self._engine,
                                     cfg.get("voice_gender_incoming", "auto")),
                 fallback=_fallback,
+                # Speak the incoming translation in the ORIGINAL speaker's own
+                # cloned voice (first-class, UI-reachable — independent of
+                # beta_active/cfg["beta"]["clone"] above). Only "once" is
+                # offered (see config.VOICE_CLONE_MODES — "always" was pulled
+                # after a live multi-speaker test showed it doesn't switch
+                # speakers). A stale "always" from earlier testing must not
+                # silently re-enable a mode the UI no longer offers, hence the
+                # exact "once" check rather than `!= "off"`. Qwen-routed AND
+                # voiced targets only: qwen_can_voice re-checks what engine
+                # routing should already guarantee (self._engine is Qwen only
+                # for a target Qwen can voice), cheap defense-in-depth rather
+                # than trusting that invariant silently.
+                clone_override=(
+                    "once"
+                    if self._engine == ENGINE_QWEN
+                    and cfg.get("voice_clone_incoming") == "once"
+                    and qwen_can_voice(cfg, cfg["target_language_incoming"])
+                    else None),
             )
         except Exception:
             self._teardown_resources()
@@ -892,10 +911,11 @@ def _swap_to_gemini(pipe, target_key, name, exc):
     # source.set_send_rate(16000) against a second, engine-facing rate that no
     # engine has used since OpenAI was retired.)
     #
-    # Both Qwen and Gemini use the incoming adaptive playback stager. Clear its
-    # provider-side pending audio at the boundary, but keep the worker alive so
-    # the replacement Gemini stream gets the same catch-up behavior. Outgoing
-    # pipelines intentionally have no stager.
+    # Both Qwen and Gemini use the adaptive playback stager, on EITHER
+    # direction (incoming and, since the outgoing leg got its own catch-up
+    # stager, outgoing too — see OutgoingPipeline.__init__). Clear its
+    # provider-side pending audio at the boundary, but keep the worker alive
+    # so the replacement Gemini stream gets the same catch-up behavior.
     stager = getattr(pipe, "_stager", None)
     if stager is not None:
         try:
@@ -1079,6 +1099,7 @@ class OutgoingPipeline:
         self.translator: BaseTranslator | CascadeTranslator = None  # pyright: ignore[reportAttributeAccessIssue]
         self.capture = None
         self._source: _GatedSource = None  # pyright: ignore[reportAttributeAccessIssue]
+        self._stager = None
         try:
             self._mic_handle = sysaudio.make_virtual_mic()
             before_streams = sysaudio.snapshot_own_audio_streams()
@@ -1140,7 +1161,21 @@ class OutgoingPipeline:
         self._on_text = on_text
         self._on_status = on_status
         self._failover_done = False
-        # Outgoing feeds the virtual mic directly — no SyncStager on this leg.
+        # A long outgoing turn can be generated faster than realtime, same as
+        # the incoming leg — pace it through the same WSOLA catch-up stager so
+        # a backlog doesn't leave the other party hearing an ever-growing lag.
+        # The optional confidence monitor stays on the raw/unpaced feed (see
+        # _feed_translated_audio): pacing only the mic side would desync the
+        # monitor from what was actually just sent, and the monitor's whole
+        # purpose is showing the user what the OTHER PARTY hears, not a
+        # smoothed-out preview of it.
+        if self._engine in (ENGINE_GEMINI, ENGINE_QWEN):
+            try:
+                self._stager = AdaptivePlaybackStager(
+                    self.player, on_status=on_status, input_rate=24000)
+            except Exception:
+                self._teardown_resources()
+                raise
         self._tts_sink = self._feed_translated_audio
         try:
             self.translator = make_translator(
@@ -1183,7 +1218,8 @@ class OutgoingPipeline:
         """Best-effort release of whatever was acquired; safe with partial init."""
         if self._source is not None:
             self._source.closed = True
-        for comp in (self.capture, getattr(self, "player", None),
+        for comp in (self.capture, getattr(self, "_stager", None),
+                     getattr(self, "player", None),
                      getattr(self, "monitor_player", None),
                      getattr(self, "translator", None)):
             if comp is not None:
@@ -1205,8 +1241,18 @@ class OutgoingPipeline:
         self._source.feed(c)
 
     def _feed_translated_audio(self, data: bytes) -> None:
-        """Send outgoing translation to the call and optional local monitor."""
-        self.player.feed_tts_pcm16(data)
+        """Send outgoing translation to the call (through the catch-up stager
+        when the engine has one) and to the optional local monitor.
+
+        The monitor is DELIBERATELY fed the raw, unpaced data even when the
+        mic-side stager is active: it exists to answer "what does the other
+        party hear", and the mic side is exactly what carries the pacing —
+        feeding the monitor a second, independently-timed copy through the
+        stager would desync it from the call rather than mirror it."""
+        if self._stager is not None:
+            self._stager.feed(data)
+        else:
+            self.player.feed_tts_pcm16(data)
         if self.monitor_player is not None:
             self.monitor_player.feed_tts_pcm16(data)
 
@@ -2068,6 +2114,32 @@ class ModeController:
             return round(float(stager.backlog_s), 2)
         except Exception:
             return 0.0
+
+    def skip_current_playback(self) -> bool:
+        """Drop whatever translated audio is queued or already playing on the
+        incoming leg — "skip this sentence". Same clear order as
+        _swap_to_gemini / play_free_preview: the stager's pending audio is
+        dropped before the player's ring, so a stale carry-over byte can never
+        lead the next utterance. Incoming only — even though a meeting's
+        outgoing leg has its own catch-up stager now too (see
+        OutgoingPipeline.__init__), skipping it would still drop the OTHER
+        PARTY into mid-sentence silence on a live call, which is a UX
+        objection independent of whether there is an object to clear.
+        Returns False when there is no incoming pipeline to act on."""
+        inc = self.incoming()
+        if inc is None:
+            return False
+        stager = getattr(inc, "_stager", None)
+        if stager is not None:
+            try:
+                stager.clear()
+            except Exception:
+                pass
+        try:
+            inc.player.clear_tts()
+        except Exception:
+            pass
+        return True
 
     def is_playing(self) -> bool:
         """True while translated TTS is actively playing back."""

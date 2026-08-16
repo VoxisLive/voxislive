@@ -652,6 +652,13 @@ input[type=password],input[type=text],input[type=email]{
 input[type=password]:focus-visible,input[type=text]:focus-visible,input[type=email]:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .fieldhint{font-size:11.5px;color:var(--text-3);margin-top:8px;line-height:1.55}
 .fieldhint a{color:var(--accent);text-decoration:none}
+/* A hint the user must not miss (e.g. the multi-speaker clone latency
+   notice) — same red-on-soft-red treatment as .auth-error, so a real
+   trade-off warning reads as one instead of blending into ordinary muted
+   field copy. */
+.fieldhint.warn{color:var(--red);background:var(--red-soft);
+  border:1px solid color-mix(in srgb,var(--red) 40%,transparent);
+  border-radius:var(--r-ctl);padding:8px 10px}
 .hkrow{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
 .hkrow .n{font-size:12.5px;color:var(--text-2);font-weight:500}
 .hkrow .k{
@@ -735,27 +742,56 @@ body.resizing,body.resizing *{user-select:none!important}
 .historymodal .mhead{padding:22px 24px 8px;flex:none}
 .historymodal .mbody{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 .historymodal .mfoot{flex:none;border-top:1px solid var(--border)}
-.histsearchwrap{margin:0 0 12px;flex:none}
+.histsearchwrap{margin:0 0 12px;flex:none;display:flex;gap:8px;align-items:center}
 .histsearchwrap input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:var(--r-ctl);
   border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:13px}
+.histstarfilter{flex:none;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 11px;border-radius:var(--r-ctl);
+  cursor:pointer;font-size:11.5px;font-weight:600;color:var(--text-3);background:transparent;
+  border:1px solid var(--border);transition:all var(--dfast) var(--ease);white-space:nowrap}
+.histstarfilter:hover{color:var(--text);background:var(--surface-2)}
+.histstarfilter.on{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
 .histpanes{display:grid;grid-template-columns:260px 1fr;grid-template-rows:minmax(0,1fr);gap:14px;flex:1;min-height:0}
 .histlist{overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-card);padding:6px}
-.histrow{display:block;width:100%;text-align:left;padding:9px 11px;border-radius:var(--r-ctl);cursor:pointer;
+.histrow{display:block;position:relative;width:100%;text-align:left;padding:9px 34px 9px 11px;border-radius:var(--r-ctl);cursor:pointer;
   border:1px solid transparent;background:transparent;color:var(--text);font-size:12.5px;line-height:1.4}
 .histrow:hover{background:var(--surface-2)}
 .histrow.sel{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
 .histrow .hr-when{font-weight:600}
 .histrow .hr-meta{font-family:var(--mono);font-size:10.5px;color:var(--text-3);font-variant-numeric:tabular-nums;margin-top:2px}
 .histrow .hr-prev{font-size:11px;color:var(--text-2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.histrow .hr-star{position:absolute;top:8px;right:6px;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+  cursor:pointer;background:transparent;border:1px solid transparent;color:var(--text-3);opacity:0;
+  transition:all var(--dfast) var(--ease)}
+.histrow:hover .hr-star,.histrow:focus-within .hr-star,.histrow .hr-star.on{opacity:1}
+.histrow .hr-star:hover{background:var(--surface-3);color:var(--text)}
+.histrow .hr-star.on{color:var(--accent)}
+.histrow .hr-star.on svg{fill:currentColor}
 .histview{overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-card);padding:12px 14px}
 .histempty{color:var(--text-3);font-size:12.5px;display:grid;place-items:center;height:100%}
 .histempty[hidden]{display:none} /* author display beats the UA [hidden] rule */
+.histsummary{margin-bottom:12px;padding:10px 12px;border-radius:var(--r-card);
+  background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
+.histsummary .hs-head{display:flex;align-items:center;gap:8px}
+.histsummary .hs-title{font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.02em}
+.histsummary .hs-head .spacer{flex:1}
+.histsummary .hs-regen{margin-left:auto;font-size:11px;padding:0 9px;height:26px}
+.histsummary .hs-body{margin-top:7px;font-size:12.5px;color:var(--text);white-space:pre-wrap;line-height:1.5}
+.hs-gen-row{margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.hs-gen-row[hidden]{display:none}
+.hs-status{font-size:11.5px;color:var(--text-3)}
 .histturns .ht{padding:7px 0;border-bottom:1px solid var(--border)}
 .histturns .ht:last-child{border-bottom:0}
 .histturns .ht .ht-t{font-family:var(--mono);font-size:10.5px;color:var(--text-3)}
 .histturns .ht .ht-src{font-size:11.5px;color:var(--text-3);margin-top:2px}
 .histturns .ht .ht-text{font-size:13px;color:var(--text);margin-top:2px}
 .histturns mark{background:var(--accent-soft);color:var(--text);border-radius:3px;padding:0 1px}
+.histturns .ht.ht-editing{padding:8px 0}
+.histturns .ht-src-edit,.histturns .ht-text-edit{display:block;width:100%;box-sizing:border-box;
+  margin-top:4px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);font:inherit;resize:vertical;min-height:30px}
+.histturns .ht-src-edit{font-size:11.5px;color:var(--text-3)}
+.histturns .ht-text-edit{font-size:13px}
+.histturns .ht-src-edit:focus,.histturns .ht-text-edit:focus{outline:none;border-color:var(--accent)}
 .histexportlbl{font-size:12px;color:var(--text-3);align-self:center;margin-right:2px}
 @media (max-width:640px){.modal.historymodal{width:96vw}.histpanes{grid-template-columns:1fr}}
 /* ============ MODAL (consent / onboarding) — reuses scrim + drawer language ============ */
@@ -934,6 +970,10 @@ body.resizing,body.resizing *{user-select:none!important}
 .streamhead .clearstream{width:28px;height:28px;border-radius:var(--r-ctl);display:grid;place-items:center;cursor:pointer;
   background:transparent;border:1px solid transparent;color:var(--text-3);transition:all var(--dfast) var(--ease)}
 .streamhead .clearstream:hover{color:var(--text);background:var(--surface-2);border-color:var(--border)}
+.streamhead .skipplayback{width:28px;height:28px;border-radius:var(--r-ctl);display:grid;place-items:center;cursor:pointer;
+  background:transparent;border:1px solid transparent;color:var(--text-3);transition:all var(--dfast) var(--ease)}
+.streamhead .skipplayback:hover:not(:disabled){color:var(--text);background:var(--surface-2);border-color:var(--border)}
+.streamhead .skipplayback:disabled{opacity:.4;cursor:default}
 /* Post-session save chip: the rail's "Transkripti kaydet" can sit below the
    fold, so when a session ends with turns on screen the save action surfaces
    where the user is already looking. Hidden again on the next session start. */

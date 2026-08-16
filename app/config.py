@@ -119,6 +119,21 @@ VOICE_BY_GENDER = {
 }
 VOICE_GENDERS = ("auto", "female", "male")
 
+# voice_clone_incoming's allowed values. Deliberately just two, not Qwen's own
+# full {off, once, always} clone-frequency set: "always" (re-clone per
+# response, intended to track a per-speaker switch) was UI-exposed and live-
+# tested 2026-08-16 and does not do what its name promises — DashScope's own
+# docs describe no re-clone trigger at all for this field (it isn't documented
+# outside this realtime model), and a live two-speaker test confirmed the
+# session just locks onto whichever speaker was talking when the connection
+# was first made, identical to "once". So only "once" (clone the first
+# speaker, hold it for the session — genuinely reliable, confirmed live) is
+# offered; "always" stays selectable by clone_override itself (engines.py) for
+# a future retest, just not through this setting. See .vault/qwen-clone-
+# meeting-measurement-2026-07-29.md for the "always adapts per speaker" claim
+# this retracts.
+VOICE_CLONE_MODES = ("off", "once")
+
 
 def resolve_voice(engine: str, gender: str) -> str | None:
     """Voice name for (engine, gender), or None when the request cannot be met —
@@ -176,6 +191,20 @@ DEFAULTS = {
     # user chooses. Honored on Qwen-routed targets only; Gemini ignores the field.
     "voice_gender_incoming": "auto",
     "voice_gender_outgoing": "auto",
+    # Speak the incoming (Video/Game + Meeting's incoming leg) translation in
+    # the ORIGINAL speaker's own cloned voice instead of the engine's stock
+    # voice ("Dublaj Sesi" / Dubbing Voice in the UI). Off by default (opt-in,
+    # since it still costs +1.06s on the first utterance). "once" (see
+    # VOICE_CLONE_MODES) clones from the first utterance and holds it for the
+    # session — the only mode offered; see that constant's docstring for why
+    # per-speaker "always" was pulled after a live multi-speaker test.
+    # Qwen-routed targets only — first-class and independent of
+    # cfg["beta"]["clone"] / beta_active (see engines.make_translator's
+    # clone_override kwarg). Mutually exclusive with voice_gender_incoming:
+    # DashScope rejects a named voice alongside enable_voice_clone, so
+    # clone="once" silently drops the requested gender (the clone already
+    # carries the speaker's own gender).
+    "voice_clone_incoming": "off",
     # Ship the curated proper-noun list (config.DEFAULT_TERMS) alongside whatever
     # the user typed. On by default: the terms only help recognition of names the
     # ASR already mangles, and they stay visible + switchable in Settings.

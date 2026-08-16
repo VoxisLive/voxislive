@@ -494,6 +494,35 @@ def verify_session() -> tuple[dict | None, str | None]:
         return None, _net_error()
 
 
+def get_referral_info() -> tuple[dict | None, str | None]:
+    """Fetches the caller's referral share code + stats from auth-core.
+
+    Returns (dict, None) on success — {code, link, referred, pending,
+    minutes_earned, reward_minutes}, per handlers/referral.go. Returns
+    (None, message) on every failure, same contract as verify_session.
+    """
+    if not IS_OFFICIAL_RELEASE:
+        return None, t("st_not_signed_in")
+    token = _valid_jwt()
+    if not token:
+        return None, t("st_not_signed_in")
+    try:
+        resp = _http.get(
+            f"{_BASE_URL}/auth/referral",
+            headers=_auth_headers(),
+            timeout=_TIMEOUT,
+        )
+        if resp.status_code == 200:
+            return resp.json(), None
+        if resp.status_code == 401:
+            clear_jwt()
+            return None, t("st_not_signed_in")
+        return None, _core_error(resp)
+    except requests.RequestException as exc:
+        _log_detail("get_referral_info", exc)
+        return None, _net_error()
+
+
 def _get_quota_once() -> tuple[str, dict | None]:
     """One GET /auth/quota attempt. Returns ("ok", quota) | ("reauth", None) |
     ("fail", None).

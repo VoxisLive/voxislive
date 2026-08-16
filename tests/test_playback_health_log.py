@@ -101,7 +101,8 @@ def test_a_replacement_stager_starts_with_a_clean_watermark(caplog):
 
 
 def test_pipeline_without_a_stager_is_skipped(caplog):
-    """Outgoing pipelines have no stager at all."""
+    """A cascade-routed pipeline (paces its own local synthesis) never builds
+    a stager at all, on either leg — this must not raise or fabricate a log."""
     pipe = _FakePipe(None)
     with caplog.at_level(logging.INFO, logger="voxis"):
         _controller(pipe)._log_playback_health()

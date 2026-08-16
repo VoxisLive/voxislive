@@ -257,6 +257,11 @@ class Bridge(HistoryMixin):
         # thread; one at a time, so a double click can't race two downloads.
         self._preview_lock = threading.Lock()
         self._preview_busy: bool = False
+        # Post-session AI summary (History): one at a time, same reasoning as
+        # the preview lock — a double click on "Generate summary" must not
+        # spend two Gemini calls.
+        self._summary_lock = threading.Lock()
+        self._summary_busy: bool = False
         # The last line Voxis SPOKE, kept apart from self._lines because stop()
         # clears those once the transcript is saved — and the A/B card is offered
         # precisely AFTER stop, when the user is finally looking at the window.
@@ -1258,6 +1263,37 @@ class Bridge(HistoryMixin):
         return {"user": user, "builtin": max(0, total - user),
                 "total": total, "limit": HOTWORDS_LIMIT}
 
+    def import_terms_file(self) -> dict:
+        """File-picker for a plain-text terms list, merged into the existing
+        hotwords box (append, never overwrite — the user's own manual entries
+        must survive an import). Reuses set_hotwords for the actual write so
+        the cap/restart/beta-copy behavior stays in one place."""
+        win = self._main_window
+        if win is None:
+            return {"ok": False, "error": "no_window"}
+        try:
+            sel = win.create_file_dialog(
+                webview.FileDialog.OPEN,
+                file_types=("Text Files (*.txt)", "All files (*.*)"),
+            )
+        except Exception:
+            _log.exception("import_terms_file dialog failed")
+            return {"ok": False, "error": "dialog_failed"}
+        if not sel:
+            return {"ok": False, "cancelled": True}
+        path = sel[0]
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                imported = f.read()
+        except OSError:
+            _log.exception("import_terms_file read failed")
+            return {"ok": False, "error": "read_failed"}
+        current = str((self.cfg.get("beta") or {}).get("hotwords") or "")
+        merged = (current + ("\n" if current and not current.endswith("\n") else "") + imported)
+        merged = merged[:HOTWORDS_MAX_CHARS]
+        ok = self.set_hotwords(merged)
+        return {"ok": ok, "text": merged}
+
     def set_voice_gender(self, leg, gender):
         """Persist the requested voice gender for one leg and restart if live.
 
@@ -1274,6 +1310,30 @@ class Bridge(HistoryMixin):
         if self.cfg.get(key) == gender:
             return True          # no-op: never restart a session for nothing
         self.cfg[key] = str(gender)
+        ok = self._save_cfg()
+        if ok:
+            self._maybe_restart()
+        return ok
+
+    def skip_playback(self):
+        """Drop whatever translated audio is queued or already playing on the
+        incoming leg ('skip this sentence'). Thin wrapper — ModeController
+        already scopes the clear to the incoming pipeline only (see its
+        skip_current_playback docstring); this is a no-op when idle."""
+        return self.controller.skip_current_playback()
+
+    def set_voice_clone_incoming(self, mode):
+        """Persist the requested incoming-leg voice-clone mode and restart if
+        live. Same pattern as set_voice_gender: allow-listed value (a
+        JS-reachable door into a session-handshake field — an unknown value
+        would strand the Qwen session), no-op guard, restart because clone is
+        chosen at connect time."""
+        from .config import VOICE_CLONE_MODES
+        if str(mode) not in VOICE_CLONE_MODES:
+            return False
+        if self.cfg.get("voice_clone_incoming") == mode:
+            return True          # no-op: never restart a session for nothing
+        self.cfg["voice_clone_incoming"] = str(mode)
         ok = self._save_cfg()
         if ok:
             self._maybe_restart()
@@ -2125,6 +2185,16 @@ class Bridge(HistoryMixin):
         voxis_client.clear_jwt()
         self._user_id = None
         return True
+
+    def referral_info(self) -> dict:
+        """Referral share code + stats for the Membership tab's invite panel.
+        Never raises across the JS boundary — a network/auth failure just
+        yields ok:False with a localized message the UI can show inline."""
+        from . import voxis_client
+        info, err = voxis_client.get_referral_info()
+        if info is None:
+            return {"ok": False, "error": err or ""}
+        return {"ok": True, **info}
 
     def capture_hotkey(self, action):
         """Block on the next key combo, then bind it to `action`.
@@ -3306,10 +3376,11 @@ class JsApi(_JsApiFacade):
         "start", "stop", "poll", "check_auth", "get_init",
         # config
         "get_cfg", "set_cfg", "set_profile", "set_device", "set_hotwords",
-        "hotword_stats", "set_voice_gender", "swap_languages",
+        "hotword_stats", "import_terms_file", "set_voice_gender", "swap_languages",
+        "skip_playback", "set_voice_clone_incoming",
         # auth / licensing
         "voxis_login", "google_login", "voxis_logout", "voxis_quota",
-        "save_keys", "clear_byok",
+        "save_keys", "clear_byok", "referral_info",
         # window chrome + hotkeys
         "win_minimize", "win_toggle_max", "win_close", "win_resize",
         "win_begin_drag", "capture_hotkey", "cancel_hotkey", "toggle_overlay",
@@ -3322,6 +3393,7 @@ class JsApi(_JsApiFacade):
         "free_voice_preview", "pro_voice_replay",
         # transcripts / history
         "save_txt", "list_sessions", "load_session", "delete_session",
+        "star_session", "edit_session", "generate_summary",
         "export_session", "open_transcript", "reveal_transcript",
         "open_transcript_folder", "choose_transcript_dir",
         "reset_transcript_dir",

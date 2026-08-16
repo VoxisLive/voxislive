@@ -6,6 +6,43 @@ Notable changes to Voxis. Version bumps are tagged in commit messages
 ## Unreleased
 
 ### Added
+- Video/Game and a meeting's incoming leg can now speak the translation in a
+  voice close to the original speaker's own ("Dubbing Voice" in Settings ›
+  Translation), on the ~29 languages Qwen can voice. Off by default; the
+  clone is established once from the first utterance and held for the
+  session. A per-response re-clone mode was also built and live-tested but
+  turned out not to track a speaker change mid-session (it just locks onto
+  whoever spoke first, same as the "once" mode) — pulled from the UI rather
+  than ship a mode that silently doesn't do what it claims.
+- History rows can now be starred to pin them; starred sessions are exempt
+  from the 90-day/500-file cleanup pass, with a "starred only" filter next
+  to the search box.
+- A saved session's text can now be corrected directly in History; exports
+  (TXT/SRT/VTT) automatically reflect the fix.
+- History can generate a short AI summary of any saved session on request
+  (paid plans; unrestricted on the OSS/BYOK build) — never automatic, so it
+  never spends a model call without an explicit ask.
+- A new control lets you drop the currently playing translated sentence on
+  the incoming leg without stopping the session. Meeting's outgoing leg is
+  deliberately excluded — skipping it would drop the other party into
+  silence mid-sentence on a live call.
+- Meeting's outgoing leg now paces a long translated turn the same way the
+  incoming leg already does (WSOLA catch-up time-compression when a
+  response outruns realtime), instead of letting the untrimmed backlog
+  build up directly in the playback ring. The optional "listen to my
+  translation" confidence monitor stays on the raw, unpaced feed on
+  purpose — it exists to mirror exactly what the other party hears, which
+  is the paced mic-side output, not a second independently-timed copy.
+- Settings › Membership now shows an inline referral code/link with a copy
+  button and live stats (friends joined, minutes earned), instead of only a
+  link out to the website.
+- The Terms list (Settings › Translation) can now be imported from a text
+  file instead of typed by hand, merging into whatever is already there.
+- Language pickers now show a flag emoji next to each language name for a
+  quicker scan. Native `<select>` dropdowns can't render actual flag
+  images, and Windows' own emoji font renders some flags as a two-letter
+  country code instead of a picture — a real image-based picker would need
+  replacing the native control, tracked separately.
 - A free/taste-tier session whose fast translation engine hits a real,
   server-confirmed problem mid-session now gets a backup voice instead of the
   session simply ending — a short notice explains what's happening. The

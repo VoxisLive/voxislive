@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING
 
 import webview
 
-from . import APP_VERSION, transcript_store
+from . import APP_VERSION, transcript_store, voxis_client
+from .config import IS_OFFICIAL_RELEASE
 from .i18n import t
 from .paths import legacy_transcripts_dir, transcripts_dir
 
@@ -136,6 +137,8 @@ class HistoryMixin:
         _session_dirname: str | None
         _last_saved_file: str | None
         _main_window: "webview.Window | None"
+        _summary_lock: threading.Lock
+        _summary_busy: bool
 
         def _emit_status(self, msg, level: str = "info") -> None: ...
         def _save_cfg(self) -> bool: ...
@@ -143,6 +146,9 @@ class HistoryMixin:
                         st: "_LegState | None" = None) -> tuple[int | None, str]: ...
         def _pending_source(self, st: "_LegState | None" = None) -> str: ...
         def _last_turn_text(self, leg: str) -> str: ...
+        def _put_event(self, ev) -> None: ...
+        def _is_paid(self) -> bool: ...
+        def _ensure_user_id(self) -> str | None: ...
 
     def _flush_turns(self):
         """Fold the in-progress turn into the structured log so a session that is
@@ -485,6 +491,77 @@ class HistoryMixin:
             # for the same fix on the config.json path).
             return None
 
+    def star_session(self, file: str, starred: bool) -> bool:
+        """Pin/unpin a saved session from History. Read-modify-write (the star
+        state changes long after the session was saved, not during save_txt's
+        own flow) — schema-additive on disk (transcript_store's `starred`
+        field docstring), and exempts the session from prune_transcripts's
+        age/count housekeeping."""
+        if not file or os.path.basename(file) != file or not file.endswith(".json"):
+            return False
+        path = self._find_transcript(file)
+        if not path:
+            return False
+        try:
+            record = transcript_store.load_record(path)
+        except (OSError, ValueError, RecursionError):
+            return False
+        if starred:
+            record["starred"] = True
+        else:
+            record.pop("starred", None)
+        try:
+            transcript_store.overwrite_record(path, record)
+        except OSError:
+            return False
+        transcript_store.invalidate_summary_cache(path)
+        return True
+
+    def edit_session(self, file: str, turns: list) -> bool:
+        """Overwrite a saved session's turn text/source (History's edit mode).
+
+        `turns` is a list of {"text", "src"} patches aligned by INDEX to the
+        record's own turns — only those two fields are writable; timing,
+        speaker label and meeting leg are preserved untouched. A turn left
+        empty on both sides after editing is dropped, same as build_record's
+        own cleaning rule (a turn must carry something to exist at all).
+        `export_session` always reads back from the saved record, so a fixed
+        transcript is automatically what gets exported — no separate code
+        path needed there."""
+        if not file or os.path.basename(file) != file or not file.endswith(".json"):
+            return False
+        if not isinstance(turns, list):
+            return False
+        path = self._find_transcript(file)
+        if not path:
+            return False
+        try:
+            record = transcript_store.load_record(path)
+        except (OSError, ValueError, RecursionError):
+            return False
+        existing = record.get("turns")
+        if not isinstance(existing, list):
+            return False
+        for i, patch in enumerate(turns):
+            if i >= len(existing) or not isinstance(patch, dict):
+                continue
+            turn = existing[i]
+            if not isinstance(turn, dict):
+                continue
+            if "text" in patch:
+                turn["text"] = str(patch.get("text") or "").strip()
+            if "src" in patch:
+                turn["src"] = str(patch.get("src") or "").strip()
+        record["turns"] = [t for t in existing
+                           if isinstance(t, dict)
+                           and ((t.get("src") or "").strip() or (t.get("text") or "").strip())]
+        try:
+            transcript_store.overwrite_record(path, record)
+        except OSError:
+            return False
+        transcript_store.invalidate_summary_cache(path)
+        return True
+
     def delete_session(self, file: str) -> bool:
         if not file or os.path.basename(file) != file or not file.endswith(".json"):
             return False
@@ -544,3 +621,83 @@ class HistoryMixin:
             return {"ok": False, "error": "write_failed"}
         self._emit_status(t("saved_to", path=out_path))
         return {"ok": True, "path": out_path, "file": os.path.basename(out_path)}
+
+    # ---------- post-session AI summary ----------
+    def _can_summarize(self) -> bool:
+        """Paid tier only on the official SaaS build — a free/taste account must
+        never spend a Gemini call this way (2026-08-12 cost-pressure policy: see
+        CLAUDE.md's engine-routing-cost-policy note). The OSS/BYOK build has no
+        tiers at all and pays for its own key directly, so it stays available
+        there unconditionally."""
+        return (not IS_OFFICIAL_RELEASE) or self._is_paid()
+
+    def _summary_api_key(self) -> str | None:
+        """A plain (non-routed) Gemini key. SaaS: voxis_client.get_session_key()
+        with NO caps/target always answers the server's legacy backward-compat
+        branch, which is Gemini regardless of the per-target Qwen routing policy
+        — no server change needed for this feature. OSS/BYOK: the user's own
+        configured key."""
+        if not IS_OFFICIAL_RELEASE:
+            from . import byok_store
+            uid = self._ensure_user_id()
+            keys = byok_store.load_byok(uid) if uid else {}
+            return keys.get("gemini")
+        key, *_rest, _err = voxis_client.get_session_key()
+        return key
+
+    def generate_summary(self, file: str) -> dict:
+        """Kick off an AI summary of a saved session. Returns immediately —
+        the model call runs off the UI thread; progress arrives as
+        ('summary', {state, code, ...}) events, same shape/contract as
+        free_voice_preview's ('preview', ...) events: JS localizes `code`, no
+        raw string ever crosses this boundary."""
+        if not self._can_summarize():
+            return {"ok": False, "code": "not_allowed"}
+        if not self._safe_transcript_name(file):
+            return {"ok": False, "code": "not_found"}
+        with self._summary_lock:
+            if self._summary_busy:
+                return {"ok": False, "code": "busy"}
+            self._summary_busy = True
+        threading.Thread(target=self._summary_thread, args=(file,), daemon=True).start()
+        return {"ok": True}
+
+    def _summary_thread(self, file: str):
+        try:
+            path = self._find_transcript(file)
+            if not path:
+                self._summary_event("error", "not_found")
+                return
+            try:
+                record = transcript_store.load_record(path)
+            except (OSError, ValueError, RecursionError):
+                self._summary_event("error", "not_found")
+                return
+            key = self._summary_api_key()
+            if not key:
+                self._summary_event("error", "no_key")
+                return
+            self._summary_event("loading", None)
+            from . import session_summary
+            try:
+                text = session_summary.generate(key, record)
+            except session_summary.SummaryUnavailable:
+                self._summary_event("error", "failed")
+                return
+            record["summary"] = text
+            try:
+                transcript_store.overwrite_record(path, record)
+            except OSError:
+                self._summary_event("error", "failed")
+                return
+            transcript_store.invalidate_summary_cache(path)
+            self._summary_event("done", None, summary=text)
+        except Exception:
+            _log.exception("generate_summary failed")
+            self._summary_event("error", "failed")
+        finally:
+            with self._summary_lock:
+                self._summary_busy = False
+
+    def _summary_event(self, state, code, **extra):
+        self._put_event(("summary", {"state": state, "code": code, **extra}))

@@ -88,6 +88,19 @@ function renderVoiceChoiceHints(){
   const el=$('#voice-s-hint');
   if(el) el.style.display = (inOk && outOk) ? 'none' : '';
 }
+// Voice cloning shares the incoming leg's gender gate (both are Qwen-only,
+// voiced-target-only); cloning on at all mutually excludes the gender picker
+// (DashScope drops a named voice alongside enable_voice_clone — see
+// config.py's voice_clone_incoming docstring).
+function renderVoiceCloneHints(){
+  const cfg=STATE.cfg||{};
+  const on = cfg.voice_clone_incoming === 'once';
+  const ok = voiceChoiceOk(cfg.target_language_incoming||'');
+  const cloneCk = $('#voice-clone-in');
+  if(cloneCk) cloneCk.disabled = !ok;
+  const mutex = $('#voice-clone-mutex-hint'); if(mutex) mutex.style.display = (ok && on) ? '' : 'none';
+  const genderSel = $('#voice-in-s'); if(genderSel) genderSel.disabled = on;
+}
 function applyI18n(lang){
   LANG = I18N[lang] ? lang : 'en';
   document.documentElement.lang = LANG;
@@ -160,7 +173,39 @@ const LANG_NAMES = {
   "sw":"Kiswahili", "sv":"Svenska", "ta":"தமிழ்", "te":"తెలుగు",
   "ur":"اردو", "uz":"Oʻzbekcha", "zu":"isiZulu",
 };
-function langPair(code){ return [code, LANG_NAMES[code] || code]; }
+// One representative flag per language, for a quick visual scan of the (long,
+// 79-entry) target-language dropdowns. A language is not a country, so these
+// are conventional picks (the most common speaker country / where the
+// standard used in the app comes from), same convention most translation
+// apps use — not a claim of exclusive ownership. Kept as a flat map next to
+// LANG_NAMES so a new language gets both added in one place.
+const LANG_FLAGS = {
+  "tr":"🇹🇷", "en":"🇬🇧", "es":"🇪🇸", "fr":"🇫🇷",
+  "de":"🇩🇪", "it":"🇮🇹", "pt":"🇵🇹", "pt-BR":"🇧🇷",
+  "pt-PT":"🇵🇹", "ru":"🇷🇺", "ar":"🇸🇦", "zh-Hans":"🇨🇳",
+  "ja":"🇯🇵", "ko":"🇰🇷", "hi":"🇮🇳", "id":"🇮🇩",
+  "vi":"🇻🇳", "th":"🇹🇭", "pl":"🇵🇱", "uk":"🇺🇦",
+  "af":"🇿🇦", "ak":"🇬🇭", "sq":"🇦🇱", "am":"🇪🇹",
+  "hy":"🇦🇲", "az":"🇦🇿", "eu":"🇪🇸", "be":"🇧🇾",
+  "bn":"🇧🇩", "bg":"🇧🇬", "my":"🇲🇲", "ca":"🇪🇸",
+  "zh-Hant":"🇹🇼", "hr":"🇭🇷", "cs":"🇨🇿", "da":"🇩🇰",
+  "nl":"🇳🇱", "et":"🇪🇪", "fil":"🇵🇭", "fi":"🇫🇮",
+  "gl":"🇪🇸", "ka":"🇬🇪", "el":"🇬🇷", "gu":"🇮🇳",
+  "ha":"🇳🇬", "he":"🇮🇱", "hu":"🇭🇺", "is":"🇮🇸",
+  "jv":"🇮🇩", "kn":"🇮🇳", "kk":"🇰🇿", "km":"🇰🇭",
+  "rw":"🇷🇼", "lo":"🇱🇦", "lv":"🇱🇻", "lt":"🇱🇹",
+  "mk":"🇲🇰", "ms":"🇲🇾", "ml":"🇮🇳", "mr":"🇮🇳",
+  "mn":"🇲🇳", "ne":"🇳🇵", "nb":"🇳🇴", "fa":"🇮🇷",
+  "pa":"🇮🇳", "ro":"🇷🇴", "sr":"🇷🇸", "sd":"🇵🇰",
+  "si":"🇱🇰", "sk":"🇸🇰", "sl":"🇸🇮", "su":"🇮🇩",
+  "sw":"🇰🇪", "sv":"🇸🇪", "ta":"🇮🇳", "te":"🇮🇳",
+  "ur":"🇵🇰", "uz":"🇺🇿", "zu":"🇿🇦",
+};
+function langPair(code){
+  const flag = LANG_FLAGS[code];
+  const name = LANG_NAMES[code] || code;
+  return [code, flag ? flag+' '+name : name];
+}
 function opt(sel, items, val){
   sel.innerHTML = "";
   items.forEach(it=>{
@@ -498,7 +543,9 @@ async function init(){
   fillVoiceSelects();
   { const e = $('#voice-in-s');  if(e) e.value = cfg.voice_gender_incoming || 'auto'; }
   { const e = $('#voice-out-s'); if(e) e.value = cfg.voice_gender_outgoing || 'auto'; }
+  { const e = $('#voice-clone-in'); if(e) e.checked = cfg.voice_clone_incoming === 'once'; }
   renderVoiceChoiceHints();
+  renderVoiceCloneHints();
   { const mi = $('#allow-multiple-instances'); if(mi) mi.checked = !!cfg.allow_multiple_instances; }
   { const mo = $('#monitor-outgoing'); if(mo) mo.checked = !!cfg.monitor_outgoing_translation; }
   // Badge removal is a paid perk: only an official build with a paid subscription
@@ -559,7 +606,7 @@ duck.oninput=()=>{updRange(duck,'duckv'); saveDuck(duck.value/100)};
 vol.oninput =()=>{updRange(vol,'volv');   saveVol(vol.value/100)};
 $('#hear').onchange   = e=>{
   if(STATE.cfg) STATE.cfg.target_language_incoming = e.target.value;
-  renderVoiceHint(); renderVoiceChoiceHints(); renderLangLock();
+  renderVoiceHint(); renderVoiceChoiceHints(); renderVoiceCloneHints(); renderLangLock();
   return api().set_cfg('target_language_incoming', e.target.value);
 };
 $('#send').onchange   = e=>{
@@ -577,7 +624,7 @@ $('#langswap').onclick = async()=>{
         STATE.cfg.target_language_incoming=r.incoming;
         STATE.cfg.target_language_outgoing=r.outgoing;
       }
-      renderVoiceHint(); renderVoiceChoiceHints(); renderLangLock();
+      renderVoiceHint(); renderVoiceChoiceHints(); renderVoiceCloneHints(); renderLangLock();
     }
   }finally{ b.disabled=false; }
 };
@@ -598,6 +645,16 @@ $('#obs').onchange    = e=>api().set_cfg('obs_subtitle_enabled', e.target.checke
     // session, which must not happen between two letters of a word.
     hw.onchange = e=>{ api().set_hotwords(e.target.value); renderHotwordCount(); syncHotwordCount(); };
   } }
+{ const ti = $('#terms-import');
+  if(ti) ti.onclick = async()=>{
+    try{
+      const r = await api().import_terms_file();
+      if(r && r.ok && typeof r.text === 'string'){
+        const hw = $('#hotwords'); if(hw) hw.value = r.text;
+        renderHotwordCount(); syncHotwordCount();
+      }
+    }catch(_){}
+  }; }
 { const bt = $('#builtin-terms');
   if(bt) bt.onchange = e=>{ if(STATE.cfg) STATE.cfg.builtin_terms = e.target.checked;
                             api().set_cfg('builtin_terms', e.target.checked);
@@ -622,6 +679,16 @@ function bindVoiceGender(sel, leg){
 }
 bindVoiceGender('#voice-in-s','incoming');
 bindVoiceGender('#voice-out-s','outgoing');
+// Same door pattern as bindVoiceGender: writes through the validated bridge
+// setter (set_voice_clone_incoming restarts a live session, since clone rides
+// the connect-time handshake). Binary now (see config.VOICE_CLONE_MODES) —
+// checked = "once", unchecked = "off".
+{ const el=$('#voice-clone-in'); if(el) el.onchange = e=>{
+  const v = e.target.checked ? 'once' : 'off';
+  if(STATE.cfg) STATE.cfg.voice_clone_incoming = v;
+  renderVoiceCloneHints();
+  return api().set_voice_clone_incoming(v);
+}; }
 { const mi = $('#allow-multiple-instances'); if(mi) mi.onchange = e=>api().set_cfg('allow_multiple_instances', e.target.checked); }
 { const mo = $('#monitor-outgoing'); if(mo) mo.onchange = e=>api().set_cfg('monitor_outgoing_translation', e.target.checked); }
 $('#brandbadge').onchange = e=>api().set_cfg('branding_badge_enabled', e.target.checked);
@@ -676,6 +743,7 @@ $('#savechip').onclick = saveTranscript;
 $('#soundcheckbtn').onclick = ()=>{ if(!SESSION_LIVE) openSoundcheck(); };
 $('#sc-close').onclick = closeSoundcheck;
 $('#clearstream').onclick = ()=>resetTranscript();
+$('#skip-playback').onclick = ()=>{ try{ api().skip_playback(); }catch(_){} };
 /* ---------- transcript folder (Settings › General) ---------- */
 async function refreshTxDir(){
   const el=$('#tx-dir-path'); if(!el) return;
@@ -826,8 +894,38 @@ function renderMembership(){
     + '<div class="pcur"><span class="ptier">'+T('mem_buy_title')+'</span></div>'
     + '<div class="pquotmeta" style="margin-top:6px">'+T('mem_buy_body')+'</div>'
     + '<button class="btn btn-primary buy-minutes" style="width:100%;margin-top:12px">'+T('mem_see_pricing')+'</button>'
+    + '</div>'
+    + '<div class="planbox" style="margin-top:10px" id="referral-box">'
+    + '<div class="pcur"><span class="ptier">'+T('mem_refer_title')+'</span></div>'
+    + '<div class="pquotmeta" style="margin-top:6px">'+T('mem_refer_body')+'</div>'
+    + '<div class="rticket" style="margin-top:10px"><code id="referral-link">—</code><button class="btn btn-ghost" id="referral-copy" style="width:auto">'+T('copy_link')+'</button></div>'
+    + '<div class="fieldhint" id="referral-stats"></div>'
     + '</div>';
   box.querySelector('.buy-minutes').onclick = ()=>{ try{api().open_url('https://voxislive.com/pricing');}catch(_){} };
+  loadReferralInfo();
+}
+// Inline referral panel in Membership — the code/link/stats without leaving
+// the app; #invitebtn (opens the account page in the browser) stays as-is
+// alongside this, since some users will still prefer the full web page.
+function loadReferralInfo(){
+  const box = $('#referral-box'); if(!box) return;
+  api().referral_info().then(r=>{
+    if(!r || !r.ok){ box.style.display='none'; return; }
+    const linkEl = $('#referral-link'), statsEl = $('#referral-stats'), copyBtn = $('#referral-copy');
+    if(linkEl) linkEl.textContent = r.link || '';
+    if(statsEl) statsEl.textContent = T('mem_refer_stats')
+      .replace('{referred}', String(r.referred||0))
+      .replace('{pending}', String(r.pending||0))
+      .replace('{minutes}', String(Math.round(r.minutes_earned||0)));
+    if(copyBtn) copyBtn.onclick = ()=>{
+      try{
+        navigator.clipboard.writeText(r.link||'');
+        const orig = copyBtn.textContent;
+        copyBtn.textContent = T('copied_feedback');
+        setTimeout(()=>{ copyBtn.textContent = orig; }, 1500);
+      }catch(_){}
+    };
+  }).catch(()=>{ box.style.display='none'; });
 }
 $('#gear').onclick = openDrawer;
 $('#closedrawer').onclick = closeDrawer;
@@ -1300,6 +1398,11 @@ $('#consent-accept').onclick = async()=>{
 const TOUR_STEPS = [
   {sel:null,         titleKey:'onboard_title',  textKey:'onboard_welcome'},
   {sel:'#m-video',   titleKey:'video_t1',       textKey:'onboard_video'},
+  // Centered (not spotlit): the control lives inside Settings › Çeviri, hidden
+  // at this point in onboarding, and driving the drawer open here risks
+  // fighting the tour overlay's own modal state for a feature-highlight step
+  // that isn't worth that risk. Naming the exact path in the copy instead.
+  {sel:null,         titleKey:'tour_dub_t',     textKey:'tour_dub_d'},
   {sel:null,         titleKey:'tour_ready_t',   textKey:'tour_ready_d'},
 ];
 let onboardStep=0;
@@ -1476,36 +1579,142 @@ async function loadHistoryList(){
 }
 function renderHistoryList(){
   const q = ($('#history-search').value||'').trim().toLowerCase();
+  const starOnly = $('#hist-star-filter').classList.contains('on');
   const list = $('#history-list'); list.innerHTML='';
   const rows = HIST_SESSIONS.filter(s=>{
+    if(starOnly && !s.starred) return false;
     if(!q) return true;
     const hay = ((s.preview||'')+' '+(s.target_in||'')+' '+(s.target_out||'')+' '+(s.started_iso||'')).toLowerCase();
     return hay.includes(q);
   });
   if(!rows.length){ const d=document.createElement('div'); d.className='histempty'; d.textContent=T('history_none'); list.appendChild(d); return; }
   rows.forEach(s=>{
-    const b=document.createElement('button'); b.type='button'; b.className='histrow'; b.setAttribute('role','option');
+    // A plain div, not a <button>: the per-row star toggle below is its own
+    // interactive control, and a button cannot legally contain another one.
+    const b=document.createElement('div'); b.className='histrow'; b.setAttribute('role','option'); b.tabIndex=0;
     b.dataset.file=s.file;
     const langs = (s.target_in||'?')+' / '+(s.target_out||'?');
     b.innerHTML = '<div class="hr-when"></div><div class="hr-meta"></div><div class="hr-prev"></div>';
     b.querySelector('.hr-when').textContent = fmtSessionWhen(s.started_iso, s.started);
     b.querySelector('.hr-meta').textContent = T('history_turns_n').replace('{n}', s.turns) + ' · ' + langs;
     b.querySelector('.hr-prev').textContent = s.preview||'';
+    const star=document.createElement('button'); star.type='button'; star.className='hr-star'+(s.starred?' on':'');
+    star.setAttribute('aria-pressed', s.starred?'true':'false');
+    star.title=T('history_star'); star.setAttribute('aria-label',T('history_star'));
+    star.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.8-4.4 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1L3.3 9.9l6.1-.8z"/></svg>';
+    star.onclick = async(e)=>{
+      e.stopPropagation();
+      const next = !s.starred;
+      s.starred = next;                                   // optimistic
+      star.classList.toggle('on', next);
+      star.setAttribute('aria-pressed', String(next));
+      try{ await api().star_session(s.file, next); }catch(_){}
+      if(starOnly && !next) renderHistoryList();           // fell out of the active filter
+    };
+    b.appendChild(star);
     b.onclick = ()=>openSession(s.file, b);
+    b.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); openSession(s.file, b); } };
     list.appendChild(b);
   });
 }
-$('#history-search').oninput = ()=>{ renderHistoryList(); if(HIST_CUR) renderHistoryTurns(); };
+$('#history-search').oninput = ()=>{ renderHistoryList(); if(HIST_CUR && !HIST_EDIT) renderHistoryTurns(); };
+$('#hist-star-filter').onclick = ()=>{
+  const btn=$('#hist-star-filter'); const on=!btn.classList.contains('on');
+  btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', String(on));
+  renderHistoryList();
+};
+let HIST_EDIT = false;
 async function openSession(file, rowEl){
   document.querySelectorAll('#history-list .histrow').forEach(r=>r.classList.toggle('sel', r===rowEl));
+  setHistEditUI(false);            // switching sessions always drops an unsaved edit
   try{ HIST_CUR = await api().load_session(file); }catch(_){ HIST_CUR=null; }
   HIST_CUR_FILE = HIST_CUR ? file : null;
   const has = !!(HIST_CUR && HIST_CUR.turns && HIST_CUR.turns.length);
-  ['#hist-export-txt','#hist-export-srt','#hist-export-vtt','#hist-delete'].forEach(s=>$(s).disabled=!HIST_CUR_FILE);
+  ['#hist-export-txt','#hist-export-srt','#hist-export-vtt','#hist-delete','#hist-edit'].forEach(s=>$(s).disabled=!HIST_CUR_FILE);
   $('#history-empty').hidden = has;
   $('#history-turns').hidden = !has;
   renderHistoryTurns();
+  renderHistorySummaryUI();
 }
+function setHistEditUI(on){
+  HIST_EDIT = on;
+  $('#hist-edit').hidden = on;
+  $('#hist-edit-save').hidden = !on;
+  $('#hist-edit-cancel').hidden = !on;
+  if(HIST_CUR) renderHistoryTurns();
+  renderHistorySummaryUI();
+}
+// Same paid-tier gate the rest of the app uses for a Gemini-cost feature (see
+// the taste wall / mem_buy_title logic) — free/taste sessions never spend a
+// summary call. OSS/BYOK has no tiers and pays for its own key, so it stays
+// available there. Manual-only regardless of tier: no auto-summary on save.
+function canSummarize(){ return STATE.official_release ? !isTasteTier(QUOTA) : true; }
+function renderHistorySummaryUI(){
+  const block=$('#history-summary'), genRow=$('#hist-summary-gen-row'), body=$('#hist-summary-body');
+  const has = !!(HIST_CUR && HIST_CUR.turns && HIST_CUR.turns.length);
+  if(HIST_EDIT || !has || !HIST_CUR_FILE || !canSummarize()){ block.hidden=true; genRow.hidden=true; return; }
+  if(HIST_CUR.summary){
+    block.hidden=false; genRow.hidden=true;
+    body.textContent = HIST_CUR.summary;
+  }else{
+    block.hidden=true; genRow.hidden=false;
+    $('#hist-summary-status').textContent='';
+  }
+}
+async function requestSummary(){
+  if(!HIST_CUR_FILE) return;
+  $('#hist-summary-gen').disabled=true;
+  $('#hist-summary-regen').disabled=true;
+  $('#hist-summary-status').textContent=T('history_summary_loading');
+  let r=null; try{ r = await api().generate_summary(HIST_CUR_FILE); }catch(_){}
+  if(!r || r.ok===false) onSummaryEvent({state:'error', code:(r&&r.code)||'failed'});
+}
+$('#hist-summary-gen').onclick = requestSummary;
+$('#hist-summary-regen').onclick = requestSummary;
+function onSummaryEvent(p){
+  if(!p) return;
+  if(p.state==='loading'){
+    $('#hist-summary-status').textContent = T('history_summary_loading');
+    return;
+  }
+  if(p.state==='done'){
+    $('#hist-summary-gen').disabled=false; $('#hist-summary-regen').disabled=false;
+    if(HIST_CUR) HIST_CUR.summary = p.summary;
+    renderHistorySummaryUI();
+    return;
+  }
+  if(p.state==='error'){
+    $('#hist-summary-gen').disabled=false; $('#hist-summary-regen').disabled=false;
+    const key = p.code==='not_allowed' ? 'history_summary_err_not_allowed'
+              : p.code==='no_key' ? 'history_summary_err_no_key'
+              : 'history_summary_err_failed';
+    $('#hist-summary-status').textContent = T(key);
+  }
+}
+$('#hist-edit').onclick = ()=>{ if(HIST_CUR_FILE) setHistEditUI(true); };
+$('#hist-edit-cancel').onclick = ()=>setHistEditUI(false);
+$('#hist-edit-save').onclick = async()=>{
+  if(!HIST_CUR_FILE || !HIST_CUR) return;
+  const turns = HIST_CUR.turns||[];
+  const patch = turns.map((t,i)=>{
+    const srcEl = document.querySelector('#history-turns textarea[data-field="src"][data-idx="'+i+'"]');
+    const textEl = document.querySelector('#history-turns textarea[data-field="text"][data-idx="'+i+'"]');
+    return {
+      src: srcEl ? srcEl.value : (t.src||''),
+      text: textEl ? textEl.value : (t.text||''),
+    };
+  });
+  let ok=false; try{ ok = await api().edit_session(HIST_CUR_FILE, patch); }catch(_){}
+  setHistEditUI(false);
+  if(ok){
+    try{ HIST_CUR = await api().load_session(HIST_CUR_FILE); }catch(_){ HIST_CUR=null; }
+    const has = !!(HIST_CUR && HIST_CUR.turns && HIST_CUR.turns.length);
+    $('#history-empty').hidden = has; $('#history-turns').hidden = !has;
+    renderHistoryTurns();
+    renderHistorySummaryUI();
+    loadHistoryList();           // the row preview may have changed
+  }
+};
 function fmtOffset(s){ s=Math.max(0,Math.floor(s||0)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
 function escHtml(s){ return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function highlight(s, q){
@@ -1537,7 +1746,10 @@ function highlight(s, q){
 }
 function renderHistoryTurns(){
   const box=$('#history-turns'); if(!HIST_CUR){ box.innerHTML=''; return; }
-  const q=($('#history-search').value||'').trim().toLowerCase();
+  // Editing always shows the FULL, unfiltered turn list — a search filter
+  // would drop turns from the DOM, and the save handler reads every turn
+  // back by index, so a hidden turn would silently lose its content.
+  const q = HIST_EDIT ? '' : ($('#history-search').value||'').trim().toLowerCase();
   box.innerHTML='';
   // Speaker tags render only for a genuinely multi-speaker session, and only
   // where the speaker CHANGES (same run-grouping rule as captions + exports).
@@ -1547,14 +1759,25 @@ function renderHistoryTurns(){
   const spks=new Set(turns.map(t=>t.spk).filter(s=>s!=null));
   const multi=spks.size>=2;
   let prevSpk=null;
-  turns.forEach(turn=>{
+  turns.forEach((turn,idx)=>{
     const pre=(multi && turn.spk!=null && turn.spk!==prevSpk) ? 'S'+turn.spk+': ' : '';
     if(turn.spk!=null) prevSpk=turn.spk;
-    if(q && !((turn.text||'').toLowerCase().includes(q) || (turn.src||'').toLowerCase().includes(q))) return;
-    const d=document.createElement('div'); d.className='ht';
+    if(!HIST_EDIT && q && !((turn.text||'').toLowerCase().includes(q) || (turn.src||'').toLowerCase().includes(q))) return;
+    const d=document.createElement('div'); d.className='ht'+(HIST_EDIT?' ht-editing':'');
     const ts=document.createElement('div'); ts.className='ht-t'; ts.textContent=fmtOffset(turn.t); d.appendChild(ts);
-    if(turn.src){ const sc=document.createElement('div'); sc.className='ht-src'; sc.innerHTML=(pre?escHtml(pre):'')+highlight(turn.src,q); d.appendChild(sc); }
-    const tx=document.createElement('div'); tx.className='ht-text'; tx.innerHTML=(pre?escHtml(pre):'')+highlight(turn.text,q); d.appendChild(tx);
+    if(HIST_EDIT){
+      const sa=document.createElement('textarea'); sa.className='ht-src-edit'; sa.rows=1;
+      sa.value=turn.src||''; sa.dataset.idx=String(idx); sa.dataset.field='src';
+      sa.setAttribute('aria-label', T('history_edit_src_label'));
+      d.appendChild(sa);
+      const ta=document.createElement('textarea'); ta.className='ht-text-edit'; ta.rows=2;
+      ta.value=turn.text||''; ta.dataset.idx=String(idx); ta.dataset.field='text';
+      ta.setAttribute('aria-label', T('history_edit_text_label'));
+      d.appendChild(ta);
+    }else{
+      if(turn.src){ const sc=document.createElement('div'); sc.className='ht-src'; sc.innerHTML=(pre?escHtml(pre):'')+highlight(turn.src,q); d.appendChild(sc); }
+      const tx=document.createElement('div'); tx.className='ht-text'; tx.innerHTML=(pre?escHtml(pre):'')+highlight(turn.text,q); d.appendChild(tx);
+    }
     box.appendChild(d);
   });
 }
@@ -1571,10 +1794,12 @@ $('#hist-export-srt').onclick = ()=>exportSession('srt');
 $('#hist-export-vtt').onclick = ()=>exportSession('vtt');
 $('#hist-delete').onclick = async()=>{
   if(!HIST_CUR_FILE) return;
+  setHistEditUI(false);
   try{ await api().delete_session(HIST_CUR_FILE); }catch(_){}
   HIST_CUR=null; HIST_CUR_FILE=null;
   $('#history-empty').hidden=false; $('#history-turns').hidden=true; $('#history-turns').innerHTML='';
-  ['#hist-export-txt','#hist-export-srt','#hist-export-vtt','#hist-delete'].forEach(s=>$(s).disabled=true);
+  ['#hist-export-txt','#hist-export-srt','#hist-export-vtt','#hist-delete','#hist-edit'].forEach(s=>$(s).disabled=true);
+  renderHistorySummaryUI();
   loadHistoryList();
 };
 /* ---------- privacy / data-flow explainer modal (informational) ---------- */
@@ -2013,6 +2238,7 @@ function dispatchUIEvent(ev) {
   else if(ev[0]==='quota_wall'){ showPaywallCard(); }
   else if(ev[0]==='review'){ showReviewCard(); }
   else if(ev[0]==='preview'){ onPreviewEvent(ev[1]); }
+  else if(ev[0]==='summary'){ onSummaryEvent(ev[1]); }
   else if(ev[0]==='taste_wall'){ openTasteWall(ev[1] && ev[1].mode); }
   else if(ev[0]==='daily_wall'){ openDailyWall(); }
   else if(ev[0]==='device_blocked'){ openDeviceBlockWall(ev[1]); }
@@ -2087,6 +2313,9 @@ async function poll(){
       b.disabled = !!p.mode;
     });
     $('#stopbtn').disabled = !p.mode;
+    // Incoming-only: nothing to skip when idle, and Meeting's outgoing leg has
+    // no stager (skip_current_playback only ever touches the incoming one).
+    $('#skip-playback').disabled = !p.mode;
     // Outgoing language only feeds Meeting mode; lock it during a video
     // session so the UI can't imply two-way translation there.
     $('#send').disabled = (p.mode==='video');

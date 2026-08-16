@@ -56,3 +56,9 @@ def test_dedicated_setter_keys_stay_off_the_generic_allowlist():
     # transcript_dir has its own validated setter (choose_transcript_dir probes
     # writability before persisting); set_cfg must never be a bypass for it.
     assert "transcript_dir" not in Bridge._SET_CFG_ALLOWED_KEYS
+    # voice_clone_incoming has its own validated setter (set_voice_clone_incoming
+    # allow-lists the value against VOICE_CLONE_MODES before it rides a Qwen
+    # session handshake) — same reasoning as voice_gender_incoming/_outgoing,
+    # which also stay off this generic escape hatch.
+    assert "voice_clone_incoming" not in Bridge._SET_CFG_ALLOWED_KEYS
+    assert "voice_gender_incoming" not in Bridge._SET_CFG_ALLOWED_KEYS

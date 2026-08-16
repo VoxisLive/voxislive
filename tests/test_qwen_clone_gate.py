@@ -49,3 +49,49 @@ def test_default_is_off_even_in_beta():
     tr = _make({"beta": {"enabled": True}}, beta_active=True)
     assert tr.clone == "off"
     assert "enable_voice_clone" not in json.loads(tr._session_update())["session"]
+
+
+# --- clone_override: the first-class voice_clone_incoming door -------------
+#
+# Independent of beta_active/cfg["beta"]["clone"] entirely — the standard
+# (non-beta) route's own opt-in for cloning the incoming speaker's voice.
+
+
+def _make_with_override(cfg, clone_override, *, beta_active=False):
+    return make_translator(
+        cfg, "cs", engine=ENGINE_QWEN, key="dummy-key", model="test-model",
+        on_audio=lambda *_: None, on_text=lambda *_: None,
+        on_status=lambda *_: None, name="t", beta_active=beta_active,
+        clone_override=clone_override)
+
+
+def test_clone_override_once_honored_on_standard_route():
+    tr = _make_with_override({}, "once")
+    assert tr.clone == "once"
+    session = json.loads(tr._session_update())["session"]
+    assert session["enable_voice_clone"] is True
+    assert session["voice_clone_options"] == {"frequency": "once"}
+
+
+def test_clone_override_always_honored_on_standard_route():
+    tr = _make_with_override({}, "always")
+    assert tr.clone == "always"
+    session = json.loads(tr._session_update())["session"]
+    assert session["voice_clone_options"] == {"frequency": "always"}
+
+
+def test_clone_override_wins_over_a_stale_beta_clone_field():
+    # A stale beta.clone="always" from an old soak must not leak through even
+    # when clone_override explicitly says "off" — override always wins.
+    cfg = {"beta": {"enabled": True, "clone": "always"}}
+    tr = _make_with_override(cfg, "off", beta_active=True)
+    assert tr.clone == "off"
+    assert "enable_voice_clone" not in json.loads(tr._session_update())["session"]
+
+
+def test_clone_override_none_falls_back_to_the_beta_active_gate():
+    # clone_override=None (the default) must not change the pre-existing
+    # beta_active-gated behavior at all.
+    cfg = {"beta": {"enabled": True, "clone": "always"}}
+    assert _make_with_override(cfg, None, beta_active=False).clone == "off"
+    assert _make_with_override(cfg, None, beta_active=True).clone == "always"

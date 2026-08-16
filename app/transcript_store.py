@@ -53,6 +53,18 @@ record carries no `leg` at all and renders exactly as it always did. Exports
 prefix every turn of a two-way record with the localized side name, because in
 a meeting the sides alternate constantly and an omitted tag would read as "same
 side as before" precisely when it is not.
+
+`starred` (optional, additive, top level) marks a session the user pinned from
+History. Written only when true — an unstarred record carries no key at all, so
+every record saved before starring existed stays byte-identical. Set well after
+the session ends (a read-modify-write via `overwrite_record`, not part of
+`build_record`/`save_record`'s normal save flow) and exempts the session from
+`prune_transcripts`'s age/count housekeeping.
+
+`summary` (optional, additive, top level) is a user-requested AI recap of the
+session (see `app/session_summary.py`), written the same read-modify-write way
+as `starred`. `render_txt` prepends it as a header block above the turns;
+SRT/VTT are timed caption formats and never carry it.
 """
 import json
 import os
@@ -196,6 +208,39 @@ def save_record(directory: str, record: dict, *, subdir: str | None = None) -> s
 def load_record(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def overwrite_record(path: str, record: dict) -> None:
+    """Atomically rewrite an EXISTING record file in place, at whatever path it
+    already lives at (legacy flat or the current per-session-folder layout) —
+    the write a post-save mutation (star, edit) needs, as opposed to
+    save_record's fresh-session layout decisions. Same temp-file + fsync +
+    atomic-replace guarantee, and shares _SAVE_LOCK so a concurrent auto-export
+    save and a manual edit can never interleave into a torn file."""
+    session_dir = os.path.dirname(path)
+    with _SAVE_LOCK:
+        fd, tmp = tempfile.mkstemp(dir=session_dir, prefix=".tmp.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(record, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+            if os.name != "nt":
+                try:
+                    dir_fd = os.open(session_dir, os.O_RDONLY)
+                    try:
+                        os.fsync(dir_fd)
+                    finally:
+                        os.close(dir_fd)
+                except OSError:
+                    pass
+        except Exception:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            raise
 
 
 def _iter_record_paths(directory: str):
@@ -378,6 +423,7 @@ def list_records(directory: str) -> list[dict]:
             # visible and searchable in History too.
             "preview": ((first.get("text", "") or "")
                         or (first.get("src", "") or ""))[:80],
+            "starred": bool(rec.get("starred", False)),
         }
         with _SUMMARY_CACHE_LOCK:
             _SUMMARY_CACHE[key] = (stamp[0], stamp[1], summary)
@@ -500,6 +546,14 @@ def _cue_text(turn, *, bilingual: bool, pre: str = "") -> str:
     return _wrap(f"{pre}{text}") if text else ""
 
 
+def _summary_header(record: dict) -> str:
+    """Prefix block for a record's AI summary (see the 'summary' field docstring
+    above), if it has one. TXT only — SRT/VTT are timed caption formats a prose
+    summary has no cue to attach to."""
+    summary = str(record.get("summary") or "").strip()
+    return summary + "\n\n---\n\n" if summary else ""
+
+
 def render_txt(record: dict, *, bilingual: bool = False) -> str:
     """Plain-text dump. Mono (default): one translation line per turn (parity with
     the legacy .txt export). Bilingual: each turn as its source line above the
@@ -507,10 +561,12 @@ def render_txt(record: dict, *, bilingual: bool = False) -> str:
     where both languages side by side beats a translated-only export."""
     turns = record.get("turns", [])
     pres = _spk_prefixes(turns, _multi_speaker(turns), _two_way(turns))
+    header = _summary_header(record)
     if not bilingual:
         lines = [pres[i] + t.get("text", "").strip()
                  for i, t in enumerate(turns) if t.get("text", "").strip()]
-        return "\n".join(lines) + ("\n" if lines else "")
+        body = "\n".join(lines) + ("\n" if lines else "")
+        return header + body if lines else body
     blocks = []
     for i, t in enumerate(turns):
         text = t.get("text", "").strip()
@@ -522,7 +578,8 @@ def render_txt(record: dict, *, bilingual: bool = False) -> str:
             blocks.append(f"{pre}{src}\n{pre}{text}")
         else:
             blocks.append(pre + (src or text))
-    return "\n\n".join(blocks) + ("\n" if blocks else "")
+    body = "\n\n".join(blocks) + ("\n" if blocks else "")
+    return header + body if blocks else body
 
 
 def render_srt(record: dict, *, bilingual: bool = True) -> str:
@@ -574,9 +631,30 @@ def export(record: dict, fmt: str, *, bilingual: bool = True) -> tuple[str, str]
     return _RENDERERS[fmt](record, bilingual=bilingual), fmt
 
 
+def _is_starred(entry_path: str) -> bool:
+    """Best-effort peek at whether a transcript entry (session folder or legacy
+    flat file) carries the starred flag, for prune_transcripts's exemption.
+    Any failure (corrupt/unreadable/mid-write) reads as not-starred — a read
+    error must never keep an old file from ever being pruned."""
+    try:
+        if os.path.isdir(entry_path):
+            name = os.path.basename(entry_path)
+            json_path = os.path.join(entry_path, name + ".json")
+        else:
+            json_path = entry_path
+        with open(json_path, encoding="utf-8") as f:
+            return bool(json.load(f).get("starred", False))
+    except Exception:
+        return False
+
+
 def prune_transcripts(directory: str, max_age_days: int = 90, max_files: int = 500) -> int:
     """Housekeeping pass: cleans up transcripts older than `max_age_days` or exceeding
-    `max_files` limit (keeps disk usage bounded). Fully guarded; returns pruned count."""
+    `max_files` limit (keeps disk usage bounded). Fully guarded; returns pruned count.
+
+    Starred sessions are exempt from BOTH budgets — they are simply never added
+    to the pruning candidate list, so a user-marked session can never be swept
+    away by age or by the 500-file cap."""
     if not directory or not os.path.exists(directory):
         return 0
     now = time.time()
@@ -587,6 +665,8 @@ def prune_transcripts(directory: str, max_age_days: int = 90, max_files: int = 5
         for name in os.listdir(directory):
             p = os.path.join(directory, name)
             if name.startswith("voxis_") and (os.path.isdir(p) or name.endswith(".json")):
+                if _is_starred(p):
+                    continue
                 try:
                     mtime = os.path.getmtime(p)
                     entries.append((mtime, p))
