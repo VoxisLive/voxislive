@@ -14,7 +14,7 @@ sounddevice==0.5.5
 numpy==2.4.6
 onnxruntime==1.28.0
 soxr==1.1.0
-scipy==1.17.1
+scipy==1.18.0
 python-dotenv==1.2.2
 # Migration of legacy Fernet-wrapped BYOK slots (migrate-on-read decoder in
 # byok_store). DPAPI is the at-rest wrapper now; this only decrypts old slots.
