@@ -1,6 +1,6 @@
 # VOXIS LIVE — REFUND & RETURN POLICY
 
-**Last Updated:** July 31, 2026
+**Last Updated:** August 22, 2026
 
 Thank you for choosing **Voxis Live** ("Voxis", "we", "us", or "our"). This **Refund & Return Policy** outlines your rights, conditions, and procedures regarding purchases, subscription cancellations, minute package refills, and refund requests made through [voxislive.com](https://voxislive.com), the Microsoft Store, or authorized distribution channels.
 
@@ -40,11 +40,9 @@ If you experience a severe, verified technical failure where Voxis Live is unabl
 
 ---
 
-## 4. BYOK (Bring Your Own Key) Open Source Build
+## 4. Legacy BYOK (Bring Your Own Key) Build
 
-The **BYOK / Developer Open Source Build** of Voxis is provided without subscription fees by Voxis Live:
-- Any API usage fees, billing, or charges incurred under your personal API key (e.g., Google AI Studio or Alibaba Cloud DashScope) are paid directly by you to the respective AI provider.
-- Voxis Live has no access to your financial transactions with Google or Alibaba and **cannot issue refunds or credits for third-party API billing**.
+The BYOK / Developer Build described here was discontinued in August 2026 and is no longer offered. It was provided without subscription fees by Voxis Live: any API usage fees, billing, or charges incurred under your personal API key (e.g., Google AI Studio or Alibaba Cloud DashScope) were paid directly by you to the respective AI provider. If you still run a previously obtained BYOK build, this remains true: Voxis Live has no access to your financial transactions with Google or Alibaba and **cannot issue refunds or credits for third-party API billing**.
 
 ---
 

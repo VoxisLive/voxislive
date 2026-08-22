@@ -1,6 +1,6 @@
 # VOXIS LIVE — PRIVACY POLICY
 
-**Last Updated:** July 31, 2026
+**Last Updated:** August 22, 2026
 
 At **Voxis Live** ("Voxis", "we", "us", or "our"), accessible from [voxislive.com](https://voxislive.com), we respect your privacy and are committed to protecting personal data. This Privacy Policy explains how we collect, use, process, and protect your information across the Voxis desktop application, browser extensions (Chrome, Edge, Chromium), and our web services, in compliance with the General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA), the Turkish Law on Protection of Personal Data (KVKK No. 6698), and applicable international privacy laws.
 
@@ -28,8 +28,8 @@ If you use the official SaaS / Microsoft Store release, we collect minimal data 
 - **Device Hash:** A one-way, non-reversible cryptographic hash derived from your machine GUID used strictly to prevent free trial abuse across multiple accounts.
 - **Technical Problem Reports (Optional):** If you manually submit a problem report, a technical snapshot (app version, Windows OS version, audio mode, error logs) is transmitted. Sensitive data (passwords, API keys, login tokens, Windows usernames) are **automatically stripped out** before sending.
 
-### 1.4 Developer / BYOK Build (Open Source)
-The open-source BYOK build communicates **only** with Google Gemini or Alibaba Qwen API servers using your own key. It sends zero telemetry, zero usage minutes, and zero account data to Voxis servers.
+### 1.4 Legacy Developer / BYOK Build (Discontinued)
+Prior to August 2026, a source-buildable BYOK build was offered; it communicated **only** with Google Gemini or Alibaba Qwen API servers using your own key, sending zero telemetry, zero usage minutes, and zero account data to Voxis servers. This distribution channel is discontinued and no longer offered; the description above remains accurate for anyone still running a previously obtained copy.
 
 ---
 

@@ -1,6 +1,6 @@
 # VOXIS LIVE — END USER LICENSE AGREEMENT (EULA)
 
-**Last Updated:** July 31, 2026
+**Last Updated:** August 22, 2026
 
 PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT" OR "EULA") CAREFULLY BEFORE DOWNLOADING, INSTALLING, OR USING THE VOXIS LIVE APPLICATION OR BROWSER EXTENSIONS.
 
@@ -10,17 +10,18 @@ BY DOWNLOADING, INSTALLING, COPYING, OR USING THE SOFTWARE, YOU AGREE TO BE BOUN
 
 ## 1. Grant of License
 
-Subject to your compliance with this Agreement and applicable subscription or BYOK terms, Voxis Live grants you a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to:
+Subject to your compliance with this Agreement and any applicable subscription terms, Voxis Live grants you a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to:
 1. Install and execute the Voxis Live desktop application on personal computer devices running supported Windows Operating Systems.
 2. Install and execute Voxis Live browser extensions on supported Web Browsers (Google Chrome, Microsoft Edge, and Chromium-based browsers).
 3. Use the Software for personal, non-commercial, or internal business real-time audio translation, subject to these terms.
 
 ---
 
-## 2. License Scope & Build Variants
+## 2. License Scope & Distribution
 
-- **Open Source / BYOK Build:** Provided under the project's designated open-source license. You may inspect, modify, and build the open-source source code for personal or developer use using your own API keys (Google Gemini / Alibaba Qwen).
-- **Official SaaS Release / Store Binaries:** The pre-compiled executable binaries (`.exe`, MSIX) distributed via the Microsoft Store, Chrome Web Store, or official Voxis installers contain proprietary license-verification, subscription management, and server-routing mechanisms ("Official Binaries").
+- **Official SaaS Release / Store Binaries:** Voxis Live is distributed exclusively as pre-compiled executable binaries (`.exe`, MSIX) via the Microsoft Store, Chrome Web Store, or official Voxis installers. These binaries contain proprietary license-verification, subscription management, and server-routing mechanisms ("Official Binaries"). This Agreement governs your use of the Official Binaries.
+- **Source-Available Excerpt:** A limited, explicitly curated excerpt of the underlying source code is published at github.com/VoxisLive/voxislive for transparency and audit purposes only, under its own separate license (PolyForm Strict 1.0.0). It is not distributed under this Agreement, does not constitute a licensed build of the Software, and does not grant any right to execute, modify, or redistribute Voxis Live.
+- **Legacy Developer / BYOK Builds:** Prior to August 2026, Voxis Live offered a source-buildable "Bring Your Own Key" developer build. That distribution channel has been discontinued and is no longer offered, maintained, or supported. If you already obtained and continue to run a previously built BYOK copy, your use remains subject to this Agreement, including Sections 3 (Restrictions), 5 (Third-Party AI Services), and 7 (Disclaimer of Warranties).
 
 ---
 
