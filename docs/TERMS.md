@@ -1,6 +1,6 @@
 # VOXIS LIVE — TERMS OF SERVICE
 
-**Last Updated:** July 31, 2026
+**Last Updated:** August 22, 2026
 
 Welcome to **Voxis Live** ("Voxis", "Application", "Service", "we", "us", or "our"). Please read these Terms of Service ("Terms") carefully before using the Voxis desktop application, browser extensions (including Chrome, Edge, and Chromium-based extensions), the website located at [voxislive.com](https://voxislive.com), or any related software, APIs, or documentation.
 
@@ -14,9 +14,11 @@ Voxis Live is a real-time speech-to-speech AI translation software ecosystem pro
 - **Desktop Application (Windows):** Captures system audio output (Video/Game Mode) or local microphone audio (Meeting Mode) and processes it via third-party artificial intelligence models (such as **Google Gemini Live API** and **Alibaba Cloud Qwen Realtime API**) to generate live translated speech and real-time subtitles.
 - **Browser Extension (Chrome / Edge / Chromium):** Captures tab audio and in-browser streams to provide real-time translation overlays, subtitles, and audio dubbing within web browsers.
 
-Voxis is provided in two main distribution modes:
-1. **Developer / Bring Your Own Key (BYOK) Build:** Open-source client builds (desktop and browser extensions) where translation requests execute using the User’s own API key (e.g., Google AI Studio API key or Alibaba Qwen DashScope key) directly between the User's device/browser and the third-party AI provider.
-2. **Official Release / SaaS Build:** Distributed via official stores (Microsoft Store, Chrome Web Store, Edge Add-ons) or official installer, operating with integrated server-managed authentication, minute subscriptions, and automated routing across Google Gemini and Alibaba Qwen infrastructure.
+Voxis is distributed as an **Official Release / SaaS Build**: via official stores (Microsoft Store, Chrome Web Store, Edge Add-ons) or official installer, operating with integrated server-managed authentication, minute subscriptions, and automated routing across Google Gemini and Alibaba Qwen infrastructure.
+
+A limited, explicitly curated excerpt of the underlying source code is separately published at github.com/VoxisLive/voxislive for transparency and audit purposes, under its own license (PolyForm Strict 1.0.0) — it is not a distribution mode of the Service, and these Terms do not apply to reading it.
+
+Prior to August 2026, Voxis also offered a source-buildable **Developer / Bring Your Own Key (BYOK) Build**, where translation requests executed using the User's own API key directly between the User's device and the third-party AI provider. That distribution channel has been discontinued and is no longer offered. Section 4.2 continues to govern any previously obtained BYOK build still in use.
 
 ---
 
@@ -51,8 +53,8 @@ Voxis provides built-in notices regarding Meeting Mode consent. You acknowledge 
 ### 4.1 Google Gemini & Alibaba Qwen AI Service Providers
 Voxis relies on third-party AI services, including but not limited to **Google Gemini Live API** (`gemini-3.5-live-translate-preview`) and **Alibaba Cloud Qwen Realtime API** (`qwen3.5-livetranslate-flash-realtime`). Audio data sent for translation is governed by the respective terms and privacy policies of those providers (e.g., [Google Terms of Service](https://policies.google.com/terms), [Google AI Studio Terms](https://ai.google.dev/terms), and [Alibaba Cloud International Privacy Policy](https://www.alibabacloud.com/help/faq-detail/42425.htm)).
 
-### 4.2 BYOK Key Management & Liability
-If you use the BYOK feature:
+### 4.2 Legacy BYOK Key Management & Liability
+The Developer / BYOK Build is discontinued and no longer distributed (see Section 1). If you obtained a BYOK build prior to its discontinuation and continue to use it:
 - You are solely responsible for obtaining, maintaining, and securing your own API keys.
 - API keys are encrypted locally on your Windows device using Windows Data Protection API (DPAPI) or local browser extension storage.
 - You are solely responsible for any costs, API quotas, or violations of third-party API terms incurred under your key.
@@ -93,7 +95,7 @@ You may cancel your SaaS subscription or delete your account at any time through
 
 ## 7. Intellectual Property & License Rights
 
-- **Application Code & Assets:** The core open-source codebase of Voxis is licensed under its designated open-source license. Official SaaS release assets, pre-compiled binaries, logos, branding ("Powered by Voxis"), and proprietary server infrastructures remain the exclusive property of Voxis Live.
+- **Application Code & Assets:** The Voxis Live codebase, Official SaaS release assets, pre-compiled binaries, logos, branding ("Powered by Voxis"), and proprietary server infrastructures are and remain the exclusive property of Voxis Live. A limited, separately-licensed excerpt is published at github.com/VoxisLive/voxislive for transparency purposes only (see Section 1); no other part of the codebase is licensed for public use.
 - **User Transcripts & Generated Files:** You retain full ownership of all text transcripts (TXT, SRT, VTT, JSON) and local WAV audio recordings generated by your use of the Software.
 
 ---
