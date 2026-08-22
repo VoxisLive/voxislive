@@ -1,0 +1,59 @@
+name: Quality
+
+# This repository publishes a small, explicitly allowlisted excerpt of the
+# Voxis engine (see scripts/check_release_hygiene.py) — it is not a build
+# target. This workflow only lints and tests the published files; there is
+# no frozen-application build here (see README.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint and test the published excerpt
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      # No requirements.lock is published here (see README.md — this repo is
+      # not a build target). These are the direct runtime deps the published
+      # files themselves import, version-pinned to match the shipping app.
+      - name: Install the runtime deps the published files import
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy==2.4.6 sounddevice==0.5.5 onnxruntime==1.28.0 comtypes==1.4.16 pycaw==20251023 google-genai==2.17.0 pytest==9.1.1 ruff==0.15.22 pyright==1.1.411
+
+      - name: Run the published tests
+        run: >
+          python -m pytest -q
+          tests/test_mix_core.py
+          tests/test_ring.py
+          tests/test_player_volume.py
+          tests/test_audio_test_tone.py
+          tests/test_speech_gate.py
+          tests/test_session_duck.py
+          tests/test_report_scrub.py
+          tests/test_transcript_export.py
+          tests/test_audio_recorder.py
+
+      - name: Run static analysis
+        run: ruff check app tests scripts
+
+      - name: Run type checker
+        run: pyright app scripts
+
+      - name: Compile Python sources
+        run: python -m compileall -q app scripts

@@ -1,0 +1,15 @@
+# --- Voxis public source-available repository ---
+# This repo publishes a small, explicitly allowlisted subset of the real
+# Voxis engine (see README.md and scripts/check_release_hygiene.py). The
+# allowlist in that script is the actual enforcement mechanism; this file is
+# just normal housekeeping.
+
+__pycache__/
+*.pyc
+.venv*/
+venv/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+Thumbs.db
+transcript_index.json

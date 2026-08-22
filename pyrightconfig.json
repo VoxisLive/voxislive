@@ -1,0 +1,5 @@
+{
+  "include": ["app", "scripts"],
+  "pythonVersion": "3.13",
+  "reportMissingImports": "warning"
+}
