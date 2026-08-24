@@ -118,7 +118,7 @@ For anything else, use in-app **Report a problem** (see `app/report_scrub.py` fo
 
 ## License
 
-This repository is published under an **[all-rights-reserved notice](LICENSE)** — not an open-source or source-available license in the OSI sense.
+This repository exists so you can verify our privacy claims yourself — see [Source transparency](#source-transparency) above. Reading it costs nothing and needs no license; building on it does. It's published under an **[all-rights-reserved notice](LICENSE)**, not an open-source or source-available license in the OSI sense.
 
 - ✅ You may read the code and quote brief excerpts for commentary, criticism, or security research.
 - ❌ It does **not** grant any right to use, copy, distribute, fork, or build a derivative work from it — commercially or for personal/noncommercial use. Voxis Live is sold, not given away, in both its official-app and BYOK forms; nothing here changes that.
