@@ -1,59 +1,39 @@
-# PolyForm Strict License 1.0.0
+Copyright (c) 2026 Voxis Live / DavutAkca. All rights reserved.
 
-<https://polyformproject.org/licenses/strict/1.0.0>
+This repository is a curated, read-only excerpt of the Voxis Live audio
+engine's source code, published for transparency and independent audit of
+how Voxis captures, transmits, and stores audio — see README.md. It is not
+a buildable or runnable copy of the application.
 
-## Acceptance
+No license, express or implied, is granted to any person or entity to use,
+copy, modify, merge, publish, distribute, sublicense, execute, or sell this
+software or any part of it, for any purpose — commercial or noncommercial —
+without prior written permission from Voxis Live. This includes combining
+any part of this excerpt, verbatim or modified, with other code (whether
+original or third-party) into a working or partially working application.
 
-In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+Voxis Live is a commercial product, offered exclusively as:
 
-## Copyright License
+  - the official application, distributed through the Microsoft Store and
+    voxislive.com under a paid subscription or plan; and
+  - the "Bring Your Own Key" (BYOK) mode, a paid one-time unlock available
+    to licensed users inside the official application.
 
-The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose, other than distributing the software or making changes or new works based on the software.
+Nothing in this repository, and nothing about it being publicly readable on
+GitHub, grants any right to either offering, in whole or in part, free of
+charge or otherwise. Use of the official application is governed by
+docs/EULA.md and docs/TERMS.md, not by this file.
 
-## Patent License
+You may quote brief excerpts of this code for commentary, criticism,
+security research, or academic discussion, to the extent such use is
+already permitted under applicable law (e.g. fair use or fair dealing);
+this notice does not restrict rights you already have under that law, and
+does not extend any rights beyond it.
 
-The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. VOXIS LIVE SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-## Noncommercial Purposes
-
-Any noncommercial purpose is a permitted purpose.
-
-## Personal Uses
-
-Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.
-
-## Noncommercial Organizations
-
-Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution is use for a permitted purpose regardless of the source of funding or obligations resulting from the funding.
-
-## Fair Use
-
-You may have "fair use" rights for the software under the law. These terms do not limit them.
-
-## No Other Rights
-
-These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else. These terms do not imply any other licenses.
-
-## Patent Defense
-
-If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
-
-## Violations
-
-The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice. Otherwise, all your licenses end immediately.
-
-## No Liability
-
-***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
-
-## Definitions
-
-The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
-
-**You** refers to the individual or entity agreeing to these terms.
-
-**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization. **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise. Control can be direct or indirect.
-
-**Your licenses** are all the licenses granted to you for the software under these terms.
-
-**Use** means anything you do with the software requiring one of your licenses.
+Commercial licensing inquiries: https://voxislive.com/licensing
+Questions about this notice: support@voxislive.com
