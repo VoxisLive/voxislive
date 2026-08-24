@@ -119,7 +119,7 @@ Başka bir sorun için uygulama içi **Sorun bildir**i kullanın (gönderilmeden
 
 ## Lisans
 
-Bu depo, OSI anlamında bir açık kaynak veya "source-available" lisans değil, **[tüm hakları saklı bir bildirim](LICENSE)** altında yayınlanmıştır.
+Bu depo, gizlilik iddialarımızı kendiniz doğrulayabilmeniz için var — yukarıdaki [Kaynağı denetleyin](#kaynağı-denetleyin) bölümüne bakın. Okumak ücretsizdir ve lisans gerektirmez; üzerine bir şey inşa etmek gerektirir. OSI anlamında bir açık kaynak veya "source-available" lisans değil, **[tüm hakları saklı bir bildirim](LICENSE)** altında yayınlanmıştır.
 
 - ✅ Kodu okuyabilir; yorum, eleştiri veya güvenlik araştırması amacıyla kısa alıntılar yapabilirsiniz.
 - ❌ Kullanma, kopyalama, dağıtma, çatallama (fork) veya bundan bir türev eser oluşturma hakkı **vermez** — ticari olsun olmasın, kişisel kullanım dahil. Voxis Live hem resmi uygulama hem de BYOK biçiminde satılan bir üründür, bedava dağıtılmaz; burada hiçbir şey bunu değiştirmez.

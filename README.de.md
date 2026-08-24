@@ -118,7 +118,7 @@ Für alles andere nutzen Sie **Problem melden** in der App (siehe `app/report_sc
 
 ## Lizenz
 
-Dieses Repository wird unter einem **[Alle-Rechte-vorbehalten-Hinweis](LICENSE)** veröffentlicht — keine Open-Source- oder "Source-Available"-Lizenz im OSI-Sinne.
+Dieses Repository existiert, damit Sie unsere Datenschutzversprechen selbst überprüfen können — siehe [Quelltransparenz](#quelltransparenz) oben. Es zu lesen kostet nichts und erfordert keine Lizenz; darauf aufzubauen schon. Es wird unter einem **[Alle-Rechte-vorbehalten-Hinweis](LICENSE)** veröffentlicht — keine Open-Source- oder "Source-Available"-Lizenz im OSI-Sinne.
 
 - ✅ Sie dürfen den Code lesen und kurze Ausschnitte für Kommentare, Kritik oder Sicherheitsforschung zitieren.
 - ❌ Er gewährt **kein** Recht zur Nutzung, zum Kopieren, zur Verbreitung, zum Forken oder zum Erstellen eines abgeleiteten Werks daraus — weder kommerziell noch für den persönlichen/nichtkommerziellen Gebrauch. Voxis Live wird sowohl als offizielle App als auch im BYOK-Modus verkauft, nicht verschenkt; daran ändert dieses Repository nichts.
