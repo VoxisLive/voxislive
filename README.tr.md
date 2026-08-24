@@ -3,7 +3,7 @@
 **[English](README.md)** | **Türkçe** | **[Deutsch](README.de.md)**
 
 ![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)
-![License](https://img.shields.io/badge/license-PolyForm%20Strict%201.0.0-blue)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-blue)
 
 > Windows için gerçek zamanlı sesli çeviri — herhangi bir videoyu, oyunu veya toplantıyı canlı olarak kendi dilinizde dinleyin.
 >
@@ -55,7 +55,7 @@ Bu dosyaların doğrulamanıza izin verdiği şeyler:
 
 **Burada olmayan ve neden olmadığı:** orkestrasyon katmanı, arayüz, ücretli çeviri motoru entegrasyonlarımız, kalite ayarları ve hesap/faturalama kodu yayınlanmıyor. Hiçbiri sesin nasıl işlendiğini değiştirmiyor — yukarıdaki mekanizma hangi motor aktif olursa olsun aynı — ve bunu yayınlamak şeffaflık açısından hiçbir fayda sağlamadan rakiplere ayar ve iş mantığımızı verir. `scripts/check_release_hygiene.py`, bu sınırın kaymasını mekanik olarak engelleyen kapıdır; bu depoda tracked olan her dosya orada açıkça adlandırılmak zorundadır.
 
-Bu depo **[PolyForm Strict 1.0.0](LICENSE)** ile lisanslıdır: okuyabilir ve alıntılayabilirsiniz, ama yeniden dağıtma, çatallama (fork) veya türev eser oluşturma hakkı vermez. Bkz. [Lisans](#lisans--polyform-strict-100).
+Bu depodaki kod, **[tüm hakları saklı bir bildirim](LICENSE)** altında yayınlanmıştır: okuyabilirsiniz, ancak kullanma, kopyalama, yeniden dağıtma, çatallama (fork) veya türev eser oluşturma hakkı vermez — kişisel veya ticari olmayan kullanım dahil. Aşağıdaki [Lisans](#lisans) bölümüne bakın.
 
 ---
 
@@ -117,16 +117,16 @@ Başka bir sorun için uygulama içi **Sorun bildir**i kullanın (gönderilmeden
 
 ---
 
-## Lisans — PolyForm Strict 1.0.0
+## Lisans
 
-Bu depo **[PolyForm Strict License 1.0.0](LICENSE)** ile lisanslıdır.
+Bu depo, OSI anlamında bir açık kaynak veya "source-available" lisans değil, **[tüm hakları saklı bir bildirim](LICENSE)** altında yayınlanmıştır.
 
-- ✅ Okuyabilir, alıntılayabilir, kişisel/ticari olmayan referans amaçlı kullanabilirsiniz.
-- ❌ Kopyalarını dağıtma, çatallama (fork) veya bundan bir türev eser — Voxis'in değiştirilmiş veya "özgür" bir derlemesi dahil — oluşturma hakkı **vermez**.
+- ✅ Kodu okuyabilir; yorum, eleştiri veya güvenlik araştırması amacıyla kısa alıntılar yapabilirsiniz.
+- ❌ Kullanma, kopyalama, dağıtma, çatallama (fork) veya bundan bir türev eser oluşturma hakkı **vermez** — ticari olsun olmasın, kişisel kullanım dahil. Voxis Live hem resmi uygulama hem de BYOK biçiminde satılan bir üründür, bedava dağıtılmaz; burada hiçbir şey bunu değiştirmez.
 
 **Ticari lisanslama, veya bu kesiti okumanın ötesindeki her kullanım** (ticari ürünler, SaaS, white-label): **<https://voxislive.com/licensing>**.
 
-Bu depoya kod katkısı kabul etmiyoruz (bkz. [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)) — altında bir türev eser hakkı verilmediği ve bu, ürünün gerçek kaynak ağacı olmadığı için.
+Bu depoya kod katkısı kabul etmiyoruz (bkz. [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)) — altında katkı yapılabilecek bir lisans olmadığı ve bu, ürünün gerçek kaynak ağacı olmadığı için.
 
 ---
 

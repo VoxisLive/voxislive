@@ -3,7 +3,7 @@
 **[English]** | **[Türkçe](README.tr.md)** | **[Deutsch](README.de.md)**
 
 ![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)
-![License](https://img.shields.io/badge/license-PolyForm%20Strict%201.0.0-blue)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-blue)
 
 > Real-time voice translation for Windows — translate any video, game, or meeting and hear it in your own language, live.
 >
@@ -54,7 +54,7 @@ What these files let you verify:
 
 **What isn't here, and why:** the orchestration layer, the UI, our paid translation-engine integrations, quality tuning, and account/billing code are not published. None of it changes how audio is handled — the mechanism above is the same regardless of which engine is active — and publishing it would hand a competitor our tuning and business logic for no transparency benefit. `scripts/check_release_hygiene.py` is the mechanical gate that keeps this boundary from drifting; every file tracked in this repository has to be named explicitly in it.
 
-This repository is licensed under **[PolyForm Strict 1.0.0](LICENSE)**: you can read it and cite it, but it does not grant a right to redistribute it, fork it, or build derivative works from it. See [License](#license--polyform-strict-100).
+This repository's code is published under an **[all-rights-reserved notice](LICENSE)**: you can read it, but it does not grant a right to use, copy, redistribute, fork, or build derivative works from it — including for personal or noncommercial use. See [License](#license) below.
 
 ---
 
@@ -116,16 +116,16 @@ For anything else, use in-app **Report a problem** (see `app/report_scrub.py` fo
 
 ---
 
-## License — PolyForm Strict 1.0.0
+## License
 
-This repository is licensed under the **[PolyForm Strict License 1.0.0](LICENSE)**.
+This repository is published under an **[all-rights-reserved notice](LICENSE)** — not an open-source or source-available license in the OSI sense.
 
-- ✅ You may read it, cite it, and use it for personal, noncommercial reference.
-- ❌ It does **not** grant a right to distribute copies, create a fork, or build a derivative work from it — including a modified or "libre" build of Voxis itself.
+- ✅ You may read the code and quote brief excerpts for commentary, criticism, or security research.
+- ❌ It does **not** grant any right to use, copy, distribute, fork, or build a derivative work from it — commercially or for personal/noncommercial use. Voxis Live is sold, not given away, in both its official-app and BYOK forms; nothing here changes that.
 
 **Commercial licensing, or any use beyond reading this excerpt** (commercial products, SaaS, white-label): **<https://voxislive.com/licensing>**.
 
-We do not accept code contributions to this repository (see [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)) — there is no derivative-work right to grant one under, and this isn't the product's real source tree.
+We do not accept code contributions to this repository (see [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)) — there is no license to contribute under, and this isn't the product's real source tree.
 
 ---
 

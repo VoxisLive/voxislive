@@ -3,7 +3,7 @@
 **[English](README.md)** | **[Türkçe](README.tr.md)** | **Deutsch**
 
 ![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)
-![License](https://img.shields.io/badge/license-PolyForm%20Strict%201.0.0-blue)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-blue)
 
 > Echtzeit-Sprachübersetzung für Windows — übersetzen Sie jedes Video, Spiel oder Meeting live und hören Sie es in Ihrer eigenen Sprache.
 >
@@ -54,7 +54,7 @@ Was diese Dateien Ihnen zu überprüfen erlauben:
 
 **Was hier nicht enthalten ist, und warum:** die Orchestrierungsschicht, die Benutzeroberfläche, unsere kostenpflichtigen Übersetzungs-Engine-Integrationen, Qualitätsoptimierungen und Konto-/Abrechnungscode werden nicht veröffentlicht. Nichts davon ändert, wie Audio behandelt wird — der obige Mechanismus ist derselbe, egal welche Engine aktiv ist — und die Veröffentlichung würde einem Wettbewerber ohne Transparenzgewinn unsere Feinabstimmung und Geschäftslogik liefern. `scripts/check_release_hygiene.py` ist das mechanische Gate, das verhindert, dass diese Grenze verwässert wird; jede in diesem Repository getrackte Datei muss dort explizit benannt sein.
 
-Dieses Repository ist unter **[PolyForm Strict 1.0.0](LICENSE)** lizenziert: Sie können es lesen und zitieren, aber es gewährt kein Recht, es weiterzuverbreiten, zu forken oder abgeleitete Werke daraus zu erstellen. Siehe [Lizenz](#lizenz--polyform-strict-100).
+Der Code in diesem Repository wird unter einem **[Alle-Rechte-vorbehalten-Hinweis](LICENSE)** veröffentlicht: Sie können ihn lesen, aber er gewährt kein Recht, ihn zu nutzen, zu kopieren, weiterzuverbreiten, zu forken oder abgeleitete Werke daraus zu erstellen — auch nicht für den persönlichen oder nichtkommerziellen Gebrauch. Siehe Abschnitt [Lizenz](#lizenz) unten.
 
 ---
 
@@ -116,16 +116,16 @@ Für alles andere nutzen Sie **Problem melden** in der App (siehe `app/report_sc
 
 ---
 
-## Lizenz — PolyForm Strict 1.0.0
+## Lizenz
 
-Dieses Repository ist unter der **[PolyForm Strict License 1.0.0](LICENSE)** lizenziert.
+Dieses Repository wird unter einem **[Alle-Rechte-vorbehalten-Hinweis](LICENSE)** veröffentlicht — keine Open-Source- oder "Source-Available"-Lizenz im OSI-Sinne.
 
-- ✅ Sie dürfen es lesen, zitieren und für persönliche, nichtkommerzielle Referenzzwecke nutzen.
-- ❌ Es gewährt **kein** Recht, Kopien zu verbreiten, einen Fork zu erstellen oder ein abgeleitetes Werk daraus zu bauen — einschließlich eines modifizierten oder "freien" Builds von Voxis selbst.
+- ✅ Sie dürfen den Code lesen und kurze Ausschnitte für Kommentare, Kritik oder Sicherheitsforschung zitieren.
+- ❌ Er gewährt **kein** Recht zur Nutzung, zum Kopieren, zur Verbreitung, zum Forken oder zum Erstellen eines abgeleiteten Werks daraus — weder kommerziell noch für den persönlichen/nichtkommerziellen Gebrauch. Voxis Live wird sowohl als offizielle App als auch im BYOK-Modus verkauft, nicht verschenkt; daran ändert dieses Repository nichts.
 
 **Kommerzielle Lizenzierung, oder jede Nutzung über das Lesen dieses Ausschnitts hinaus** (kommerzielle Produkte, SaaS, White-Label): **<https://voxislive.com/licensing>**.
 
-Wir nehmen keine Code-Beiträge zu diesem Repository an (siehe [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)) — es gibt kein Recht auf abgeleitete Werke, unter dem man beitragen könnte, und dies ist nicht der echte Quellbaum des Produkts.
+Wir nehmen keine Code-Beiträge zu diesem Repository an (siehe [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)) — es gibt keine Lizenz, unter der man beitragen könnte, und dies ist nicht der echte Quellbaum des Produkts.
 
 ---
 

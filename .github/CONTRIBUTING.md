@@ -6,10 +6,11 @@ code contributions or pull requests.
 It publishes a small, explicitly allowlisted excerpt of the real Voxis
 engine — the audio capture → translate → playback → local-storage chain —
 so that anyone can read exactly how audio is handled, without us asking you
-to take our word for it. It is licensed under **PolyForm Strict 1.0.0**
-(see [LICENSE](../LICENSE)), which permits reading and personal/noncommercial
-reference use but not distribution, forks, or derivative works — so there is
-no contribution flow to describe here.
+to take our word for it. It is published under an **all-rights-reserved
+notice** (see [LICENSE](../LICENSE)) — reading only, with no license granted
+to use, copy, distribute, fork, or build derivative works from it,
+commercially or otherwise — so there is no contribution flow to describe
+here.
 
 If you found something worth flagging:
 

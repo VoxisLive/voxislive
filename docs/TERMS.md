@@ -1,6 +1,6 @@
 # VOXIS LIVE — TERMS OF SERVICE
 
-**Last Updated:** August 22, 2026
+**Last Updated:** August 24, 2026
 
 Welcome to **Voxis Live** ("Voxis", "Application", "Service", "we", "us", or "our"). Please read these Terms of Service ("Terms") carefully before using the Voxis desktop application, browser extensions (including Chrome, Edge, and Chromium-based extensions), the website located at [voxislive.com](https://voxislive.com), or any related software, APIs, or documentation.
 
@@ -16,7 +16,7 @@ Voxis Live is a real-time speech-to-speech AI translation software ecosystem pro
 
 Voxis is distributed as an **Official Release / SaaS Build**: via official stores (Microsoft Store, Chrome Web Store, Edge Add-ons) or official installer, operating with integrated server-managed authentication, minute subscriptions, and automated routing across Google Gemini and Alibaba Qwen infrastructure.
 
-A limited, explicitly curated excerpt of the underlying source code is separately published at github.com/VoxisLive/voxislive for transparency and audit purposes, under its own license (PolyForm Strict 1.0.0) — it is not a distribution mode of the Service, and these Terms do not apply to reading it.
+A limited, explicitly curated excerpt of the underlying source code is separately published at github.com/VoxisLive/voxislive for transparency and audit purposes, under its own all-rights-reserved notice — it is not a distribution mode of the Service, and these Terms do not apply to reading it.
 
 Prior to August 2026, Voxis also offered a source-buildable **Developer / Bring Your Own Key (BYOK) Build**, where translation requests executed using the User's own API key directly between the User's device and the third-party AI provider. That distribution channel has been discontinued and is no longer offered. Section 4.2 continues to govern any previously obtained BYOK build still in use.
 
