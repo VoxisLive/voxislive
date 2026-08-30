@@ -1,6 +1,6 @@
 # VOXIS LIVE — TERMS OF SERVICE
 
-**Last Updated:** August 24, 2026
+**Last Updated:** August 30, 2026
 
 Welcome to **Voxis Live** ("Voxis", "Application", "Service", "we", "us", or "our"). Please read these Terms of Service ("Terms") carefully before using the Voxis desktop application, browser extensions (including Chrome, Edge, and Chromium-based extensions), the website located at [voxislive.com](https://voxislive.com), or any related software, APIs, or documentation.
 
@@ -14,7 +14,7 @@ Voxis Live is a real-time speech-to-speech AI translation software ecosystem pro
 - **Desktop Application (Windows):** Captures system audio output (Video/Game Mode) or local microphone audio (Meeting Mode) and processes it via third-party artificial intelligence models (such as **Google Gemini Live API** and **Alibaba Cloud Qwen Realtime API**) to generate live translated speech and real-time subtitles.
 - **Browser Extension (Chrome / Edge / Chromium):** Captures tab audio and in-browser streams to provide real-time translation overlays, subtitles, and audio dubbing within web browsers.
 
-Voxis is distributed as an **Official Release / SaaS Build**: via official stores (Microsoft Store, Chrome Web Store, Edge Add-ons) or official installer, operating with integrated server-managed authentication, minute subscriptions, and automated routing across Google Gemini and Alibaba Qwen infrastructure.
+Voxis is distributed as an **Official Release / SaaS Build**: via official stores (Microsoft Store, Chrome Web Store, Edge Add-ons) or official installer, operating with integrated server-managed authentication, prepaid minute balances, and automated routing across Google Gemini and Alibaba Qwen infrastructure.
 
 A limited, explicitly curated excerpt of the underlying source code is separately published at github.com/VoxisLive/voxislive for transparency and audit purposes, under its own all-rights-reserved notice — it is not a distribution mode of the Service, and these Terms do not apply to reading it.
 
@@ -77,19 +77,19 @@ You agree **NOT** to use Voxis to:
 ### 6.1 Right to Block, Suspend, or Terminate Access
 **Voxis Live reserves the absolute, unilateral right to suspend, restrict, block, or permanently terminate your account, API access, device access (`device_hash`), or IP address at any time, with or without prior notice, at our sole discretion.** Reasons for suspension or termination include, but are not limited to:
 - Violation of any provision of these Terms or EULA;
-- Fraudulent, abusive, or unauthorized use of the Application, API endpoints, or subscription minutes;
+- Fraudulent, abusive, or unauthorized use of the Application, API endpoints, or purchased minutes;
 - Attempts to reverse engineer, hack, or bypass billing controls;
 - Unlawful wiretapping or non-consensual interception of live audio;
 - Requests by law enforcement or government agencies.
 
-### 6.2 Effect of Termination & Subscription Cancellation
+### 6.2 Effect of Termination
 Upon termination or blocking of your account due to a violation of these Terms:
 1. Your license to use the Software and SaaS services is immediately revoked.
-2. Any remaining subscription minutes, minute packages, or unused paid credits shall be **forfeited immediately without any right to refund or compensation**.
+2. Any remaining minutes, minute packages, or unused paid credits shall be **forfeited immediately without any right to refund or compensation**.
 3. Voxis shall not be liable to you or any third party for any termination of your access to the Application.
 
-### 6.3 Voluntary User Cancellation
-You may cancel your SaaS subscription or delete your account at any time through your account settings or Microsoft Store subscription portal. Cancellation will take effect at the end of the current billing cycle.
+### 6.3 Voluntary Account Deletion
+Voxis is sold as one-time prepaid minute packs: there is no recurring subscription and no billing cycle to cancel. You may delete your account and its associated data at any time from your account settings. Purchases made through the Microsoft Store are managed from your Microsoft account.
 
 ---
 

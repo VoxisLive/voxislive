@@ -1,6 +1,6 @@
 # VOXIS LIVE — PRIVACY POLICY
 
-**Last Updated:** August 22, 2026
+**Last Updated:** August 30, 2026
 
 At **Voxis Live** ("Voxis", "we", "us", or "our"), accessible from [voxislive.com](https://voxislive.com), we respect your privacy and are committed to protecting personal data. This Privacy Policy explains how we collect, use, process, and protect your information across the Voxis desktop application, browser extensions (Chrome, Edge, Chromium), and our web services, in compliance with the General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA), the Turkish Law on Protection of Personal Data (KVKK No. 6698), and applicable international privacy laws.
 
@@ -24,7 +24,7 @@ Voxis is built with a **privacy-first, local-processing architecture**. The tabl
 ### 1.3 SaaS Account & Technical Data (Official Release Build Only)
 If you use the official SaaS / Microsoft Store release, we collect minimal data required for account management and abuse prevention:
 - **Account Credentials:** Email address, hashed password, or Google OAuth token.
-- **Usage Minutes:** Aggregated minutes of translation used per session (for subscription quota enforcement).
+- **Usage Minutes:** Aggregated minutes of translation used per session (for plan quota enforcement).
 - **Device Hash:** A one-way, non-reversible cryptographic hash derived from your machine GUID used strictly to prevent free trial abuse across multiple accounts.
 - **Technical Problem Reports (Optional):** If you manually submit a problem report, a technical snapshot (app version, Windows OS version, audio mode, error logs) is transmitted. Sensitive data (passwords, API keys, login tokens, Windows usernames) are **automatically stripped out** before sending.
 
@@ -36,7 +36,7 @@ Prior to August 2026, a source-buildable BYOK build was offered; it communicated
 ## 2. Legal Bases for Processing (GDPR / KVKK)
 
 We process your data under the following legal bases:
-1. **Performance of a Contract (GDPR Art. 6(1)(b)):** To deliver real-time speech translation and manage your subscription account.
+1. **Performance of a Contract (GDPR Art. 6(1)(b)):** To deliver real-time speech translation and manage your account and minute balance.
 2. **Legitimate Interests (GDPR Art. 6(1)(f)):** To enforce free trial limits, maintain service security, and prevent fraudulent multi-account creation.
 3. **Explicit Consent (GDPR Art. 6(1)(a) & Art. 9(2)(a)):** For optional technical problem report submissions and optional local audio recording.
 
@@ -50,7 +50,7 @@ Voxis does not sell, rent, or trade your personal data. We share data only with 
 | :--- | :--- | :--- | :--- |
 | **Google Cloud / AI Studio** | Live Speech Translation Engine | Encrypted PCM Audio Stream | [Google AI Privacy Policy](https://policies.google.com/privacy) |
 | **Alibaba Cloud / DashScope (Qwen)** | Realtime Speech Translation Engine | Encrypted PCM Audio Stream | [Alibaba Cloud Privacy Policy](https://www.alibabacloud.com/help/faq-detail/42425.htm) |
-| **PocketBase (Self-Hosted)** | SaaS Account & Subscription Backend | Email, Hashed Password, Usage Minutes, Device Hash | Encrypted at rest on secure cloud servers |
+| **PocketBase (Self-Hosted)** | SaaS Account & Billing Backend | Email, Hashed Password, Usage Minutes, Device Hash | Encrypted at rest on secure cloud servers |
 
 ---
 
