@@ -1,23 +1,23 @@
 # VOXIS LIVE — REFUND & RETURN POLICY
 
-**Last Updated:** August 22, 2026
+**Last Updated:** August 30, 2026
 
-Thank you for choosing **Voxis Live** ("Voxis", "we", "us", or "our"). This **Refund & Return Policy** outlines your rights, conditions, and procedures regarding purchases, subscription cancellations, minute package refills, and refund requests made through [voxislive.com](https://voxislive.com), the Microsoft Store, or authorized distribution channels.
+Thank you for choosing **Voxis Live** ("Voxis", "we", "us", or "our"). This **Refund & Return Policy** outlines your rights, conditions, and procedures regarding purchases, minute package refills, and refund requests made through [voxislive.com](https://voxislive.com), the Microsoft Store, or authorized distribution channels.
 
 ---
 
 ## 1. Nature of Digital Services
 
-Voxis Live provides real-time AI speech-to-speech translation software and digital minute subscriptions. Due to the immediate activation and consumption nature of digital services and the real-time API execution costs incurred with third-party AI infrastructure providers (Google Cloud, Alibaba Cloud):
+Voxis Live provides real-time AI speech-to-speech translation software sold as prepaid digital minute packages. Due to the immediate activation and consumption nature of digital services and the real-time API execution costs incurred with third-party AI infrastructure providers (Google Cloud, Alibaba Cloud):
 
-1. **Digital Minute Packages & Consumed Minutes:** Once minute packages or subscription minutes have been used to perform live AI translation sessions, those consumed minutes are **non-refundable**.
+1. **Digital Minute Packages & Consumed Minutes:** Once purchased minutes have been used to perform live AI translation sessions, those consumed minutes are **non-refundable**.
 2. **Immediate Performance:** By initiating a live translation session, you consent to the immediate performance of the service and acknowledge that you waive statutory rights of withdrawal for minutes already consumed.
 
 ---
 
 ## 2. Store Purchases (Microsoft Store & App Stores)
 
-If you purchased a Voxis Live subscription or minute package directly through the **Microsoft Store** or another third-party app store:
+If you purchased a Voxis Live minute package directly through the **Microsoft Store** or another third-party app store:
 - **Refund Authority:** Refunds, billing inquiries, and transaction processing are governed exclusively by the terms and policies of the respective store platform (e.g., [Microsoft Store Refund Terms](https://support.microsoft.com/account-billing/returning-items-you-bought-from-microsoft-for-exchange-or-refund-72621197-cc60-d570-c26e-d068e943b8e8)).
 - **Request Procedure:** You must submit refund requests directly through your Microsoft Account purchase history. Voxis Live does not process direct payments or refunds for Microsoft Store transactions.
 
@@ -25,7 +25,7 @@ If you purchased a Voxis Live subscription or minute package directly through th
 
 ## 3. Direct Web Purchases (voxislive.com & SaaS Billing)
 
-For subscriptions or minute packages purchased directly on [voxislive.com](https://voxislive.com):
+For minute packages purchased directly on [voxislive.com](https://voxislive.com):
 
 ### 3.1 14-Day Statutory Right of Withdrawal (EU / UK / TR Consumers)
 If you reside in the European Union, United Kingdom, Turkey, or a jurisdiction providing statutory consumer withdrawal rights:
@@ -42,13 +42,13 @@ If you experience a severe, verified technical failure where Voxis Live is unabl
 
 ## 4. Legacy BYOK (Bring Your Own Key) Build
 
-The BYOK / Developer Build described here was discontinued in August 2026 and is no longer offered. It was provided without subscription fees by Voxis Live: any API usage fees, billing, or charges incurred under your personal API key (e.g., Google AI Studio or Alibaba Cloud DashScope) were paid directly by you to the respective AI provider. If you still run a previously obtained BYOK build, this remains true: Voxis Live has no access to your financial transactions with Google or Alibaba and **cannot issue refunds or credits for third-party API billing**.
+The BYOK / Developer Build described here was discontinued in August 2026 and is no longer offered. It was provided at no charge by Voxis Live: any API usage fees, billing, or charges incurred under your personal API key (e.g., Google AI Studio or Alibaba Cloud DashScope) were paid directly by you to the respective AI provider. If you still run a previously obtained BYOK build, this remains true: Voxis Live has no access to your financial transactions with Google or Alibaba and **cannot issue refunds or credits for third-party API billing**.
 
 ---
 
 ## 5. Account Suspension & Fraudulent Chargebacks
 
-1. **Breach of Terms:** As outlined in our Terms of Service, if your account or device is suspended, blocked, or terminated due to a violation of our Terms (including fraud, unauthorized wiretapping, reverse engineering, or quota manipulation), all unused minutes and subscriptions are **forfeited without refund**.
+1. **Breach of Terms:** As outlined in our Terms of Service, if your account or device is suspended, blocked, or terminated due to a violation of our Terms (including fraud, unauthorized wiretapping, reverse engineering, or quota manipulation), all unused minutes are **forfeited without refund**.
 2. **Unauthorized Chargebacks:** Initiating an unauthorized chargeback or payment dispute with your bank without first contacting Voxis support will result in immediate account suspension, device hash blocking (`device_hash`), and potential legal collection.
 
 ---

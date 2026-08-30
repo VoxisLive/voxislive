@@ -1,6 +1,6 @@
 # VOXIS LIVE — END USER LICENSE AGREEMENT (EULA)
 
-**Last Updated:** August 24, 2026
+**Last Updated:** August 30, 2026
 
 PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT" OR "EULA") CAREFULLY BEFORE DOWNLOADING, INSTALLING, OR USING THE VOXIS LIVE APPLICATION OR BROWSER EXTENSIONS.
 
@@ -10,7 +10,7 @@ BY DOWNLOADING, INSTALLING, COPYING, OR USING THE SOFTWARE, YOU AGREE TO BE BOUN
 
 ## 1. Grant of License
 
-Subject to your compliance with this Agreement and any applicable subscription terms, Voxis Live grants you a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to:
+Subject to your compliance with this Agreement and any applicable purchase terms, Voxis Live grants you a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to:
 1. Install and execute the Voxis Live desktop application on personal computer devices running supported Windows Operating Systems.
 2. Install and execute Voxis Live browser extensions on supported Web Browsers (Google Chrome, Microsoft Edge, and Chromium-based browsers).
 3. Use the Software for personal, non-commercial, or internal business real-time audio translation, subject to these terms.
@@ -19,7 +19,7 @@ Subject to your compliance with this Agreement and any applicable subscription t
 
 ## 2. License Scope & Distribution
 
-- **Official SaaS Release / Store Binaries:** Voxis Live is distributed exclusively as pre-compiled executable binaries (`.exe`, MSIX) via the Microsoft Store, Chrome Web Store, or official Voxis installers. These binaries contain proprietary license-verification, subscription management, and server-routing mechanisms ("Official Binaries"). This Agreement governs your use of the Official Binaries.
+- **Official SaaS Release / Store Binaries:** Voxis Live is distributed exclusively as pre-compiled executable binaries (`.exe`, MSIX) via the Microsoft Store, Chrome Web Store, or official Voxis installers. These binaries contain proprietary license-verification, account and minute-balance management, and server-routing mechanisms ("Official Binaries"). This Agreement governs your use of the Official Binaries.
 - **Source-Available Excerpt:** A limited, explicitly curated excerpt of the underlying source code is published at github.com/VoxisLive/voxislive for transparency and audit purposes only, under its own separate all-rights-reserved notice (not this Agreement). It is not distributed under this Agreement, does not constitute a licensed build of the Software, and does not grant any right to use, execute, modify, distribute, or redistribute Voxis Live, in whole or in part, commercially or otherwise.
 - **Legacy Developer / BYOK Builds:** Prior to August 2026, Voxis Live offered a source-buildable "Bring Your Own Key" developer build. That distribution channel has been discontinued and is no longer offered, maintained, or supported. If you already obtained and continue to run a previously built BYOK copy, your use remains subject to this Agreement, including Sections 3 (Restrictions), 5 (Third-Party AI Services), and 7 (Disclaimer of Warranties).
 
@@ -30,7 +30,7 @@ Subject to your compliance with this Agreement and any applicable subscription t
 You agree that you will **NOT**, directly or indirectly:
 1. Decompile, reverse engineer, disassemble, or attempt to derive the source code or licensing verification keys of the Official Binaries or server endpoints, except to the extent permitted by mandatory applicable law.
 2. Modify, remove, or obscure any proprietary notices, copyright labels, trademark marks, or "Powered by Voxis" attributions embedded in the Software.
-3. Use the Software to bypass subscription billing, minute counters, or device-quota verification systems.
+3. Use the Software to bypass billing, minute counters, or device-quota verification systems.
 4. Rent, lease, lend, sell, redistribute, or sublicense the Official Binaries or access tokens to any third party.
 5. Use the Software for any illegal purpose, unauthorized wiretapping, non-consensual eavesdropping, or surveillance.
 
