@@ -64,7 +64,7 @@ def test_scrub_text_redacts_bare_dashscope_key_with_no_label():
 
 
 def test_scrub_text_redacts_email():
-    assert report_scrub.scrub_text("contact me at drypts@icloud.com please") == \
+    assert report_scrub.scrub_text("contact me at someone@example.com please") == \
         "contact me at [REDACTED_EMAIL] please"
 
 
