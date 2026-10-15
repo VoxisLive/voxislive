@@ -5,9 +5,9 @@
 ![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-blue)
 
-**VoxisLive ist eine Desktop-App für Windows (und Linux über den Snap Store), die Systemaudio — Videos, Spiele, Meetings — in Echtzeit übersetzt und die Übersetzung in Ihrer Sprache vorspricht: Sie hören eine Stimme, keine Untertitel.** Im Zwei-Wege-Meeting-Modus hört Ihr Gegenüber Sie über ein virtuelles Mikrofon in seiner Sprache. 79 Zielsprachen; kostenlos 10 Minuten pro Tag (35 der 79 Sprachen mit Stimme); vorausbezahlte Minuten, kein Abo; im Microsoft Store erhältlich.
+**VoxisLive ist eine Desktop-App für Windows (und Linux über den Snap Store), die Systemaudio — Videos, Spiele, Meetings — in Echtzeit übersetzt und die Übersetzung in Ihrer Sprache vorspricht: Sie hören eine Stimme, keine Untertitel.** Im Zwei-Wege-Meeting-Modus hört Ihr Gegenüber Sie über ein virtuelles Mikrofon in seiner Sprache. 79 Zielsprachen; kostenlos 10 Minuten pro Tag (35 der 79 Sprachen mit Stimme); bezahlte Minuten als Monats- oder Jahresplan (Plus, Premium, Ultra) oder als einmalige Minutenpakete; im Microsoft Store erhältlich.
 
-Die kostenlosen Tagesminuten gelten im Video- und Spielmodus; die 44 Sprachen ohne kostenlose Stimme erscheinen als Live-Untertitel. Kostenpflichtige Minutenpakete sprechen alle 79 Sprachen und schalten den Meeting-Modus frei.
+Die kostenlosen Tagesminuten gelten im Video- und Spielmodus; die 44 Sprachen ohne kostenlose Stimme erscheinen als Live-Untertitel. Bezahlte Pläne und Minutenpakete sprechen alle 79 Sprachen und schalten den Meeting-Modus frei.
 
 **Herunterladen:** [Microsoft Store](https://apps.microsoft.com/detail/9P5Z0KVS58RS) (Windows 10 und 11) · [Snap Store](https://snapcraft.io/voxis) (Linux) · Website: **[voxislive.com](https://voxislive.com)** · [Preise](https://voxislive.com/pricing)
 

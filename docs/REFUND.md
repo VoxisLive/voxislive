@@ -1,61 +1,63 @@
-# VOXIS LIVE — REFUND & RETURN POLICY
+# VoxisLive — Refund Policy
 
-**Last Updated:** August 30, 2026
+**Effective date:** June 17, 2026 · **Requests:** support@voxislive.com · **Last updated:** October 14, 2026
 
-Thank you for choosing **Voxis Live** ("Voxis", "we", "us", or "our"). This **Refund & Return Policy** outlines your rights, conditions, and procedures regarding purchases, minute package refills, and refund requests made through [voxislive.com](https://voxislive.com), the Microsoft Store, or authorized distribution channels.
+> This is a copy of the Refund Policy published at [voxislive.com/refund](https://voxislive.com/refund). If the two ever differ, the version on voxislive.com governs.
 
----
+Simple and consumer-friendly: 14 days to change your mind, minus the minutes you already used.
 
-## 1. Nature of Digital Services
+## 1. The 14-day withdrawal right
 
-Voxis Live provides real-time AI speech-to-speech translation software sold as prepaid digital minute packages. Due to the immediate activation and consumption nature of digital services and the real-time API execution costs incurred with third-party AI infrastructure providers (Google Cloud, Alibaba Cloud):
+Consumers in the EU, UK, Türkiye, and applicable jurisdictions have **14 calendar days from purchase** to withdraw from a purchase without giving any reason. Any translation minutes you have already used are deducted pro rata, as set out in section 2 — using minutes does not cancel your withdrawal right.
 
-1. **Digital Minute Packages & Consumed Minutes:** Once purchased minutes have been used to perform live AI translation sessions, those consumed minutes are **non-refundable**.
-2. **Immediate Performance:** By initiating a live translation session, you consent to the immediate performance of the service and acknowledge that you waive statutory rights of withdrawal for minutes already consumed.
+## 2. How the refund is calculated
 
----
+Because live AI translation performance begins immediately upon initiating a translation session, any translated minutes you have consumed are deducted, calculated pro rata against the amount paid. Completely consumed minute packs are non-refundable due to third-party AI infrastructure costs incurred.
 
-## 2. Store Purchases (Microsoft Store & App Stores)
+**Example:** you bought a 600-minute pack and used 60 minutes — 10% of the pack. Your refund is 90% of the purchase price.
 
-If you purchased a Voxis Live minute package directly through the **Microsoft Store** or another third-party app store:
-- **Refund Authority:** Refunds, billing inquiries, and transaction processing are governed exclusively by the terms and policies of the respective store platform (e.g., [Microsoft Store Refund Terms](https://support.microsoft.com/account-billing/returning-items-you-bought-from-microsoft-for-exchange-or-refund-72621197-cc60-d570-c26e-d068e943b8e8)).
-- **Request Procedure:** You must submit refund requests directly through your Microsoft Account purchase history. Voxis Live does not process direct payments or refunds for Microsoft Store transactions.
+## 3. BYOK License (bring your own key)
 
----
+The **BYOK License** is a one-time digital unlock that is activated on your account immediately after purchase and is delivered in full at that moment: from activation on, Voxis runs on API keys you obtain and pay for yourself, so there is no metered service left for us to deliver. For this reason the BYOK License is **non-refundable once activated**, to the extent permitted by applicable law — the 14-day withdrawal right lapses upon activation under the rules for immediately performed digital content. If activation fails and we cannot activate your license within a reasonable time, you are entitled to a full refund.
 
-## 3. Direct Web Purchases (voxislive.com & SaaS Billing)
+## 4. Store purchases (Microsoft Store)
 
-For minute packages purchased directly on [voxislive.com](https://voxislive.com):
+Purchases made directly through the Microsoft Store or third-party app stores are subject to the respective store's refund terms. You must request refunds directly through your Microsoft Account order history. VoxisLive does not process direct refunds for store transactions.
 
-### 3.1 14-Day Statutory Right of Withdrawal (EU / UK / TR Consumers)
-If you reside in the European Union, United Kingdom, Turkey, or a jurisdiction providing statutory consumer withdrawal rights:
-- You have the right to cancel your initial purchase within **14 calendar days** from the purchase date without giving any reason, **provided you have not used or consumed any translation minutes**.
-- If you cancel within the 14-day window prior to consuming any minutes, you will receive a full refund to your original payment method.
-- If you use translation minutes during the 14-day window, you agree that any refund will be calculated **pro-rata**, deducting the value of minutes consumed prior to cancellation.
+## 5. Cancellations and plans
 
-### 3.2 Technical Faults & Verified Non-Delivery
-If you experience a severe, verified technical failure where Voxis Live is unable to deliver translation service due to our server outage or system failure (and not due to local network issues, user audio configuration, or third-party API rate limits):
-- Contact [support@voxislive.com](mailto:support@voxislive.com) within **7 days** of the occurrence.
-- We will investigate the session logs and, at our sole discretion, issue a minute credit refund to your account or process a pro-rated financial refund.
+**Minute packs** are single charges: there is nothing to cancel, and their minutes stay on your account until you use them.
 
----
+**Plans** (subscriptions: Plus, Premium or Ultra) renew automatically until you cancel. You can cancel at any time, in one step, in the billing portal on your account page. Cancellation takes effect at the end of the current paid period: no further charges are made, and the plan and its minutes stay available until then. Plan minutes still unused when the plan ends expire; pack minutes do not. A plan upgrade charges the prorated difference for the rest of the current period; that payment is refundable on the same terms as the plan itself — within 14 days of it, with the minutes already used deducted pro rata as set out in section 2.
 
-## 4. Legacy BYOK (Bring Your Own Key) Build
+**14 days to change your mind.** Consumers in the EU, the UK, Türkiye and applicable jurisdictions may withdraw from a plan within 14 calendar days of its first payment, without giving any reason. Because the service is digital and starts immediately after payment, by paying you agree that it begins right away. Your withdrawal right still applies: the plan minutes you have already used are deducted pro rata from the refund, as set out in section 2, and the refund is calculated on the amount you actually paid, including any introductory price.
 
-The BYOK / Developer Build described here was discontinued in August 2026 and is no longer offered. It was provided at no charge by Voxis Live: any API usage fees, billing, or charges incurred under your personal API key (e.g., Google AI Studio or Alibaba Cloud DashScope) were paid directly by you to the respective AI provider. If you still run a previously obtained BYOK build, this remains true: Voxis Live has no access to your financial transactions with Google or Alibaba and **cannot issue refunds or credits for third-party API billing**.
+**Annual plans.** If you withdraw from an annual plan within the 14 days above, the months of the paid year that have not yet started are refunded pro rata, with the minutes already used deducted as in section 2. After those 14 days, cancelling an annual plan ends it at the end of the paid year; the remaining months are not refunded.
 
----
+Apart from the cases above and service faults (section 6), cancelling a plan does not refund the period you are in; it ends the plan when that period ends.
 
-## 5. Account Suspension & Fraudulent Chargebacks
+## 6. Service faults & Outages
 
-1. **Breach of Terms:** As outlined in our Terms of Service, if your account or device is suspended, blocked, or terminated due to a violation of our Terms (including fraud, unauthorized wiretapping, reverse engineering, or quota manipulation), all unused minutes are **forfeited without refund**.
-2. **Unauthorized Chargebacks:** Initiating an unauthorized chargeback or payment dispute with your bank without first contacting Voxis support will result in immediate account suspension, device hash blocking (`device_hash`), and potential legal collection.
+If a verified server outage or technical system failure prevents service delivery (unrelated to local network configuration or third-party API rate limits), contact support within 7 days for a minute credit or pro-rata refund.
 
----
+## 7. Breach of terms & Fraudulent chargebacks
 
-## 6. How to Request a Refund or Support
+Accounts or device hashes (`device_hash`) suspended or banned due to a breach of our Terms of Service (such as fraudulent activity, illegal wiretapping, or reverse engineering) forfeit all remaining minutes without refund. Initiating an unauthorized chargeback results in immediate account suspension and device banning.
 
-To submit a billing inquiry or request a refund under eligible conditions:
-1. Email our support team at [support@voxislive.com](mailto:support@voxislive.com).
-2. Include your registered account email, transaction ID, date of purchase, and a brief description of your request.
-3. Refunds approved by Voxis will be processed to the original payment method within **5 to 10 business days**.
+## 8. How to request
+
+Email [support@voxislive.com](mailto:support@voxislive.com) or use the [contact page](https://voxislive.com/contact), including your account email and your payment receipt or order reference.
+
+## Common questions
+
+### Do I need to give a reason for a refund?
+
+No. Within 14 days of purchase, no reason is required — used minutes are simply deducted pro rata.
+
+### I used part of my pack. How much do I get back?
+
+The unused share. For example, 60 minutes used from a 600-minute pack means a 90% refund of the purchase price.
+
+### What if the app doesn't work for me at all?
+
+If the service does not work as described and we cannot fix it within a reasonable time, you are entitled to a refund even beyond the 14-day window.

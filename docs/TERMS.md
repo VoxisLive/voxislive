@@ -1,129 +1,61 @@
-# VOXIS LIVE — TERMS OF SERVICE
+# VoxisLive — Terms of Service
 
-**Last Updated:** August 30, 2026
+**Effective date:** June 17, 2026 · **Governing law:** England and Wales · **Last updated:** October 14, 2026
 
-Welcome to **Voxis Live** ("Voxis", "Application", "Service", "we", "us", or "our"). Please read these Terms of Service ("Terms") carefully before using the Voxis desktop application, browser extensions (including Chrome, Edge, and Chromium-based extensions), the website located at [voxislive.com](https://voxislive.com), or any related software, APIs, or documentation.
+> This is a copy of the Terms published at [voxislive.com/terms](https://voxislive.com/terms). If the two ever differ, the version on voxislive.com governs.
 
-By downloading, installing, accessing, or using Voxis Live (via desktop app, browser extension, or web services), you ("User" or "you") agree to be bound by these Terms. If you do not agree to all of these Terms, do not install, access, or use the Application or Extensions.
+The agreement between you and VoxisLive when you create an account or use the service.
 
----
+## 1. The service
 
-## 1. Description of Service
+VoxisLive is a real-time voice-translation software ecosystem provided across desktop software (Windows and Linux) and browser extensions (Chrome, Edge, Chromium). VoxisLive is distributed as a **managed service**: we supply AI access and you use account minutes. A limited, source-available excerpt of the engine is separately published on GitHub for transparency; a previously-offered open-source / BYOK build has been discontinued and is no longer distributed, though Section 7 continues to govern any copy still in use. Translation relies on third-party AI providers (Google Gemini Live API and Alibaba Cloud Qwen Realtime API). By creating an account, downloading, or using VoxisLive desktop apps or browser extensions, you accept these Terms.
 
-Voxis Live is a real-time speech-to-speech AI translation software ecosystem provided across desktop software and browser extension platforms:
-- **Desktop Application (Windows):** Captures system audio output (Video/Game Mode) or local microphone audio (Meeting Mode) and processes it via third-party artificial intelligence models (such as **Google Gemini Live API** and **Alibaba Cloud Qwen Realtime API**) to generate live translated speech and real-time subtitles.
-- **Browser Extension (Chrome / Edge / Chromium):** Captures tab audio and in-browser streams to provide real-time translation overlays, subtitles, and audio dubbing within web browsers.
+## 2. Accounts
 
-Voxis is distributed as an **Official Release / SaaS Build**: via official stores (Microsoft Store, Chrome Web Store, Edge Add-ons) or official installer, operating with integrated server-managed authentication, prepaid minute balances, and automated routing across Google Gemini and Alibaba Qwen infrastructure.
+You must provide accurate information, keep your credentials secure, and accept responsibility for all activity on your account. Minimum age is 18, with the legal capacity to enter this agreement.
 
-A limited, explicitly curated excerpt of the underlying source code is separately published at github.com/VoxisLive/voxislive for transparency and audit purposes, under its own all-rights-reserved notice — it is not a distribution mode of the Service, and these Terms do not apply to reading it.
+## 3. Minutes, billing and renewals
 
-Prior to August 2026, Voxis also offered a source-buildable **Developer / Bring Your Own Key (BYOK) Build**, where translation requests executed using the User's own API key directly between the User's device and the third-party AI provider. That distribution channel has been discontinued and is no longer offered. Section 4.2 continues to govern any previously obtained BYOK build still in use.
+Paid usage is measured in translated minutes. Minute packs are one-time purchases added to your account instantly; pack minutes never expire while your account is active.
 
----
+**Plans.** Where we offer a plan (Plus, Premium or Ultra), it is a subscription that adds the plan's monthly minutes to your account at the start of every month — on an annual plan too, month by month rather than all at once. A plan renews automatically at the end of each billing period (monthly or yearly, as chosen at checkout), and each renewal is charged to your payment method through our merchant of record, Polar, until you cancel. The price, the billing period and any introductory price are shown at checkout before you pay. An introductory price (such as a reduced first month) applies only to the plan and the period stated; after it, the plan renews at its regular price.
 
-## 2. Artificial Intelligence Disclaimer & Accuracy Warning
+**Roll-over and expiry.** Plan minutes you do not use carry over to the next month, up to a plan balance of twice the plan's monthly minutes (360 minutes on Plus, 960 on Premium, 2,000 on Ultra). At each renewal, plan minutes above that cap expire. When a plan ends, the plan minutes left at the end of the last paid period expire. Pack minutes never count toward the cap and never expire.
 
-### 2.1 AI-Generated Output
-You acknowledge and agree that translations, synthetic voices, captions, and transcriptions produced by Voxis are generated dynamically using artificial intelligence models ("AI Output").
+**Plan changes.** When you move to another plan with the same billing period, an upgrade (to a plan with more monthly minutes) applies immediately: the prorated price difference for the rest of the current billing period is charged to your payment method at once, and the prorated share of the additional monthly minutes is added to your account. A downgrade takes effect at the next renewal; until then your current plan and its minutes stay as they are. To switch between monthly and yearly billing, cancel the plan and choose the new one when the current period ends.
 
-### 2.2 No Guarantee of Accuracy
-**AI Output may contain errors, omissions, misinterpretations, or "hallucinations." Voxis makes no warranty or representation regarding the accuracy, completeness, reliability, or timeliness of any translation.** Voxis must **NOT** be relied upon for emergency services, medical diagnosis, legal proceedings, high-risk financial transactions, safety-critical navigation, or any situation where inaccurate translation could lead to personal injury, financial loss, or legal liability.
+**Order of use.** Plan minutes are used first; pack minutes are used only once your plan minutes have run out.
 
----
+**Cancellation.** You can cancel a plan at any time, in one step, in the billing portal on your account page. Cancellation stops all future charges; the plan and its minutes stay available until the end of the period you have already paid for. If a renewal payment fails, the plan stays active while the payment is retried; if it still cannot be collected, the plan ends. Refunds and the 14-day withdrawal right are covered in section 4 and in our [Refund Policy](REFUND.md).
 
-## 3. User Warranties & Live Audio Consent Obligations
+Every new account receives a one-time credit of 15 complimentary minutes of the standard managed voice; this credit does not renew. Beyond that credit, and beyond any purchased minutes, an account retains a free allowance of 10 translated minutes per day, delivered with an on-device voice; the allowance resets daily, does not accumulate, and has no cash value.
 
-### 3.1 Compliance with Eavesdropping & Wiretapping Laws
-In many jurisdictions (including various U.S. states such as California, Florida, and Illinois, as well as Member States of the European Union), it is illegal to record, intercept, or transmit the live oral communications of another person without their prior consent (often referred to as "all-party consent" or "two-party consent" laws).
+## 4. Refunds & Cancellation
 
-### 3.2 User Warranties & Representations
-When using Voxis in **Meeting Mode** or whenever capturing, translating, or processing third-party audio, **YOU EXPRESSLY WARRANT AND REPRESENT THAT:**
-1. You have obtained all required consents, permissions, and authorizations from all participants in the audio stream or call prior to initiating real-time AI translation.
-2. You will comply with all applicable local, state, national, and international privacy, wiretapping, surveillance, and data protection laws (including GDPR and CCPA).
-3. You will not use Voxis for unauthorized surveillance, wiretapping, secret recording, or unlawful monitoring of any individual or entity.
+**Consumers have a statutory 14-day withdrawal right.** Because live translation starts immediately, minutes you have already used are deducted pro rata from the refund, and fully used minute packs are not refunded. Plans can be cancelled at any time and end when the paid period ends. Our [Refund Policy](REFUND.md) sets out the details, including plans and the BYOK License. The prorated amount charged for a plan upgrade is treated the same way: within 14 days of that payment, the minutes already used are deducted pro rata from its refund.
 
-### 3.3 Obligation to Inform
-Voxis provides built-in notices regarding Meeting Mode consent. You acknowledge that these UI notices do not relieve you of your legal duty to explicitly inform and obtain consent from all call participants.
+## 5. Acceptable use & Audio Consent Warranty
 
----
-
-## 4. Third-Party Services & API Usage
-
-### 4.1 Google Gemini & Alibaba Qwen AI Service Providers
-Voxis relies on third-party AI services, including but not limited to **Google Gemini Live API** (`gemini-3.5-live-translate-preview`) and **Alibaba Cloud Qwen Realtime API** (`qwen3.5-livetranslate-flash-realtime`). Audio data sent for translation is governed by the respective terms and privacy policies of those providers (e.g., [Google Terms of Service](https://policies.google.com/terms), [Google AI Studio Terms](https://ai.google.dev/terms), and [Alibaba Cloud International Privacy Policy](https://www.alibabacloud.com/help/faq-detail/42425.htm)).
-
-### 4.2 Legacy BYOK Key Management & Liability
-The Developer / BYOK Build is discontinued and no longer distributed (see Section 1). If you obtained a BYOK build prior to its discontinuation and continue to use it:
-- You are solely responsible for obtaining, maintaining, and securing your own API keys.
-- API keys are encrypted locally on your Windows device using Windows Data Protection API (DPAPI) or local browser extension storage.
-- You are solely responsible for any costs, API quotas, or violations of third-party API terms incurred under your key.
-
----
-
-## 5. Acceptable Use & Prohibited Activities
-
-You agree **NOT** to use Voxis to:
-1. Intercept or translate communications without proper legal authorization or consent.
-2. Infringe upon the intellectual property, privacy, or publicity rights of third parties.
-3. Transmit audio containing hate speech, illegal material, harassment, or content violating third-party platform terms (e.g., Zoom, Teams, Discord).
-4. Reverse engineer, decompile, or tamper with the security or license-verification mechanisms of the official SaaS build or browser extension.
-5. Circumvent, manipulate, or exploit usage limits, billing counters, device hashes, or access restrictions.
-
----
+You must not resell or abuse the service or its quota; attempt to reverse engineer, hack, or bypass authentication, device limits, or billing measures; or use the service unlawfully. When using VoxisLive in Meeting Mode or capturing third-party audio, **you expressly warrant that you have obtained all legally required consents** from all call participants under applicable wiretapping, eavesdropping, and privacy laws. You agree to indemnify, defend, and hold harmless VoxisLive and its developers against any third-party claims, fines, or damages arising from your failure to obtain required audio consent.
 
 ## 6. Account Suspension, Banning & Termination Rights
 
-### 6.1 Right to Block, Suspend, or Terminate Access
-**Voxis Live reserves the absolute, unilateral right to suspend, restrict, block, or permanently terminate your account, API access, device access (`device_hash`), or IP address at any time, with or without prior notice, at our sole discretion.** Reasons for suspension or termination include, but are not limited to:
-- Violation of any provision of these Terms or EULA;
-- Fraudulent, abusive, or unauthorized use of the Application, API endpoints, or purchased minutes;
-- Attempts to reverse engineer, hack, or bypass billing controls;
-- Unlawful wiretapping or non-consensual interception of live audio;
-- Requests by law enforcement or government agencies.
+VoxisLive reserves the absolute, unilateral right to suspend, restrict, block, or permanently terminate your account, API access, device access (`device_hash`), or IP address at any time, with or without prior notice, if you breach these Terms, attempt to exploit billing controls, or use the service unlawfully. Upon account termination or blocking for breach, all unused minutes and credits are **immediately forfeited without any right to refund or compensation**.
 
-### 6.2 Effect of Termination
-Upon termination or blocking of your account due to a violation of these Terms:
-1. Your license to use the Software and SaaS services is immediately revoked.
-2. Any remaining minutes, minute packages, or unused paid credits shall be **forfeited immediately without any right to refund or compensation**.
-3. Voxis shall not be liable to you or any third party for any termination of your access to the Application.
+## 7. Third-party dependencies
 
-### 6.3 Voluntary Account Deletion
-Voxis is sold as one-time prepaid minute packs: there is no recurring subscription and no billing cycle to cancel. You may delete your account and its associated data at any time from your account settings. Purchases made through the Microsoft Store are managed from your Microsoft account.
+Translation (Google Cloud / Gemini, Alibaba Cloud / Qwen), payment processing, and email (Resend) operate under their respective providers' terms. If you use a previously obtained BYOK build, you are solely responsible for compliance with Google's or Alibaba's API terms and any charges incurred under your key.
 
----
+## 8. Disclaimers
 
-## 7. Intellectual Property & License Rights
+The service is provided **“as is”** and **“as available”**. Machine translation accuracy is not guaranteed; AI output may contain errors or hallucinations. Do not rely on VoxisLive for high-stakes, legal, medical, emergency, or safety-critical communication.
 
-- **Application Code & Assets:** The Voxis Live codebase, Official SaaS release assets, pre-compiled binaries, logos, branding ("Powered by Voxis"), and proprietary server infrastructures are and remain the exclusive property of Voxis Live. A limited, separately-licensed excerpt is published at github.com/VoxisLive/voxislive for transparency purposes only (see Section 1); no other part of the codebase is licensed for public use.
-- **User Transcripts & Generated Files:** You retain full ownership of all text transcripts (TXT, SRT, VTT, JSON) and local WAV audio recordings generated by your use of the Software.
+## 9. Liability
 
----
+To the maximum extent permitted by law, VoxisLive's total aggregate liability is capped at the amounts you paid to VoxisLive in the preceding 12 months (or $50 for free/legacy-BYOK users). Statutory consumer protections that cannot be waived remain unaffected.
 
-## 8. Limitation of Liability & Indemnification
+## 10. Governing law & Contact
 
-### 8.1 Disclaimer of Warranties
-**TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VOXIS LIVE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS, WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.**
+These Terms are governed by the laws of England and Wales. Mandatory local consumer-protection rights remain enforceable regardless. For legal or support questions, contact us at [support@voxislive.com](mailto:support@voxislive.com) or via our [contact page](https://voxislive.com/contact).
 
-### 8.2 Limitation of Liability
-**IN NO EVENT SHALL VOXIS LIVE, ITS DEVELOPERS, AFFILIATES, OFFICERS, OR SUPPLIERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES (INCLUDING LOSS OF PROFITS, DATA LOSS, BUSINESS INTERRUPTION, OR THIRD-PARTY FINES) ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF OR INABILITY TO USE THE APPLICATION OR BROWSER EXTENSIONS.**
-
-### 8.3 User Indemnification (Tazminat Yükümlülüğü)
-**YOU AGREE TO INDEMNIFY, DEFEND, AND HOLD HARMLESS VOXIS LIVE, ITS DEVELOPERS, AND AFFILIATES FROM AND AGAINST ANY AND ALL CLAIMS, LIABILITIES, LOSSES, DAMAGES, FINES, EXPENSES, OR DEMANDS (INCLUDING REASONABLE ATTORNEYS' FEES) ARISING OUT OF OR RELATED TO:**
-1. Your violation of these Terms;
-2. Your failure to obtain required consent from call participants before capturing or translating their audio;
-3. Your violation of any applicable wiretapping, privacy, or data protection law.
-
----
-
-## 9. Modifications to Terms & Service
-
-We reserve the right to modify these Terms at any time. Updated Terms will be posted on [voxislive.com](https://voxislive.com) and noted in application release notes. Your continued use of Voxis following the posting of updated Terms constitutes acceptance of those changes.
-
----
-
-## 10. Contact Information
-
-If you have any questions regarding these Terms, please contact us at:
-- **Email:** [support@voxislive.com](mailto:support@voxislive.com)
-- **Website:** [https://voxislive.com](https://voxislive.com)
+**Operator:** VoxisLive is operated by VoxisLive Limited, a private limited company registered in England and Wales (company no. 17500296). Registered office: 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom. Website: [voxislive.com](https://voxislive.com). E-mail: [support@voxislive.com](mailto:support@voxislive.com).
