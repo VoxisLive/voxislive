@@ -5,9 +5,9 @@
 ![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-blue)
 
-**VoxisLive is a desktop app for Windows (and Linux, via the Snap Store) that translates system audio — videos, games, meetings — in real time and speaks the translation in your language: a voice, not subtitles.** In two-way Meeting mode, the other side hears you in their language through a virtual microphone. 79 target languages; free tier of 10 minutes a day (35 of the 79 voiced); prepaid minutes, no subscription; on the Microsoft Store.
+**VoxisLive is a desktop app for Windows (and Linux, via the Snap Store) that translates system audio — videos, games, meetings — in real time and speaks the translation in your language: a voice, not subtitles.** In two-way Meeting mode, the other side hears you in their language through a virtual microphone. 79 target languages; free tier of 10 minutes a day (35 of the 79 voiced); paid minutes as monthly or yearly plans (Plus, Premium, Ultra) or one-time minute packs; on the Microsoft Store.
 
-The free daily minutes cover Video and Game mode; the 44 languages without a free voice arrive as live captions, and paid minute packs speak all 79 and unlock Meeting mode.
+The free daily minutes cover Video and Game mode; the 44 languages without a free voice arrive as live captions, and paid plans and minute packs speak all 79 and unlock Meeting mode.
 
 **Get it:** [Microsoft Store](https://apps.microsoft.com/detail/9P5Z0KVS58RS) (Windows 10 and 11) · [Snap Store](https://snapcraft.io/voxis) (Linux) · Site: **[voxislive.com](https://voxislive.com)** · [Pricing](https://voxislive.com/pricing)
 

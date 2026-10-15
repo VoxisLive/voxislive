@@ -5,9 +5,9 @@
 ![GitHub stars](https://img.shields.io/github/stars/VoxisLive/voxislive?style=social)
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-blue)
 
-**VoxisLive, bilgisayarında çalan sesi (video, oyun, toplantı) gerçek zamanlı çeviren ve çeviriyi kendi dilinde sesli okuyan bir masaüstü uygulamasıdır (Windows; Linux için Snap Store): altyazı değil, bir ses duyarsın.** İki yönlü Toplantı modunda karşı taraf da seni sanal bir mikrofon üzerinden kendi dilinde duyar. 79 hedef dil; günde 10 dakikalık ücretsiz katman (79 dilin 35'i sesli); ön ödemeli dakikalar, abonelik yok; Microsoft Store'da.
+**VoxisLive, bilgisayarında çalan sesi (video, oyun, toplantı) gerçek zamanlı çeviren ve çeviriyi kendi dilinde sesli okuyan bir masaüstü uygulamasıdır (Windows; Linux için Snap Store): altyazı değil, bir ses duyarsın.** İki yönlü Toplantı modunda karşı taraf da seni sanal bir mikrofon üzerinden kendi dilinde duyar. 79 hedef dil; günde 10 dakikalık ücretsiz katman (79 dilin 35'i sesli); ücretli dakikalar aylık veya yıllık plan (Plus, Premium, Ultra) ya da tek seferlik dakika paketi olarak; Microsoft Store'da.
 
-Ücretsiz günlük dakikalar Video ve Oyun modunda geçerli; ücretsiz sesi olmayan 44 dil canlı altyazı olarak gelir. Ücretli dakika paketleri 79 dilin hepsini seslendirir ve Toplantı modunu açar.
+Ücretsiz günlük dakikalar Video ve Oyun modunda geçerli; ücretsiz sesi olmayan 44 dil canlı altyazı olarak gelir. Ücretli planlar ve dakika paketleri 79 dilin hepsini seslendirir ve Toplantı modunu açar.
 
 **İndir:** [Microsoft Store](https://apps.microsoft.com/detail/9P5Z0KVS58RS) (Windows 10 ve 11) · [Snap Store](https://snapcraft.io/voxis) (Linux) · Site: **[voxislive.com](https://voxislive.com)** · [Fiyatlar](https://voxislive.com/pricing)
 
