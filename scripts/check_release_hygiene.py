@@ -99,7 +99,13 @@ PUBLIC_EXACT_FILES = frozenset({
 # remove them would break every clone and fork). Empty — this repo's history
 # was squashed to a single curated commit when it was narrowed; add entries
 # here only for a *future* leak judged not worth another rewrite.
-HISTORY_PATH_ALLOWLIST: frozenset[str] = frozenset()
+# Retired on purpose (owner, 2026-11-16): these were published copies of
+# legal texts; the live pages on voxislive.com are now the only version.
+HISTORY_PATH_ALLOWLIST: frozenset[str] = frozenset({
+    "docs/EULA.md",
+    "docs/AI_DISCLOSURE.md",
+    "docs/MEETING_CONSENT.md",
+})
 HISTORY_PATH_ALLOWLIST_PREFIXES: tuple[str, ...] = ()
 HISTORY_SECRET_ALLOWLIST: frozenset[str] = frozenset()
 
