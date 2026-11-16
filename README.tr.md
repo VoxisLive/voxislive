@@ -53,7 +53,7 @@ Bu dosyalarla neleri doğrulayabilirsin:
 - **`app/report_scrub.py`**, isteğe bağlı bir hata raporu cihazından çıkmadan önce tam olarak neyin (anahtarlar, token'lar, e-postalar, yerel kullanıcı adları) silindiğini gösterir.
 - **`app/i18n.py`**, uygulamanın bu konuda ekranda gösterdiği gerçek metindir — uygulama içi gizlilik açıklaması dahil.
 
-`docs/PRIVACY.md`, `docs/TERMS.md` ve `docs/` altındaki diğer dosyalar aynı iddiaların sade dildeki halidir.
+voxislive.com'daki [Gizlilik Politikası](https://voxislive.com/tr/gizlilik) ve [Kullanım Koşulları](https://voxislive.com/terms) aynı iddiaların sade dildeki halidir.
 
 **Burada olmayanlar ve nedeni:** orkestrasyon katmanı, arayüz, ücretli çeviri motoru entegrasyonlarımız, kalite ayarları ve hesap/faturalama kodu yayınlanmıyor. Hiçbiri yukarıdaki yakalama ve konuşma kapısı zincirini değiştirmiyor; bu zincir her motorun önünde durur — ve bunları yayınlamak, şeffaflığa hiçbir katkı sağlamadan rakiplere ayarlarımızı ve iş mantığımızı verir. `scripts/check_release_hygiene.py`, bu sınırın kaymasını mekanik olarak engelleyen kapıdır; bu depoda izlenen her dosya orada açıkça adıyla yazılmak zorundadır.
 
@@ -137,6 +137,6 @@ Bu depoya kod katkısı kabul etmiyoruz (bkz. [`.github/CONTRIBUTING.md`](.githu
 - **Uygulamayla ilgili sorun/hata bildirimi:** [GitHub Issues](https://github.com/VoxisLive/voxislive/issues)
 - **Güvenlik:** [`.github/SECURITY.md`](.github/SECURITY.md)
 - **Ticari sorular:** <https://voxislive.com/licensing>
-- **Gizlilik politikası:** [`docs/PRIVACY.md`](docs/PRIVACY.md)
+- **Gizlilik politikası:** <https://voxislive.com/tr/gizlilik>
 
 *Voxis Live — gerçek zamanlı, simültane sesli çeviri.*

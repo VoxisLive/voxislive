@@ -52,7 +52,7 @@ What these files let you verify:
 - **`app/report_scrub.py`** shows exactly what gets redacted (keys, tokens, emails, local usernames) before an optional problem report ever leaves your device.
 - **`app/i18n.py`** is the actual on-screen text the app shows about this — including the privacy explainer it displays in-app.
 
-`docs/PRIVACY.md`, `docs/TERMS.md`, and the rest of `docs/` are the plain-language versions of the same claims.
+The [Privacy Policy](https://voxislive.com/privacy) and [Terms of Service](https://voxislive.com/terms) on voxislive.com are the plain-language versions of the same claims.
 
 **What isn't here, and why:** the orchestration layer, the UI, our paid translation-engine integrations, quality tuning, and account/billing code are not published. None of it changes the capture and speech-gating chain above, which sits in front of every engine — and publishing it would hand a competitor our tuning and business logic for no transparency benefit. `scripts/check_release_hygiene.py` is the mechanical gate that keeps this boundary from drifting; every file tracked in this repository has to be named explicitly in it.
 
@@ -136,6 +136,6 @@ We do not accept code contributions to this repository (see [`.github/CONTRIBUTI
 - **Issues / bug reports about the app:** [GitHub Issues](https://github.com/VoxisLive/voxislive/issues)
 - **Security:** [`.github/SECURITY.md`](.github/SECURITY.md)
 - **Commercial inquiries:** <https://voxislive.com/licensing>
-- **Privacy policy:** [`docs/PRIVACY.md`](docs/PRIVACY.md)
+- **Privacy policy:** <https://voxislive.com/privacy>
 
 *Voxis Live — real-time, simultaneous voice translation.*
