@@ -69,10 +69,7 @@ PUBLIC_EXACT_FILES = frozenset({
 
     "docs/PRIVACY.md",
     "docs/TERMS.md",
-    "docs/EULA.md",
     "docs/REFUND.md",
-    "docs/AI_DISCLOSURE.md",
-    "docs/MEETING_CONSENT.md",
     "docs/VOICE_CREDITS.md",
 
     "scripts/check_release_hygiene.py",

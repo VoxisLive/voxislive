@@ -52,7 +52,7 @@ Was diese Dateien Ihnen zu überprüfen erlauben:
 - **`app/report_scrub.py`** zeigt genau, was (Schlüssel, Tokens, E-Mails, lokale Benutzernamen) entfernt wird, bevor ein optionaler Problembericht Ihr Gerät verlässt.
 - **`app/i18n.py`** ist der tatsächliche Text, den die App dazu auf dem Bildschirm zeigt — einschließlich der In-App-Datenschutzerklärung.
 
-`docs/PRIVACY.md`, `docs/TERMS.md` und der Rest von `docs/` sind die allgemeinverständlichen Versionen derselben Aussagen.
+Die [Datenschutzerklärung](https://voxislive.com/de/privacy) und die [Nutzungsbedingungen](https://voxislive.com/terms) auf voxislive.com sind die allgemeinverständlichen Versionen derselben Aussagen.
 
 **Was hier nicht enthalten ist, und warum:** die Orchestrierungsschicht, die Benutzeroberfläche, unsere kostenpflichtigen Übersetzungs-Engine-Integrationen, Qualitätsoptimierungen und Konto-/Abrechnungscode werden nicht veröffentlicht. Nichts davon ändert die obige Kette aus Erfassung und Sprach-Gate, die vor jeder Engine sitzt — und die Veröffentlichung würde einem Wettbewerber ohne Transparenzgewinn unsere Feinabstimmung und Geschäftslogik liefern. `scripts/check_release_hygiene.py` ist das mechanische Gate, das verhindert, dass diese Grenze verwässert wird; jede in diesem Repository getrackte Datei muss dort explizit benannt sein.
 
@@ -136,6 +136,6 @@ Wir nehmen keine Code-Beiträge zu diesem Repository an (siehe [`.github/CONTRIB
 - **Probleme/Fehlerberichte zur App:** [GitHub Issues](https://github.com/VoxisLive/voxislive/issues)
 - **Sicherheit:** [`.github/SECURITY.md`](.github/SECURITY.md)
 - **Geschäftliche Anfragen:** <https://voxislive.com/licensing>
-- **Datenschutzerklärung:** [`docs/PRIVACY.md`](docs/PRIVACY.md)
+- **Datenschutzerklärung:** <https://voxislive.com/de/privacy>
 
 *Voxis Live — Echtzeit-Simultanübersetzung.*
